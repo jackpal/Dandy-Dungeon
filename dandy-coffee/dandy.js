@@ -93,17 +93,15 @@
   pOldButtons = 0;
   pPlayerMoveTimer = 0;
   loadLevel = function loadLevel() {
-    var _a, _b, _c, len, level, line, x;
+    var _a, _b, _c, _d, _e, _f, level, line, x;
     level = levels[currentLevel];
     map = [];
     _b = level;
     for (_a = 0, _c = _b.length; _a < _c; _a++) {
       line = _b[_a];
-      len = line.length;
-      x = 0;
-      while (x < len) {
+      _e = 0; _f = line.length;
+      for (_d = 0, x = _e; (_e <= _f ? x < _f : x > _f); (_e <= _f ? x += 1 : x -= 1), _d++) {
         map.push(encoding.indexOf(line.charAt(x)));
-        x++;
       }
     }
     setPlayerStartPosition();
@@ -167,7 +165,7 @@
     return [clamp(px - (windowTileWidth >> 1), 0, levelWidth - windowTileWidth), clamp(py - (windowTileHeight >> 1), 0, levelHeight - windowTileHeight)];
   };
   drawPicture = function drawPicture() {
-    var baseX, baseY, canvas, canvasTileHeight, canvasTileWidth, context, d, tl, tx, ty, x, y;
+    var _a, _b, _c, _d, _e, _f, baseX, baseY, canvas, canvasTileHeight, canvasTileWidth, context, d, tl, tx, ty, x, y;
     canvas = document.getElementById('gameCanvas');
     context = canvas.getContext('2d');
     tl = getVisibleTopLeftCorner();
@@ -175,17 +173,15 @@
     baseY = tl[1];
     canvasTileWidth = tileWidth * 2;
     canvasTileHeight = tileHeight * 2;
-    y = 0;
-    while (y < windowTileHeight) {
-      x = 0;
-      while (x < windowTileWidth) {
+    _b = 0; _c = windowTileHeight;
+    for (_a = 0, y = _b; (_b <= _c ? y < _c : y > _c); (_b <= _c ? y += 1 : y -= 1), _a++) {
+      _e = 0; _f = windowTileWidth;
+      for (_d = 0, x = _e; (_e <= _f ? x < _f : x > _f); (_e <= _f ? x += 1 : x -= 1), _d++) {
         d = map[(baseX + x) + (baseY + y) * levelWidth];
         tx = tileWidth * (d & 15);
         ty = tileHeight * (d >> 4);
         context.drawImage(strike, tx, ty, tileWidth, tileHeight, x * canvasTileWidth, y * canvasTileHeight, canvasTileWidth, canvasTileHeight);
-        x++;
       }
-      y++;
     }
     return null;
   };
@@ -288,20 +284,18 @@
     }
   };
   doBomb = function doBomb() {
-    var baseX, baseY, pos, tl, v, x, y;
+    var _a, _b, _c, _d, _e, _f, baseX, baseY, pos, tl, v, x, y;
     tl = getVisibleTopLeftCorner();
     baseX = tl[0];
     baseY = tl[1];
-    y = 0;
-    while (y < windowTileHeight) {
-      x = 0;
-      while (x < windowTileWidth) {
+    _b = 0; _c = windowTileHeight;
+    for (_a = 0, y = _b; (_b <= _c ? y <= _c : y >= _c); (_b <= _c ? y += 1 : y -= 1), _a++) {
+      _e = 0; _f = windowTileWidth;
+      for (_d = 0, x = _e; (_e <= _f ? x <= _f : x >= _f); (_e <= _f ? x += 1 : x -= 1), _d++) {
         pos = (baseX + x) + (baseY + y) * levelWidth;
         v = map[pos];
         (v >= kMonster1 && v <= kMonster3) || (v >= kGenerator1 && v <= kGenerator3) ? (map[pos] = kSpace) : null;
-        x++;
       }
-      y++;
     }
     dirty = true;
     return dirty;
@@ -319,7 +313,7 @@
     return m * Math.floor(x / m) + dx;
   };
   moveMonsters = function moveMonsters() {
-    var baseX, baseY, d, dd, dx, dy, gd, gd2, gpos, mDir, mx, my, npos, nv, pos, ran_number, tl, v, xBase, xEnd, yBase, yEnd;
+    var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, baseX, baseY, d, dd, dx, dy, gd, gd2, gpos, mDir, mx, my, npos, nv, pos, ran_number, tl, v, xBase, xEnd, yBase, yEnd;
     tl = getVisibleTopLeftCorner();
     baseX = tl[0];
     baseY = tl[1];
@@ -330,16 +324,16 @@
     yBase = adjust(baseY, dy, Math.floor(rotor / dx));
     xEnd = baseX + windowTileWidth;
     yEnd = baseY + windowTileHeight;
-    my = yBase;
-    while (my < yEnd) {
-      mx = xBase;
-      while (mx < xEnd) {
+    _b = yBase; _c = yEnd;
+    for (_a = 0, my = _b; (_b <= _c ? my < _c : my > _c); (_b <= _c ? my += dy : my -= dy), _a++) {
+      _e = xBase; _f = xEnd;
+      for (_d = 0, mx = _e; (_e <= _f ? mx < _f : mx > _f); (_e <= _f ? mx += dx : mx -= dx), _d++) {
         pos = mx + my * levelWidth;
         v = map[pos];
         if (v >= kMonster1 && v <= kMonster3) {
           mDir = kDeltaToDir[toDelta(py, my) + 1][toDelta(px, mx) + 1];
-          d = 0;
-          while (d < 3) {
+          _h = 0; _i = 2;
+          for (_g = 0, d = _h; (_h <= _i ? d <= _i : d >= _i); (_h <= _i ? d += 1 : d -= 1), _g++) {
             dd = (mDir + kSearchOrder[d]) & 7;
             npos = pos + kDirToDeltaX[dd] + kDirToDeltaY[dd] * levelWidth;
             nv = map[npos];
@@ -357,27 +351,23 @@
               // Don't try to walk around arrows.
               break;
             }
-            d++;
           }
         } else if (v >= kGenerator1 && v <= kGenerator3) {
           ran_number = Math.floor(Math.random() * 8);
           if ((ran_number < 4)) {
             gd = ran_number * 2;
-            dd = 0;
-            while (dd < 8) {
+            _k = 0; _l = 8;
+            for (_j = 0, dd = _k; (_k <= _l ? dd < _l : dd > _l); (_k <= _l ? dd += 2 : dd -= 2), _j++) {
               gd2 = (gd + dd) % 7;
               gpos = pos + kDirToDeltaX[gd2] + kDirToDeltaY[gd2] * levelWidth;
               if (map[gpos] === kSpace) {
                 map[gpos] = kMonster1 + (v - kGenerator1);
                 break;
               }
-              dd += 2;
             }
           }
         }
-        mx += dy;
       }
-      my += dx;
     }
     return null;
   };
@@ -390,15 +380,15 @@
     }
   };
   doPlayerMove = function doPlayerMove() {
-    var dd, di;
-    di = 0;
-    while (di < 3) {
+    var _a, _b, _c, dd, di;
+    _b = 0; _c = 3;
+    for (_a = 0, di = _b; (_b <= _c ? di < _c : di > _c); (_b <= _c ? di += 1 : di -= 1), _a++) {
       dd = (pDir + kSearchOrder[di]) & 7;
       if (move(dd)) {
-        return null;
+        break;
       }
-      di++;
     }
+    return null;
   };
   doButtons = function doButtons() {
     var d, deltaDown;

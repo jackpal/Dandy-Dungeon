@@ -913,19 +913,14 @@ pButtons: 0
 pOldButtons: 0
 pPlayerMoveTimer: 0
 
-
 loadLevel: () ->
   level: levels[currentLevel]
   map: []
   for line in level
-    len: line.length
-    x: 0
-    while x < len
+    for x in [0...line.length]
       map.push(encoding.indexOf(line.charAt(x)))
-      x++
   setPlayerStartPosition()
   paDir: -1
-
 
 findFirst: (item) ->
   for m, i in map
@@ -984,18 +979,14 @@ drawPicture: () ->
     baseY: tl[1]
     canvasTileWidth: tileWidth * 2
     canvasTileHeight: tileHeight * 2
-    y: 0
-    while y < windowTileHeight
-      x: 0
-      while x < windowTileWidth
+    for y in [0...windowTileHeight]
+      for x in [0...windowTileWidth]
         d: map[(baseX + x) + (baseY + y)*levelWidth]
         tx: tileWidth * (d & 15)
         ty: tileHeight * (d >> 4)
         context.drawImage(strike, tx, ty, tileWidth, tileHeight,
           x * canvasTileWidth, y * canvasTileHeight,
           canvasTileWidth, canvasTileHeight)
-        x++
-      y++
     null
 
 game: () ->
@@ -1089,17 +1080,13 @@ doBomb: () ->
     baseX: tl[0]
     baseY: tl[1]
 
-    y: 0
-    while y < windowTileHeight
-        x: 0
-        while x < windowTileWidth
+    for y in [0..windowTileHeight]
+        for x in [0..windowTileWidth]
             pos: (baseX + x) + (baseY + y) * levelWidth
             v: map[pos]
             if (v >= kMonster1 && v <= kMonster3) ||
                     (v >= kGenerator1 && v <= kGenerator3)
                 map[pos]: kSpace
-            x++
-        y++
     dirty: true
 
 toDelta: (a, b) ->
@@ -1128,16 +1115,13 @@ moveMonsters: () ->
     yBase: adjust(baseY, dy, Math.floor(rotor / dx))
     xEnd: baseX + windowTileWidth
     yEnd: baseY + windowTileHeight
-    my: yBase
-    while my < yEnd
-        mx: xBase
-        while mx < xEnd
+    for my in [yBase...yEnd] by dy
+        for mx in [xBase...xEnd] by dx
             pos: mx + my * levelWidth
             v: map[pos]
             if v >= kMonster1 && v <= kMonster3
                 mDir: kDeltaToDir[toDelta(py, my) + 1][toDelta(px, mx) + 1]
-                d: 0
-                while d < 3
+                for d in [0..2]
                     dd: (mDir + kSearchOrder[d]) & 7
                     npos: pos + kDirToDeltaX[dd] + kDirToDeltaY[dd] * levelWidth
                     nv: map[npos]
@@ -1154,21 +1138,16 @@ moveMonsters: () ->
                     else if nv >= kArrow && nv <= kArrow+7
                         # Don't try to walk around arrows.
                         break
-                    d++
             else if v >= kGenerator1 && v <= kGenerator3
                 ran_number: Math.floor(Math.random()*8)
                 if (ran_number < 4)
                     gd: ran_number * 2
-                    dd: 0
-                    while dd < 8
+                    for dd in [0...8] by 2
                         gd2: (gd + dd) % 7
                         gpos: pos + kDirToDeltaX[gd2] + kDirToDeltaY[gd2] * levelWidth
                         if map[gpos] == kSpace
                             map[gpos]: kMonster1 + (v - kGenerator1)
                             break
-                        dd += 2
-            mx += dy
-        my += dx
     null
 
 fire: () ->
@@ -1178,12 +1157,11 @@ fire: () ->
         paDir: pDir
 
 doPlayerMove: () ->
-  di: 0
-  while di < 3
+  for di in [0...3]
     dd: (pDir + kSearchOrder[di]) & 7;
     if move(dd)
-      return
-    di++
+      break
+  null
 
 doButtons: () ->
     deltaDown: pButtons & ~ pOldButtons
