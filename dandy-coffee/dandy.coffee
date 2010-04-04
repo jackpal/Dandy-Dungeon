@@ -1080,8 +1080,8 @@ doBomb: () ->
     baseX: tl[0]
     baseY: tl[1]
 
-    for y in [0..windowTileHeight]
-        for x in [0..windowTileWidth]
+    for y in [0...windowTileHeight]
+        for x in [0...windowTileWidth]
             pos: (baseX + x) + (baseY + y) * levelWidth
             v: map[pos]
             if (v >= kMonster1 && v <= kMonster3) ||
@@ -1121,7 +1121,7 @@ moveMonsters: () ->
             v: map[pos]
             if v >= kMonster1 && v <= kMonster3
                 mDir: kDeltaToDir[toDelta(py, my) + 1][toDelta(px, mx) + 1]
-                for d in [0..2]
+                for d in [0...3]
                     dd: (mDir + kSearchOrder[d]) & 7
                     npos: pos + kDirToDeltaX[dd] + kDirToDeltaY[dd] * levelWidth
                     nv: map[npos]

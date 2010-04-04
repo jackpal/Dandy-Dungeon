@@ -289,9 +289,9 @@
     baseX = tl[0];
     baseY = tl[1];
     _b = 0; _c = windowTileHeight;
-    for (_a = 0, y = _b; (_b <= _c ? y <= _c : y >= _c); (_b <= _c ? y += 1 : y -= 1), _a++) {
+    for (_a = 0, y = _b; (_b <= _c ? y < _c : y > _c); (_b <= _c ? y += 1 : y -= 1), _a++) {
       _e = 0; _f = windowTileWidth;
-      for (_d = 0, x = _e; (_e <= _f ? x <= _f : x >= _f); (_e <= _f ? x += 1 : x -= 1), _d++) {
+      for (_d = 0, x = _e; (_e <= _f ? x < _f : x > _f); (_e <= _f ? x += 1 : x -= 1), _d++) {
         pos = (baseX + x) + (baseY + y) * levelWidth;
         v = map[pos];
         (v >= kMonster1 && v <= kMonster3) || (v >= kGenerator1 && v <= kGenerator3) ? (map[pos] = kSpace) : null;
@@ -332,8 +332,8 @@
         v = map[pos];
         if (v >= kMonster1 && v <= kMonster3) {
           mDir = kDeltaToDir[toDelta(py, my) + 1][toDelta(px, mx) + 1];
-          _h = 0; _i = 2;
-          for (_g = 0, d = _h; (_h <= _i ? d <= _i : d >= _i); (_h <= _i ? d += 1 : d -= 1), _g++) {
+          _h = 0; _i = 3;
+          for (_g = 0, d = _h; (_h <= _i ? d < _i : d > _i); (_h <= _i ? d += 1 : d -= 1), _g++) {
             dd = (mDir + kSearchOrder[d]) & 7;
             npos = pos + kDirToDeltaX[dd] + kDirToDeltaY[dd] * levelWidth;
             nv = map[npos];
