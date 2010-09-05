@@ -1,0 +1,30 @@
+Microsoft Visual Studio Solution File, Format Version 8.00
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Dandy360", "Dandy360.vcproj", "{07A275D0-7E6A-4BAD-861F-C38A068941A2}"
+	ProjectSection(ProjectDependencies) = postProject
+	EndProjectSection
+EndProject
+Global
+	GlobalSection(SolutionConfiguration) = preSolution
+		Debug = Debug
+		Profile = Profile
+		Profile_FastCap = Profile_FastCap
+		Release = Release
+		Release_LTCG = Release_LTCG
+	EndGlobalSection
+	GlobalSection(ProjectConfiguration) = postSolution
+		{07A275D0-7E6A-4BAD-861F-C38A068941A2}.Debug.ActiveCfg = Debug|Xenon
+		{07A275D0-7E6A-4BAD-861F-C38A068941A2}.Debug.Build.0 = Debug|Xenon
+		{07A275D0-7E6A-4BAD-861F-C38A068941A2}.Profile.ActiveCfg = Profile|Xenon
+		{07A275D0-7E6A-4BAD-861F-C38A068941A2}.Profile.Build.0 = Profile|Xenon
+		{07A275D0-7E6A-4BAD-861F-C38A068941A2}.Profile_FastCap.ActiveCfg = Profile_FastCap|Xenon
+		{07A275D0-7E6A-4BAD-861F-C38A068941A2}.Profile_FastCap.Build.0 = Profile_FastCap|Xenon
+		{07A275D0-7E6A-4BAD-861F-C38A068941A2}.Release.ActiveCfg = Release|Xenon
+		{07A275D0-7E6A-4BAD-861F-C38A068941A2}.Release.Build.0 = Release|Xenon
+		{07A275D0-7E6A-4BAD-861F-C38A068941A2}.Release_LTCG.ActiveCfg = Release_LTCG|Xenon
+		{07A275D0-7E6A-4BAD-861F-C38A068941A2}.Release_LTCG.Build.0 = Release_LTCG|Xenon
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+	EndGlobalSection
+	GlobalSection(ExtensibilityAddIns) = postSolution
+	EndGlobalSection
+EndGlobal

@@ -1,6 +1,9 @@
 *.dll
+*.exe
+*.ncb
 *.pdb
 *.suo
+*.user
 bin
 obj
 Thumbs.db

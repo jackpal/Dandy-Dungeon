@@ -1,0 +1,78 @@
+<Project MSBuildVersion="1.2" DefaultTargets="Build">
+  <PropertyGroup>
+    <Property ProjectType="Local" />
+    <Property ProductVersion="8.0.30703" />
+    <Property SchemaVersion="2.0" />
+    <Property ProjectGuid="{733C84E7-58F2-4E09-AC82-78AFD7E7BDD3}" />
+    <Property Configuration="Debug" Condition=" '$(Configuration)' == '' " />
+    <Property ApplicationIcon="" />
+    <Property AssemblyKeyContainerName="" />
+    <Property AssemblyName="Dandy" />
+    <Property AssemblyOriginatorKeyFile="" />
+    <Property DefaultClientScript="JScript" />
+    <Property DefaultHTMLPageLayout="Grid" />
+    <Property DefaultTargetSchema="IE50" />
+    <Property DelaySign="false" />
+    <Property OutputType="WinExe" />
+    <Property RootNamespace="Dandy" />
+    <Property RunPostBuildEvent="OnBuildSuccess" />
+    <Property StartupObject="" />
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
+    <Property OutputPath="bin\Debug\" />
+    <Property AllowUnsafeBlocks="true" />
+    <Property BaseAddress="285212672" />
+    <Property CheckForOverflowUnderflow="false" />
+    <Property ConfigurationOverrideFile="" />
+    <Property DefineConstants="DEBUG;TRACE" />
+    <Property DocumentationFile="" />
+    <Property DebugSymbols="true" />
+    <Property FileAlignment="4096" />
+    <Property IncrementalBuild="true" />
+    <Property NoStdLib="false" />
+    <Property NoWarn="" />
+    <Property Optimize="false" />
+    <Property RegisterForComInterop="false" />
+    <Property RemoveIntegerChecks="false" />
+    <Property TreatWarningsAsErrors="false" />
+    <Property WarningLevel="4" />
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
+    <Property OutputPath="bin\Release\" />
+    <Property AllowUnsafeBlocks="false" />
+    <Property BaseAddress="285212672" />
+    <Property CheckForOverflowUnderflow="false" />
+    <Property ConfigurationOverrideFile="" />
+    <Property DefineConstants="TRACE" />
+    <Property DocumentationFile="" />
+    <Property DebugSymbols="false" />
+    <Property FileAlignment="4096" />
+    <Property IncrementalBuild="false" />
+    <Property NoStdLib="false" />
+    <Property NoWarn="" />
+    <Property Optimize="true" />
+    <Property RegisterForComInterop="false" />
+    <Property RemoveIntegerChecks="false" />
+    <Property TreatWarningsAsErrors="false" />
+    <Property WarningLevel="4" />
+  </PropertyGroup>
+  <ItemGroup>
+    <Item Type="Reference" Include="System" Name="System" />
+    <Item Type="Reference" Include="System.Windows.Forms" Name="System.Windows.Forms" />
+    <Item Type="Reference" Include="System.Drawing" Name="System.Drawing" />
+    <Item Type="Reference" Include="System.Data" Name="System.Data" HintPath="C:\WINDOWS\Microsoft.NET\Framework\v1.1.4322\System.Data.dll" />
+    <Item Type="Reference" Include="System.Xml" Name="System.XML" HintPath="C:\WINDOWS\Microsoft.NET\Framework\v1.1.4322\System.XML.dll" />
+    <Item Type="Reference" Include="Microsoft.DirectX" Name="Microsoft.DirectX" HintPath="C:\WINDOWS\Microsoft.NET\Managed DirectX\v9.00.0900\Microsoft.DirectX.dll" AssemblyFolderKey="hklm\managed directx 9.0" />
+    <Item Type="Reference" Include="Microsoft.DirectX.Direct3D" Name="Microsoft.DirectX.Direct3D" HintPath="C:\WINDOWS\Microsoft.NET\Managed DirectX\v9.00.0900\Microsoft.DirectX.Direct3D.dll" AssemblyFolderKey="hklm\managed directx 9.0" />
+    <Item Type="Reference" Include="Microsoft.DirectX.Direct3DX" Name="Microsoft.DirectX.Direct3DX" HintPath="C:\WINDOWS\Microsoft.NET\Managed DirectX\v9.00.0900\Microsoft.DirectX.Direct3DX.dll" AssemblyFolderKey="hklm\managed directx 9.0" />
+  </ItemGroup>
+  <ItemGroup>
+    <Item Type="Compile" Include="CSScheme.cs" SubType="Code" />
+    <Item Type="Compile" Include="Dandy.cs" SubType="Form" />
+  </ItemGroup>
+  <Import Project="$(MSBuildBinPath)\CSHARP.Targets" />
+  <PropertyGroup>
+    <Property PreBuildEvent="" />
+    <Property PostBuildEvent="" />
+  </PropertyGroup>
+</Project>

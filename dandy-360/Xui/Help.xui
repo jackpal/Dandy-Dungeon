@@ -1,0 +1,56 @@
+<XuiCanvas version="000c">
+<Properties>
+<Width>640.000000</Width>
+<Height>480.000000</Height>
+</Properties>
+<XuiScene>
+<Properties>
+<Id>XuiScene1</Id>
+<Width>477.000000</Width>
+<Height>354.000000</Height>
+<Position>83.500000,69.000000,0.000000</Position>
+</Properties>
+<XuiFigure>
+<Properties>
+<Width>482.000000</Width>
+<Height>360.000000</Height>
+<Position>-12.000000,-2.000000,0.000000</Position>
+<Fill>
+<Properties>
+<FillColor>0xffebebeb</FillColor>
+</Properties>
+</Fill>
+<Closed>true</Closed>
+<Points>4,0.000000,0.000000,0.000000,0.000000,482.000000,0.000000,0,482.000000,0.000000,482.000000,0.000000,482.000000,360.000000,0,482.000000,360.000000,482.000000,360.000000,0.000000,360.000000,0,0.000000,360.000000,0.000000,360.000000,0.000000,0.000000,0,</Points>
+</Properties>
+</XuiFigure>
+<XuiText>
+<Properties>
+<Id>XuiText1</Id>
+<Width>437.000000</Width>
+<Height>259.000000</Height>
+<Position>21.000002,12.000002,0.000000</Position>
+<Text>Dandy 360 is an old-school adventure game for one to four players. There are 26 levels in the dungeon, How far can you go?
+
+Controls:
+A : Fire Arrow
+B: Fire smart bomb
+Y : Eat Food
+Use D-pad or left thumbstick to move.</Text>
+<TextColor>0xff0f0f0f</TextColor>
+<DropShadowColor>0x800f0f0f</DropShadowColor>
+<TextStyle>0</TextStyle>
+</Properties>
+</XuiText>
+<XuiBackButton>
+<Properties>
+<Id>XuiBackButton1</Id>
+<Width>87.000000</Width>
+<Height>32.000000</Height>
+<Position>14.999999,308.000000,0.000000</Position>
+<Text>Back</Text>
+<PressKey>22593</PressKey>
+</Properties>
+</XuiBackButton>
+</XuiScene>
+</XuiCanvas>
