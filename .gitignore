@@ -1,0 +1,6 @@
+*.dll
+*.pdb
+*.suo
+bin
+obj
+Thumbs.db

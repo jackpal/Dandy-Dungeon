@@ -1,0 +1,58 @@
+"General"
+{
+"ProjectIdGuid" = "{CFF6FBA4-DEC4-4BF4-B8CC-72AC9B6A92A0}"
+}
+"Configurations"
+{
+    "Debug|Win32"
+    {
+    "ProjectType" = "DLL"
+    "OptLevel" = "Off"
+    "StrongNamingLevel" = "None"
+    "LanguageRestriction" = "None"
+    "OutputPath" = ""
+    "SearchPath" = ""
+    "StrongNameFile" = ""
+    "OutputBase" = ""
+    "CustomCommandLine" = "-o dandy.dll --define XBOX360 --progress -Ooff -g --define COMPILE --standalone -a font.fsi font.fs dandy.fs"
+    "CustomCompiler" = "C:\\Program Files\\FSharp-1.9.1.1\\bin\\fsc.exe"
+    "DebugCheck" = "TRUE"
+    "CustomCompilationCheck" = "TRUE"
+    "DebugStartMode" = "0"
+    "StartApp" = ""
+    "StartAppPath" = ""
+    "CustomStartupArguments" = ""
+    }
+    "Release|Win32"
+    {
+    "ProjectType" = "EXE"
+    "OptLevel" = "3"
+    "StrongNamingLevel" = "None"
+    "LanguageRestriction" = "Fast F#"
+    "OutputPath" = ""
+    "SearchPath" = ""
+    "StrongNameFile" = ""
+    "OutputBase" = ""
+    "CustomCommandLine" = ""
+    "CustomCompiler" = ""
+    "DebugCheck" = "FALSE"
+    "CustomCompilationCheck" = "FALSE"
+    "DebugStartMode" = "0"
+    "StartApp" = ""
+    "StartAppPath" = ""
+    "CustomStartupArguments" = ""
+    }
+}
+"Files"
+{
+    "dandy.fs"
+    {
+    "ProjRelPath" = "T"
+    }
+}
+"ProjStartupServices"
+{
+}
+"Globals"
+{
+}

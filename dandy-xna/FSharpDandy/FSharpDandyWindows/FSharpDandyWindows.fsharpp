@@ -1,0 +1,58 @@
+"General"
+{
+"ProjectIdGuid" = "{E673FA9C-E6FF-4987-B7C6-C492ECC7A514}"
+}
+"Configurations"
+{
+    "Debug|Win32"
+    {
+    "ProjectType" = "EXE"
+    "OptLevel" = "Off"
+    "StrongNamingLevel" = "None"
+    "LanguageRestriction" = "None"
+    "OutputPath" = ""
+    "SearchPath" = ""
+    "StrongNameFile" = ""
+    "OutputBase" = ""
+    "CustomCommandLine" = "-o dandy.dll --progress -Ooff -g --define COMPILE -a ..\\FSharpDandy\\font.fsi ..\\FSharpDandy\\font.fs ..\\FSharpDandy\\dandy.fs"
+    "CustomCompiler" = "C:\\Program Files\\FSharp-1.9.1.1\\bin\\fsc.exe"
+    "DebugCheck" = "TRUE"
+    "CustomCompilationCheck" = "TRUE"
+    "DebugStartMode" = "0"
+    "StartApp" = ""
+    "StartAppPath" = ""
+    "CustomStartupArguments" = ""
+    }
+    "Release|Win32"
+    {
+    "ProjectType" = "EXE"
+    "OptLevel" = "3"
+    "StrongNamingLevel" = "None"
+    "LanguageRestriction" = "Fast F#"
+    "OutputPath" = ""
+    "SearchPath" = ""
+    "StrongNameFile" = ""
+    "OutputBase" = ""
+    "CustomCommandLine" = ""
+    "CustomCompiler" = ""
+    "DebugCheck" = "FALSE"
+    "CustomCompilationCheck" = "FALSE"
+    "DebugStartMode" = "0"
+    "StartApp" = ""
+    "StartAppPath" = ""
+    "CustomStartupArguments" = ""
+    }
+}
+"Files"
+{
+    "..\\fsharpdandy\\dandy.fs"
+    {
+    "ProjRelPath" = "T"
+    }
+}
+"ProjStartupServices"
+{
+}
+"Globals"
+{
+}

@@ -1,0 +1,325 @@
+﻿<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <ProjectGuid>{89A76B2A-92E8-4E57-9B13-AEE968666668}</ProjectGuid>
+    <ProjectTypeGuids>{9F340DF3-2AED-4330-AC16-78AC2D9B4738};{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}</ProjectTypeGuids>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">x86</Platform>
+    <OutputType>WinExe</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>WindowsDandy</RootNamespace>
+    <AssemblyName>WindowsDandy</AssemblyName>
+    <XnaFrameworkVersion>v1.0</XnaFrameworkVersion>
+    <XnaPlatform>Windows</XnaPlatform>
+    <ApplicationIcon>
+    </ApplicationIcon>
+    <XNAGlobalContentPipelineAssemblies>Microsoft.Xna.Framework.Content.Pipeline.EffectImporter.dll;Microsoft.Xna.Framework.Content.Pipeline.FBXImporter.dll;Microsoft.Xna.Framework.Content.Pipeline.TextureImporter.dll;Microsoft.Xna.Framework.Content.Pipeline.XImporter.dll</XNAGlobalContentPipelineAssemblies>
+    <XNAProjectContentPipelineAssemblies>
+    </XNAProjectContentPipelineAssemblies>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|x86' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\x86\Debug</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <NoStdLib>true</NoStdLib>
+    <UseVSHostingProcess>false</UseVSHostingProcess>
+    <PlatformTarget>x86</PlatformTarget>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|x86' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\x86\Release</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <NoStdLib>true</NoStdLib>
+    <UseVSHostingProcess>false</UseVSHostingProcess>
+    <PlatformTarget>x86</PlatformTarget>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="dandy, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\FSharpDandy\FSharpDandyWindows\dandy.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Xna.Framework">
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Microsoft.Xna.Framework.Game">
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="mscorlib">
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="System">
+      <Private>False</Private>
+    </Reference>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Program.cs">
+      <XNAUseContentPipeline>false</XNAUseContentPipeline>
+      <Name>Program</Name>
+    </Compile>
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="..\..\Media\dandy.bmp">
+      <XNAUseContentPipeline>true</XNAUseContentPipeline>
+      <Importer>TextureImporter</Importer>
+      <Processor>SpriteTextureProcessor</Processor>
+      <Name>dandy</Name>
+      <Link>Media\dandy.bmp</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\..\Media\Levels\LEVEL.C">
+      <XNAUseContentPipeline>false</XNAUseContentPipeline>
+      <Name>LEVEL</Name>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>Media\Levels\LEVEL.C</Link>
+    </Content>
+    <Content Include="..\..\Media\Levels\LEVEL.H">
+      <XNAUseContentPipeline>false</XNAUseContentPipeline>
+      <Name>LEVEL</Name>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>Media\Levels\LEVEL.H</Link>
+    </Content>
+    <Content Include="..\..\Media\Levels\LEVEL.I">
+      <XNAUseContentPipeline>false</XNAUseContentPipeline>
+      <Name>LEVEL</Name>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>Media\Levels\LEVEL.I</Link>
+    </Content>
+    <Content Include="..\..\Media\Levels\LEVEL.S">
+      <XNAUseContentPipeline>false</XNAUseContentPipeline>
+      <Name>LEVEL</Name>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>Media\Levels\LEVEL.S</Link>
+    </Content>
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="..\..\Media\Sounds\bang.wav">
+      <XNAUseContentPipeline>false</XNAUseContentPipeline>
+      <Name>bang</Name>
+      <Link>Media\Sounds\bang.wav</Link>
+    </Content>
+    <Content Include="..\..\Media\Sounds\bomb.wav">
+      <XNAUseContentPipeline>false</XNAUseContentPipeline>
+      <Name>bomb</Name>
+      <Link>Media\Sounds\bomb.wav</Link>
+    </Content>
+    <Content Include="..\..\Media\Sounds\DandySounds.xap">
+      <XNAUseContentPipeline>true</XNAUseContentPipeline>
+      <Importer>XactImporter</Importer>
+      <Processor>XactProcessor</Processor>
+      <Name>DandySounds</Name>
+      <Link>Media\Sounds\DandySounds.xap</Link>
+    </Content>
+    <Content Include="..\..\Media\Sounds\doorOpen.wav">
+      <XNAUseContentPipeline>false</XNAUseContentPipeline>
+      <Name>doorOpen</Name>
+      <Link>Media\Sounds\doorOpen.wav</Link>
+    </Content>
+    <Content Include="..\..\Media\Sounds\goingDown.wav">
+      <XNAUseContentPipeline>false</XNAUseContentPipeline>
+      <Name>goingDown</Name>
+      <Link>Media\Sounds\goingDown.wav</Link>
+    </Content>
+    <Content Include="..\..\Media\Sounds\heart.wav">
+      <XNAUseContentPipeline>false</XNAUseContentPipeline>
+      <Name>heart</Name>
+      <Link>Media\Sounds\heart.wav</Link>
+    </Content>
+    <Content Include="..\..\Media\Sounds\kaboom.wav">
+      <XNAUseContentPipeline>false</XNAUseContentPipeline>
+      <Name>kaboom</Name>
+      <Link>Media\Sounds\kaboom.wav</Link>
+    </Content>
+    <Content Include="..\..\Media\Sounds\kaching.wav">
+      <XNAUseContentPipeline>false</XNAUseContentPipeline>
+      <Name>kaching</Name>
+      <Link>Media\Sounds\kaching.wav</Link>
+    </Content>
+    <Content Include="..\..\Media\Sounds\key.wav">
+      <XNAUseContentPipeline>false</XNAUseContentPipeline>
+      <Name>key</Name>
+      <Link>Media\Sounds\key.wav</Link>
+    </Content>
+    <Content Include="..\..\Media\Sounds\monsterpain.wav">
+      <XNAUseContentPipeline>false</XNAUseContentPipeline>
+      <Name>monsterpain</Name>
+      <Link>Media\Sounds\monsterpain.wav</Link>
+    </Content>
+    <Content Include="..\..\Media\Sounds\needkey.wav">
+      <XNAUseContentPipeline>false</XNAUseContentPipeline>
+      <Name>needkey</Name>
+      <Link>Media\Sounds\needkey.wav</Link>
+    </Content>
+    <Content Include="..\..\Media\Sounds\ouch.wav">
+      <XNAUseContentPipeline>false</XNAUseContentPipeline>
+      <Name>ouch</Name>
+      <Link>Media\Sounds\ouch.wav</Link>
+    </Content>
+    <Content Include="..\..\Media\Sounds\yum.wav">
+      <XNAUseContentPipeline>false</XNAUseContentPipeline>
+      <Name>yum</Name>
+      <Link>Media\Sounds\yum.wav</Link>
+    </Content>
+    <Content Include="Game.ico">
+      <XNAUseContentPipeline>false</XNAUseContentPipeline>
+      <Name>Game</Name>
+    </Content>
+    <None Include="..\..\Media\Levels\LEVEL.A">
+      <XNAUseContentPipeline>false</XNAUseContentPipeline>
+      <Name>LEVEL</Name>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>Media\Levels\LEVEL.A</Link>
+    </None>
+    <None Include="..\..\Media\Levels\LEVEL.B">
+      <XNAUseContentPipeline>false</XNAUseContentPipeline>
+      <Name>LEVEL</Name>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>Media\Levels\LEVEL.B</Link>
+    </None>
+    <None Include="..\..\Media\Levels\LEVEL.D">
+      <XNAUseContentPipeline>false</XNAUseContentPipeline>
+      <Name>LEVEL</Name>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>Media\Levels\LEVEL.D</Link>
+    </None>
+    <None Include="..\..\Media\Levels\LEVEL.E">
+      <XNAUseContentPipeline>false</XNAUseContentPipeline>
+      <Name>LEVEL</Name>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>Media\Levels\LEVEL.E</Link>
+    </None>
+    <None Include="..\..\Media\Levels\LEVEL.F">
+      <XNAUseContentPipeline>false</XNAUseContentPipeline>
+      <Name>LEVEL</Name>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>Media\Levels\LEVEL.F</Link>
+    </None>
+    <None Include="..\..\Media\Levels\LEVEL.G">
+      <XNAUseContentPipeline>false</XNAUseContentPipeline>
+      <Name>LEVEL</Name>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>Media\Levels\LEVEL.G</Link>
+    </None>
+    <None Include="..\..\Media\Levels\LEVEL.J">
+      <XNAUseContentPipeline>false</XNAUseContentPipeline>
+      <Name>LEVEL</Name>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>Media\Levels\LEVEL.J</Link>
+    </None>
+    <None Include="..\..\Media\Levels\LEVEL.K">
+      <XNAUseContentPipeline>false</XNAUseContentPipeline>
+      <Name>LEVEL</Name>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>Media\Levels\LEVEL.K</Link>
+    </None>
+    <None Include="..\..\Media\Levels\LEVEL.L">
+      <XNAUseContentPipeline>false</XNAUseContentPipeline>
+      <Name>LEVEL</Name>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>Media\Levels\LEVEL.L</Link>
+    </None>
+    <None Include="..\..\Media\Levels\LEVEL.M">
+      <XNAUseContentPipeline>false</XNAUseContentPipeline>
+      <Name>LEVEL</Name>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>Media\Levels\LEVEL.M</Link>
+    </None>
+    <None Include="..\..\Media\Levels\LEVEL.N">
+      <XNAUseContentPipeline>false</XNAUseContentPipeline>
+      <Name>LEVEL</Name>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>Media\Levels\LEVEL.N</Link>
+    </None>
+    <None Include="..\..\Media\Levels\LEVEL.O">
+      <XNAUseContentPipeline>false</XNAUseContentPipeline>
+      <Name>LEVEL</Name>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>Media\Levels\LEVEL.O</Link>
+    </None>
+    <None Include="..\..\Media\Levels\LEVEL.P">
+      <XNAUseContentPipeline>false</XNAUseContentPipeline>
+      <Name>LEVEL</Name>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>Media\Levels\LEVEL.P</Link>
+    </None>
+    <None Include="..\..\Media\Levels\LEVEL.Q">
+      <XNAUseContentPipeline>false</XNAUseContentPipeline>
+      <Name>LEVEL</Name>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>Media\Levels\LEVEL.Q</Link>
+    </None>
+    <None Include="..\..\Media\Levels\LEVEL.R">
+      <XNAUseContentPipeline>false</XNAUseContentPipeline>
+      <Name>LEVEL</Name>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>Media\Levels\LEVEL.R</Link>
+    </None>
+    <None Include="..\..\Media\Levels\LEVEL.T">
+      <XNAUseContentPipeline>false</XNAUseContentPipeline>
+      <Name>LEVEL</Name>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>Media\Levels\LEVEL.T</Link>
+    </None>
+    <None Include="..\..\Media\Levels\LEVEL.U">
+      <XNAUseContentPipeline>false</XNAUseContentPipeline>
+      <Name>LEVEL</Name>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>Media\Levels\LEVEL.U</Link>
+    </None>
+    <None Include="..\..\Media\Levels\LEVEL.V">
+      <XNAUseContentPipeline>false</XNAUseContentPipeline>
+      <Name>LEVEL</Name>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>Media\Levels\LEVEL.V</Link>
+    </None>
+    <None Include="..\..\Media\Levels\LEVEL.W">
+      <XNAUseContentPipeline>false</XNAUseContentPipeline>
+      <Name>LEVEL</Name>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>Media\Levels\LEVEL.W</Link>
+    </None>
+    <None Include="..\..\Media\Levels\LEVEL.X">
+      <XNAUseContentPipeline>false</XNAUseContentPipeline>
+      <Importer>XImporter</Importer>
+      <Processor>ModelProcessor</Processor>
+      <Name>LEVEL</Name>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>Media\Levels\LEVEL.X</Link>
+    </None>
+    <None Include="..\..\Media\Levels\LEVEL.Y">
+      <XNAUseContentPipeline>false</XNAUseContentPipeline>
+      <Name>LEVEL</Name>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>Media\Levels\LEVEL.Y</Link>
+    </None>
+    <None Include="..\..\Media\Levels\LEVEL.Z">
+      <XNAUseContentPipeline>false</XNAUseContentPipeline>
+      <Name>LEVEL</Name>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>Media\Levels\LEVEL.Z</Link>
+    </None>
+    <Content Include="Media\Fonts\ui.spritefont">
+      <XNAUseContentPipeline>true</XNAUseContentPipeline>
+      <Importer>FontDescriptionImporter</Importer>
+      <Processor>FontDescriptionProcessor</Processor>
+      <Name>ui</Name>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+  <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
+  <Import Project="$(MSBuildExtensionsPath)\Microsoft\XNA\Game Studio Express\v1.0\Microsoft.Xna.ContentPipeline.targets" />
+  <Import Project="$(MSBuildExtensionsPath)\Microsoft\XNA\Game Studio Express\v1.0\Microsoft.Xna.Common.targets" />
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>

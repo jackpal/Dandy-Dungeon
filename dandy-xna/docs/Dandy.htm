@@ -1,0 +1,2038 @@
+<html xmlns:v="urn:schemas-microsoft-com:vml"
+xmlns:o="urn:schemas-microsoft-com:office:office"
+xmlns:w="urn:schemas-microsoft-com:office:word"
+xmlns:m="http://schemas.microsoft.com/office/2004/12/omml"
+xmlns="http://www.w3.org/TR/REC-html40">
+
+<head>
+<meta http-equiv=Content-Type content="text/html; charset=big5">
+<meta name=ProgId content=Word.Document>
+<meta name=Generator content="Microsoft Word 12">
+<meta name=Originator content="Microsoft Word 12">
+<link rel=File-List href="Dandy.files/filelist.xml">
+<link rel=Edit-Time-Data href="Dandy.files/editdata.mso">
+<!--[if !mso]>
+<style>
+v\:* {behavior:url(#default#VML);}
+o\:* {behavior:url(#default#VML);}
+w\:* {behavior:url(#default#VML);}
+.shape {behavior:url(#default#VML);}
+</style>
+<![endif]-->
+<title>Dandy Dungeon in FSharp</title>
+<!--[if gte mso 9]><xml>
+ <o:DocumentProperties>
+  <o:Author>user</o:Author>
+  <o:LastAuthor>Jack</o:LastAuthor>
+  <o:Revision>7</o:Revision>
+  <o:TotalTime>114</o:TotalTime>
+  <o:Created>2006-05-21T03:53:00Z</o:Created>
+  <o:LastSaved>2007-03-03T07:08:00Z</o:LastSaved>
+  <o:Pages>4</o:Pages>
+  <o:Words>1934</o:Words>
+  <o:Characters>11029</o:Characters>
+  <o:Lines>91</o:Lines>
+  <o:Paragraphs>25</o:Paragraphs>
+  <o:CharactersWithSpaces>12938</o:CharactersWithSpaces>
+  <o:Version>12.00</o:Version>
+ </o:DocumentProperties>
+</xml><![endif]-->
+<link rel=themeData href="Dandy.files/themedata.thmx">
+<link rel=colorSchemeMapping href="Dandy.files/colorschememapping.xml">
+<!--[if gte mso 9]><xml>
+ <w:WordDocument>
+  <w:TrackMoves>false</w:TrackMoves>
+  <w:TrackFormatting/>
+  <w:DoNotHyphenateCaps/>
+  <w:PunctuationKerning/>
+  <w:DisplayHorizontalDrawingGridEvery>0</w:DisplayHorizontalDrawingGridEvery>
+  <w:DisplayVerticalDrawingGridEvery>2</w:DisplayVerticalDrawingGridEvery>
+  <w:ValidateAgainstSchemas/>
+  <w:SaveIfXMLInvalid>false</w:SaveIfXMLInvalid>
+  <w:IgnoreMixedContent>false</w:IgnoreMixedContent>
+  <w:AlwaysShowPlaceholderText>false</w:AlwaysShowPlaceholderText>
+  <w:DoNotPromoteQF/>
+  <w:LidThemeOther>EN-US</w:LidThemeOther>
+  <w:LidThemeAsian>X-NONE</w:LidThemeAsian>
+  <w:LidThemeComplexScript>X-NONE</w:LidThemeComplexScript>
+  <w:Compatibility>
+   <w:SpaceForUL/>
+   <w:BalanceSingleByteDoubleByteWidth/>
+   <w:DoNotLeaveBackslashAlone/>
+   <w:ULTrailSpace/>
+   <w:DoNotExpandShiftReturn/>
+   <w:AdjustLineHeightInTable/>
+   <w:BreakWrappedTables/>
+   <w:SnapToGridInCell/>
+   <w:WrapTextWithPunct/>
+   <w:UseAsianBreakRules/>
+   <w:DontGrowAutofit/>
+   <w:SplitPgBreakAndParaMark/>
+   <w:DontVertAlignCellWithSp/>
+   <w:DontBreakConstrainedForcedTables/>
+   <w:DontVertAlignInTxbx/>
+   <w:Word11KerningPairs/>
+   <w:CachedColBalance/>
+   <w:UseFELayout/>
+  </w:Compatibility>
+  <w:BrowserLevel>MicrosoftInternetExplorer4</w:BrowserLevel>
+  <m:mathPr>
+   <m:mathFont m:val="Cambria Math"/>
+   <m:brkBin m:val="before"/>
+   <m:brkBinSub m:val="--"/>
+   <m:smallFrac m:val="off"/>
+   <m:dispDef/>
+   <m:lMargin m:val="0"/>
+   <m:rMargin m:val="0"/>
+   <m:defJc m:val="centerGroup"/>
+   <m:wrapIndent m:val="1440"/>
+   <m:intLim m:val="subSup"/>
+   <m:naryLim m:val="undOvr"/>
+  </m:mathPr></w:WordDocument>
+</xml><![endif]--><!--[if gte mso 9]><xml>
+ <w:LatentStyles DefLockedState="false" DefUnhideWhenUsed="true"
+  DefSemiHidden="true" DefQFormat="false" DefPriority="99"
+  LatentStyleCount="267">
+  <w:LsdException Locked="false" Priority="0" SemiHidden="false"
+   UnhideWhenUsed="false" QFormat="true" Name="Normal"/>
+  <w:LsdException Locked="false" Priority="9" SemiHidden="false"
+   UnhideWhenUsed="false" QFormat="true" Name="heading 1"/>
+  <w:LsdException Locked="false" Priority="9" SemiHidden="false"
+   UnhideWhenUsed="false" QFormat="true" Name="heading 2"/>
+  <w:LsdException Locked="false" Priority="9" SemiHidden="false"
+   UnhideWhenUsed="false" QFormat="true" Name="heading 3"/>
+  <w:LsdException Locked="false" Priority="9" QFormat="true" Name="heading 4"/>
+  <w:LsdException Locked="false" Priority="9" QFormat="true" Name="heading 5"/>
+  <w:LsdException Locked="false" Priority="9" QFormat="true" Name="heading 6"/>
+  <w:LsdException Locked="false" Priority="9" QFormat="true" Name="heading 7"/>
+  <w:LsdException Locked="false" Priority="9" QFormat="true" Name="heading 8"/>
+  <w:LsdException Locked="false" Priority="9" QFormat="true" Name="heading 9"/>
+  <w:LsdException Locked="false" Priority="39" Name="toc 1"/>
+  <w:LsdException Locked="false" Priority="39" Name="toc 2"/>
+  <w:LsdException Locked="false" Priority="39" Name="toc 3"/>
+  <w:LsdException Locked="false" Priority="39" Name="toc 4"/>
+  <w:LsdException Locked="false" Priority="39" Name="toc 5"/>
+  <w:LsdException Locked="false" Priority="39" Name="toc 6"/>
+  <w:LsdException Locked="false" Priority="39" Name="toc 7"/>
+  <w:LsdException Locked="false" Priority="39" Name="toc 8"/>
+  <w:LsdException Locked="false" Priority="39" Name="toc 9"/>
+  <w:LsdException Locked="false" Priority="35" QFormat="true" Name="caption"/>
+  <w:LsdException Locked="false" Priority="10" SemiHidden="false"
+   UnhideWhenUsed="false" QFormat="true" Name="Title"/>
+  <w:LsdException Locked="false" Priority="1" Name="Default Paragraph Font"/>
+  <w:LsdException Locked="false" Priority="11" SemiHidden="false"
+   UnhideWhenUsed="false" QFormat="true" Name="Subtitle"/>
+  <w:LsdException Locked="false" Priority="22" SemiHidden="false"
+   UnhideWhenUsed="false" QFormat="true" Name="Strong"/>
+  <w:LsdException Locked="false" Priority="20" SemiHidden="false"
+   UnhideWhenUsed="false" QFormat="true" Name="Emphasis"/>
+  <w:LsdException Locked="false" Priority="59" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Table Grid"/>
+  <w:LsdException Locked="false" UnhideWhenUsed="false" Name="Placeholder Text"/>
+  <w:LsdException Locked="false" Priority="1" SemiHidden="false"
+   UnhideWhenUsed="false" QFormat="true" Name="No Spacing"/>
+  <w:LsdException Locked="false" Priority="60" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Light Shading"/>
+  <w:LsdException Locked="false" Priority="61" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Light List"/>
+  <w:LsdException Locked="false" Priority="62" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Light Grid"/>
+  <w:LsdException Locked="false" Priority="63" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Medium Shading 1"/>
+  <w:LsdException Locked="false" Priority="64" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Medium Shading 2"/>
+  <w:LsdException Locked="false" Priority="65" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Medium List 1"/>
+  <w:LsdException Locked="false" Priority="66" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Medium List 2"/>
+  <w:LsdException Locked="false" Priority="67" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Medium Grid 1"/>
+  <w:LsdException Locked="false" Priority="68" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Medium Grid 2"/>
+  <w:LsdException Locked="false" Priority="69" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Medium Grid 3"/>
+  <w:LsdException Locked="false" Priority="70" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Dark List"/>
+  <w:LsdException Locked="false" Priority="71" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Colorful Shading"/>
+  <w:LsdException Locked="false" Priority="72" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Colorful List"/>
+  <w:LsdException Locked="false" Priority="73" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Colorful Grid"/>
+  <w:LsdException Locked="false" Priority="60" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Light Shading Accent 1"/>
+  <w:LsdException Locked="false" Priority="61" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Light List Accent 1"/>
+  <w:LsdException Locked="false" Priority="62" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Light Grid Accent 1"/>
+  <w:LsdException Locked="false" Priority="63" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Medium Shading 1 Accent 1"/>
+  <w:LsdException Locked="false" Priority="64" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Medium Shading 2 Accent 1"/>
+  <w:LsdException Locked="false" Priority="65" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Medium List 1 Accent 1"/>
+  <w:LsdException Locked="false" UnhideWhenUsed="false" Name="Revision"/>
+  <w:LsdException Locked="false" Priority="34" SemiHidden="false"
+   UnhideWhenUsed="false" QFormat="true" Name="List Paragraph"/>
+  <w:LsdException Locked="false" Priority="29" SemiHidden="false"
+   UnhideWhenUsed="false" QFormat="true" Name="Quote"/>
+  <w:LsdException Locked="false" Priority="30" SemiHidden="false"
+   UnhideWhenUsed="false" QFormat="true" Name="Intense Quote"/>
+  <w:LsdException Locked="false" Priority="66" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Medium List 2 Accent 1"/>
+  <w:LsdException Locked="false" Priority="67" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Medium Grid 1 Accent 1"/>
+  <w:LsdException Locked="false" Priority="68" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Medium Grid 2 Accent 1"/>
+  <w:LsdException Locked="false" Priority="69" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Medium Grid 3 Accent 1"/>
+  <w:LsdException Locked="false" Priority="70" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Dark List Accent 1"/>
+  <w:LsdException Locked="false" Priority="71" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Colorful Shading Accent 1"/>
+  <w:LsdException Locked="false" Priority="72" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Colorful List Accent 1"/>
+  <w:LsdException Locked="false" Priority="73" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Colorful Grid Accent 1"/>
+  <w:LsdException Locked="false" Priority="60" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Light Shading Accent 2"/>
+  <w:LsdException Locked="false" Priority="61" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Light List Accent 2"/>
+  <w:LsdException Locked="false" Priority="62" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Light Grid Accent 2"/>
+  <w:LsdException Locked="false" Priority="63" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Medium Shading 1 Accent 2"/>
+  <w:LsdException Locked="false" Priority="64" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Medium Shading 2 Accent 2"/>
+  <w:LsdException Locked="false" Priority="65" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Medium List 1 Accent 2"/>
+  <w:LsdException Locked="false" Priority="66" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Medium List 2 Accent 2"/>
+  <w:LsdException Locked="false" Priority="67" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Medium Grid 1 Accent 2"/>
+  <w:LsdException Locked="false" Priority="68" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Medium Grid 2 Accent 2"/>
+  <w:LsdException Locked="false" Priority="69" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Medium Grid 3 Accent 2"/>
+  <w:LsdException Locked="false" Priority="70" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Dark List Accent 2"/>
+  <w:LsdException Locked="false" Priority="71" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Colorful Shading Accent 2"/>
+  <w:LsdException Locked="false" Priority="72" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Colorful List Accent 2"/>
+  <w:LsdException Locked="false" Priority="73" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Colorful Grid Accent 2"/>
+  <w:LsdException Locked="false" Priority="60" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Light Shading Accent 3"/>
+  <w:LsdException Locked="false" Priority="61" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Light List Accent 3"/>
+  <w:LsdException Locked="false" Priority="62" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Light Grid Accent 3"/>
+  <w:LsdException Locked="false" Priority="63" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Medium Shading 1 Accent 3"/>
+  <w:LsdException Locked="false" Priority="64" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Medium Shading 2 Accent 3"/>
+  <w:LsdException Locked="false" Priority="65" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Medium List 1 Accent 3"/>
+  <w:LsdException Locked="false" Priority="66" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Medium List 2 Accent 3"/>
+  <w:LsdException Locked="false" Priority="67" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Medium Grid 1 Accent 3"/>
+  <w:LsdException Locked="false" Priority="68" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Medium Grid 2 Accent 3"/>
+  <w:LsdException Locked="false" Priority="69" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Medium Grid 3 Accent 3"/>
+  <w:LsdException Locked="false" Priority="70" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Dark List Accent 3"/>
+  <w:LsdException Locked="false" Priority="71" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Colorful Shading Accent 3"/>
+  <w:LsdException Locked="false" Priority="72" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Colorful List Accent 3"/>
+  <w:LsdException Locked="false" Priority="73" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Colorful Grid Accent 3"/>
+  <w:LsdException Locked="false" Priority="60" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Light Shading Accent 4"/>
+  <w:LsdException Locked="false" Priority="61" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Light List Accent 4"/>
+  <w:LsdException Locked="false" Priority="62" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Light Grid Accent 4"/>
+  <w:LsdException Locked="false" Priority="63" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Medium Shading 1 Accent 4"/>
+  <w:LsdException Locked="false" Priority="64" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Medium Shading 2 Accent 4"/>
+  <w:LsdException Locked="false" Priority="65" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Medium List 1 Accent 4"/>
+  <w:LsdException Locked="false" Priority="66" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Medium List 2 Accent 4"/>
+  <w:LsdException Locked="false" Priority="67" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Medium Grid 1 Accent 4"/>
+  <w:LsdException Locked="false" Priority="68" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Medium Grid 2 Accent 4"/>
+  <w:LsdException Locked="false" Priority="69" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Medium Grid 3 Accent 4"/>
+  <w:LsdException Locked="false" Priority="70" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Dark List Accent 4"/>
+  <w:LsdException Locked="false" Priority="71" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Colorful Shading Accent 4"/>
+  <w:LsdException Locked="false" Priority="72" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Colorful List Accent 4"/>
+  <w:LsdException Locked="false" Priority="73" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Colorful Grid Accent 4"/>
+  <w:LsdException Locked="false" Priority="60" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Light Shading Accent 5"/>
+  <w:LsdException Locked="false" Priority="61" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Light List Accent 5"/>
+  <w:LsdException Locked="false" Priority="62" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Light Grid Accent 5"/>
+  <w:LsdException Locked="false" Priority="63" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Medium Shading 1 Accent 5"/>
+  <w:LsdException Locked="false" Priority="64" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Medium Shading 2 Accent 5"/>
+  <w:LsdException Locked="false" Priority="65" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Medium List 1 Accent 5"/>
+  <w:LsdException Locked="false" Priority="66" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Medium List 2 Accent 5"/>
+  <w:LsdException Locked="false" Priority="67" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Medium Grid 1 Accent 5"/>
+  <w:LsdException Locked="false" Priority="68" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Medium Grid 2 Accent 5"/>
+  <w:LsdException Locked="false" Priority="69" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Medium Grid 3 Accent 5"/>
+  <w:LsdException Locked="false" Priority="70" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Dark List Accent 5"/>
+  <w:LsdException Locked="false" Priority="71" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Colorful Shading Accent 5"/>
+  <w:LsdException Locked="false" Priority="72" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Colorful List Accent 5"/>
+  <w:LsdException Locked="false" Priority="73" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Colorful Grid Accent 5"/>
+  <w:LsdException Locked="false" Priority="60" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Light Shading Accent 6"/>
+  <w:LsdException Locked="false" Priority="61" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Light List Accent 6"/>
+  <w:LsdException Locked="false" Priority="62" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Light Grid Accent 6"/>
+  <w:LsdException Locked="false" Priority="63" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Medium Shading 1 Accent 6"/>
+  <w:LsdException Locked="false" Priority="64" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Medium Shading 2 Accent 6"/>
+  <w:LsdException Locked="false" Priority="65" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Medium List 1 Accent 6"/>
+  <w:LsdException Locked="false" Priority="66" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Medium List 2 Accent 6"/>
+  <w:LsdException Locked="false" Priority="67" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Medium Grid 1 Accent 6"/>
+  <w:LsdException Locked="false" Priority="68" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Medium Grid 2 Accent 6"/>
+  <w:LsdException Locked="false" Priority="69" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Medium Grid 3 Accent 6"/>
+  <w:LsdException Locked="false" Priority="70" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Dark List Accent 6"/>
+  <w:LsdException Locked="false" Priority="71" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Colorful Shading Accent 6"/>
+  <w:LsdException Locked="false" Priority="72" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Colorful List Accent 6"/>
+  <w:LsdException Locked="false" Priority="73" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Colorful Grid Accent 6"/>
+  <w:LsdException Locked="false" Priority="19" SemiHidden="false"
+   UnhideWhenUsed="false" QFormat="true" Name="Subtle Emphasis"/>
+  <w:LsdException Locked="false" Priority="21" SemiHidden="false"
+   UnhideWhenUsed="false" QFormat="true" Name="Intense Emphasis"/>
+  <w:LsdException Locked="false" Priority="31" SemiHidden="false"
+   UnhideWhenUsed="false" QFormat="true" Name="Subtle Reference"/>
+  <w:LsdException Locked="false" Priority="32" SemiHidden="false"
+   UnhideWhenUsed="false" QFormat="true" Name="Intense Reference"/>
+  <w:LsdException Locked="false" Priority="33" SemiHidden="false"
+   UnhideWhenUsed="false" QFormat="true" Name="Book Title"/>
+  <w:LsdException Locked="false" Priority="37" Name="Bibliography"/>
+  <w:LsdException Locked="false" Priority="39" QFormat="true" Name="TOC Heading"/>
+ </w:LatentStyles>
+</xml><![endif]-->
+<style>
+<!--
+ /* Font Definitions */
+ @font-face
+	{font-family:Wingdings;
+	panose-1:5 0 0 0 0 0 0 0 0 0;
+	mso-font-charset:2;
+	mso-generic-font-family:auto;
+	mso-font-pitch:variable;
+	mso-font-signature:0 268435456 0 0 -2147483648 0;}
+@font-face
+	{font-family:PMingLiU;
+	panose-1:2 2 5 0 0 0 0 0 0 0;
+	mso-font-alt:PMingLiU;
+	mso-font-charset:136;
+	mso-generic-font-family:roman;
+	mso-font-pitch:auto;
+	mso-font-signature:-1610611969 684719354 22 0 1048577 0;}
+@font-face
+	{font-family:MingLiU;
+	panose-1:2 2 5 9 0 0 0 0 0 0;
+	mso-font-alt:MingLiU;
+	mso-font-charset:136;
+	mso-generic-font-family:roman;
+	mso-font-pitch:auto;
+	mso-font-signature:-1610611969 684719354 22 0 1048577 0;}
+@font-face
+	{font-family:"Cambria Math";
+	panose-1:2 4 5 3 5 4 6 3 2 4;
+	mso-font-charset:1;
+	mso-generic-font-family:roman;
+	mso-font-format:other;
+	mso-font-pitch:variable;
+	mso-font-signature:0 0 0 0 0 0;}
+@font-face
+	{font-family:Tahoma;
+	panose-1:2 11 6 4 3 5 4 4 2 4;
+	mso-font-charset:0;
+	mso-generic-font-family:swiss;
+	mso-font-pitch:variable;
+	mso-font-signature:-520082689 -1073717157 41 0 66047 0;}
+@font-face
+	{font-family:Consolas;
+	panose-1:2 11 6 9 2 2 4 3 2 4;
+	mso-font-charset:0;
+	mso-generic-font-family:roman;
+	mso-font-format:other;
+	mso-font-pitch:auto;
+	mso-font-signature:0 0 0 0 0 0;}
+@font-face
+	{font-family:"\@PMingLiU";
+	panose-1:2 2 5 0 0 0 0 0 0 0;
+	mso-font-charset:136;
+	mso-generic-font-family:roman;
+	mso-font-pitch:auto;
+	mso-font-signature:-1610611969 684719354 22 0 1048577 0;}
+@font-face
+	{font-family:"\@MingLiU";
+	panose-1:2 2 5 9 0 0 0 0 0 0;
+	mso-font-charset:136;
+	mso-generic-font-family:roman;
+	mso-font-pitch:auto;
+	mso-font-signature:-1610611969 684719354 22 0 1048577 0;}
+ /* Style Definitions */
+ p.MsoNormal, li.MsoNormal, div.MsoNormal
+	{mso-style-unhide:no;
+	mso-style-qformat:yes;
+	mso-style-parent:"";
+	margin:0in;
+	margin-bottom:.0001pt;
+	mso-pagination:none;
+	font-size:12.0pt;
+	font-family:"Times New Roman","serif";
+	mso-fareast-font-family:PMingLiU;
+	mso-font-kerning:1.0pt;
+	mso-fareast-language:ZH-TW;}
+h1
+	{mso-style-priority:9;
+	mso-style-unhide:no;
+	mso-style-qformat:yes;
+	mso-style-link:"Heading 1 Char";
+	mso-style-next:\5167\6587;
+	margin-top:9.0pt;
+	margin-right:0in;
+	margin-bottom:9.0pt;
+	margin-left:0in;
+	line-height:300%;
+	mso-pagination:none;
+	page-break-after:avoid;
+	mso-outline-level:1;
+	font-size:26.0pt;
+	font-family:"Arial","sans-serif";
+	mso-fareast-font-family:PMingLiU;
+	mso-bidi-font-family:"Times New Roman";
+	mso-font-kerning:26.0pt;
+	mso-fareast-language:ZH-TW;
+	font-weight:bold;}
+h2
+	{mso-style-priority:9;
+	mso-style-unhide:no;
+	mso-style-qformat:yes;
+	mso-style-link:"Heading 2 Char";
+	mso-style-next:\5167\6587;
+	margin:0in;
+	margin-bottom:.0001pt;
+	line-height:300%;
+	mso-pagination:none;
+	page-break-after:avoid;
+	mso-outline-level:2;
+	font-size:24.0pt;
+	font-family:"Arial","sans-serif";
+	mso-fareast-font-family:PMingLiU;
+	mso-bidi-font-family:"Times New Roman";
+	mso-font-kerning:1.0pt;
+	mso-fareast-language:ZH-TW;
+	font-weight:bold;}
+h3
+	{mso-style-priority:9;
+	mso-style-unhide:no;
+	mso-style-qformat:yes;
+	mso-style-link:"Heading 3 Char";
+	mso-style-next:\5167\6587;
+	margin:0in;
+	margin-bottom:.0001pt;
+	line-height:300%;
+	mso-pagination:none;
+	page-break-after:avoid;
+	mso-outline-level:3;
+	font-size:18.0pt;
+	font-family:"Arial","sans-serif";
+	mso-fareast-font-family:PMingLiU;
+	mso-bidi-font-family:"Times New Roman";
+	mso-font-kerning:1.0pt;
+	mso-fareast-language:ZH-TW;
+	font-weight:bold;}
+p.MsoDate, li.MsoDate, div.MsoDate
+	{mso-style-noshow:yes;
+	mso-style-priority:99;
+	mso-style-link:"Date Char";
+	mso-style-next:\5167\6587;
+	margin:0in;
+	margin-bottom:.0001pt;
+	text-align:right;
+	mso-pagination:none;
+	font-size:12.0pt;
+	font-family:"MingLiU","serif";
+	mso-hansi-font-family:"Courier New";
+	mso-bidi-font-family:"Times New Roman";
+	mso-font-kerning:1.0pt;
+	mso-fareast-language:ZH-TW;}
+a:link, span.MsoHyperlink
+	{mso-style-priority:99;
+	color:#0066A7;
+	mso-text-animation:none;
+	text-decoration:none;
+	text-underline:none;
+	text-decoration:none;
+	text-line-through:none;}
+a:visited, span.MsoHyperlinkFollowed
+	{mso-style-noshow:yes;
+	mso-style-priority:99;
+	color:purple;
+	mso-themecolor:followedhyperlink;
+	text-decoration:underline;
+	text-underline:single;}
+p.MsoPlainText, li.MsoPlainText, div.MsoPlainText
+	{mso-style-priority:99;
+	mso-style-link:"Plain Text Char";
+	margin:0in;
+	margin-bottom:.0001pt;
+	mso-pagination:none;
+	font-size:12.0pt;
+	font-family:"MingLiU","serif";
+	mso-hansi-font-family:"Courier New";
+	mso-bidi-font-family:"Times New Roman";
+	mso-font-kerning:1.0pt;
+	mso-fareast-language:ZH-TW;}
+p
+	{mso-style-noshow:yes;
+	mso-style-priority:99;
+	mso-margin-top-alt:auto;
+	margin-right:0in;
+	mso-margin-bottom-alt:auto;
+	margin-left:0in;
+	mso-pagination:widow-orphan;
+	font-size:12.0pt;
+	font-family:"Times New Roman","serif";
+	mso-fareast-font-family:"Times New Roman";}
+p.MsoAcetate, li.MsoAcetate, div.MsoAcetate
+	{mso-style-noshow:yes;
+	mso-style-priority:99;
+	mso-style-link:"Balloon Text Char";
+	margin:0in;
+	margin-bottom:.0001pt;
+	mso-pagination:none;
+	font-size:8.0pt;
+	font-family:"Tahoma","sans-serif";
+	mso-fareast-font-family:PMingLiU;
+	mso-font-kerning:1.0pt;
+	mso-fareast-language:ZH-TW;}
+p.MsoListParagraph, li.MsoListParagraph, div.MsoListParagraph
+	{mso-style-priority:34;
+	mso-style-unhide:no;
+	mso-style-qformat:yes;
+	margin-top:0in;
+	margin-right:0in;
+	margin-bottom:0in;
+	margin-left:.5in;
+	margin-bottom:.0001pt;
+	mso-add-space:auto;
+	mso-pagination:none;
+	font-size:12.0pt;
+	font-family:"Times New Roman","serif";
+	mso-fareast-font-family:PMingLiU;
+	mso-font-kerning:1.0pt;
+	mso-fareast-language:ZH-TW;}
+p.MsoListParagraphCxSpFirst, li.MsoListParagraphCxSpFirst, div.MsoListParagraphCxSpFirst
+	{mso-style-priority:34;
+	mso-style-unhide:no;
+	mso-style-qformat:yes;
+	mso-style-type:export-only;
+	margin-top:0in;
+	margin-right:0in;
+	margin-bottom:0in;
+	margin-left:.5in;
+	margin-bottom:.0001pt;
+	mso-add-space:auto;
+	mso-pagination:none;
+	font-size:12.0pt;
+	font-family:"Times New Roman","serif";
+	mso-fareast-font-family:PMingLiU;
+	mso-font-kerning:1.0pt;
+	mso-fareast-language:ZH-TW;}
+p.MsoListParagraphCxSpMiddle, li.MsoListParagraphCxSpMiddle, div.MsoListParagraphCxSpMiddle
+	{mso-style-priority:34;
+	mso-style-unhide:no;
+	mso-style-qformat:yes;
+	mso-style-type:export-only;
+	margin-top:0in;
+	margin-right:0in;
+	margin-bottom:0in;
+	margin-left:.5in;
+	margin-bottom:.0001pt;
+	mso-add-space:auto;
+	mso-pagination:none;
+	font-size:12.0pt;
+	font-family:"Times New Roman","serif";
+	mso-fareast-font-family:PMingLiU;
+	mso-font-kerning:1.0pt;
+	mso-fareast-language:ZH-TW;}
+p.MsoListParagraphCxSpLast, li.MsoListParagraphCxSpLast, div.MsoListParagraphCxSpLast
+	{mso-style-priority:34;
+	mso-style-unhide:no;
+	mso-style-qformat:yes;
+	mso-style-type:export-only;
+	margin-top:0in;
+	margin-right:0in;
+	margin-bottom:0in;
+	margin-left:.5in;
+	margin-bottom:.0001pt;
+	mso-add-space:auto;
+	mso-pagination:none;
+	font-size:12.0pt;
+	font-family:"Times New Roman","serif";
+	mso-fareast-font-family:PMingLiU;
+	mso-font-kerning:1.0pt;
+	mso-fareast-language:ZH-TW;}
+p.a, li.a, div.a
+	{mso-style-name:\5167\6587;
+	mso-style-unhide:no;
+	margin:0in;
+	margin-bottom:.0001pt;
+	mso-pagination:none;
+	font-size:12.0pt;
+	font-family:"Times New Roman","serif";
+	mso-fareast-font-family:PMingLiU;
+	mso-font-kerning:1.0pt;
+	mso-fareast-language:ZH-TW;}
+span.Heading1Char
+	{mso-style-name:"Heading 1 Char";
+	mso-style-priority:9;
+	mso-style-unhide:no;
+	mso-style-locked:yes;
+	mso-style-link:"Heading 1";
+	mso-ansi-font-size:14.0pt;
+	mso-bidi-font-size:14.0pt;
+	font-family:"Cambria","serif";
+	mso-ascii-font-family:Cambria;
+	mso-ascii-theme-font:major-latin;
+	mso-fareast-font-family:"Times New Roman";
+	mso-fareast-theme-font:major-fareast;
+	mso-hansi-font-family:Cambria;
+	mso-hansi-theme-font:major-latin;
+	mso-bidi-font-family:"Times New Roman";
+	mso-bidi-theme-font:major-bidi;
+	color:#365F91;
+	mso-themecolor:accent1;
+	mso-themeshade:191;
+	mso-font-kerning:1.0pt;
+	mso-fareast-language:ZH-TW;
+	font-weight:bold;}
+span.Heading2Char
+	{mso-style-name:"Heading 2 Char";
+	mso-style-noshow:yes;
+	mso-style-priority:9;
+	mso-style-unhide:no;
+	mso-style-locked:yes;
+	mso-style-link:"Heading 2";
+	mso-ansi-font-size:13.0pt;
+	mso-bidi-font-size:13.0pt;
+	font-family:"Cambria","serif";
+	mso-ascii-font-family:Cambria;
+	mso-ascii-theme-font:major-latin;
+	mso-fareast-font-family:"Times New Roman";
+	mso-fareast-theme-font:major-fareast;
+	mso-hansi-font-family:Cambria;
+	mso-hansi-theme-font:major-latin;
+	mso-bidi-font-family:"Times New Roman";
+	mso-bidi-theme-font:major-bidi;
+	color:#4F81BD;
+	mso-themecolor:accent1;
+	mso-font-kerning:1.0pt;
+	mso-fareast-language:ZH-TW;
+	font-weight:bold;}
+span.Heading3Char
+	{mso-style-name:"Heading 3 Char";
+	mso-style-noshow:yes;
+	mso-style-priority:9;
+	mso-style-unhide:no;
+	mso-style-locked:yes;
+	mso-style-link:"Heading 3";
+	mso-ansi-font-size:12.0pt;
+	mso-bidi-font-size:12.0pt;
+	font-family:"Cambria","serif";
+	mso-ascii-font-family:Cambria;
+	mso-ascii-theme-font:major-latin;
+	mso-fareast-font-family:"Times New Roman";
+	mso-fareast-theme-font:major-fareast;
+	mso-hansi-font-family:Cambria;
+	mso-hansi-theme-font:major-latin;
+	mso-bidi-font-family:"Times New Roman";
+	mso-bidi-theme-font:major-bidi;
+	color:#4F81BD;
+	mso-themecolor:accent1;
+	mso-font-kerning:1.0pt;
+	mso-fareast-language:ZH-TW;
+	font-weight:bold;}
+span.DateChar
+	{mso-style-name:"Date Char";
+	mso-style-noshow:yes;
+	mso-style-priority:99;
+	mso-style-unhide:no;
+	mso-style-locked:yes;
+	mso-style-link:Date;
+	mso-ansi-font-size:12.0pt;
+	mso-bidi-font-size:12.0pt;
+	font-family:"PMingLiU","serif";
+	mso-fareast-font-family:PMingLiU;
+	mso-font-kerning:1.0pt;
+	mso-fareast-language:ZH-TW;}
+span.PlainTextChar
+	{mso-style-name:"Plain Text Char";
+	mso-style-priority:99;
+	mso-style-unhide:no;
+	mso-style-locked:yes;
+	mso-style-link:"Plain Text";
+	mso-ansi-font-size:10.5pt;
+	mso-bidi-font-size:10.5pt;
+	font-family:"Consolas","serif";
+	mso-ascii-font-family:Consolas;
+	mso-fareast-font-family:PMingLiU;
+	mso-hansi-font-family:Consolas;
+	mso-font-kerning:1.0pt;
+	mso-fareast-language:ZH-TW;}
+span.BalloonTextChar
+	{mso-style-name:"Balloon Text Char";
+	mso-style-noshow:yes;
+	mso-style-priority:99;
+	mso-style-unhide:no;
+	mso-style-locked:yes;
+	mso-style-link:"Balloon Text";
+	mso-ansi-font-size:8.0pt;
+	mso-bidi-font-size:8.0pt;
+	font-family:"Tahoma","sans-serif";
+	mso-ascii-font-family:Tahoma;
+	mso-fareast-font-family:PMingLiU;
+	mso-hansi-font-family:Tahoma;
+	mso-bidi-font-family:Tahoma;
+	mso-font-kerning:1.0pt;
+	mso-fareast-language:ZH-TW;}
+.MsoChpDefault
+	{mso-style-type:export-only;
+	mso-default-props:yes;
+	font-size:10.0pt;
+	mso-ansi-font-size:10.0pt;
+	mso-bidi-font-size:10.0pt;}
+ /* Page Definitions */
+ @page
+	{mso-page-border-surround-header:no;
+	mso-page-border-surround-footer:no;}
+@page Section1
+	{size:595.3pt 841.9pt;
+	margin:1.0in 57.65pt 1.0in 57.65pt;
+	mso-header-margin:42.55pt;
+	mso-footer-margin:49.6pt;
+	mso-paper-source:0;
+	layout-grid:18.0pt;}
+div.Section1
+	{page:Section1;}
+ /* List Definitions */
+ @list l0
+	{mso-list-id:143087411;
+	mso-list-type:hybrid;
+	mso-list-template-ids:-171017586 67698689 67698691 67698693 67698689 67698691 67698693 67698689 67698691 67698693;}
+@list l0:level1
+	{mso-level-number-format:bullet;
+	mso-level-text:\F06C;
+	mso-level-tab-stop:24.0pt;
+	mso-level-number-position:left;
+	margin-left:24.0pt;
+	text-indent:-24.0pt;
+	font-family:Wingdings;
+	mso-bidi-font-family:"Times New Roman";}
+@list l0:level2
+	{mso-level-number-format:bullet;
+	mso-level-text:\F06E;
+	mso-level-tab-stop:48.0pt;
+	mso-level-number-position:left;
+	margin-left:48.0pt;
+	text-indent:-24.0pt;
+	font-family:Wingdings;
+	mso-bidi-font-family:"Times New Roman";}
+@list l0:level3
+	{mso-level-number-format:bullet;
+	mso-level-text:\F075;
+	mso-level-tab-stop:1.0in;
+	mso-level-number-position:left;
+	margin-left:1.0in;
+	text-indent:-24.0pt;
+	font-family:Wingdings;
+	mso-bidi-font-family:"Times New Roman";}
+@list l0:level4
+	{mso-level-number-format:bullet;
+	mso-level-text:\F06C;
+	mso-level-tab-stop:96.0pt;
+	mso-level-number-position:left;
+	margin-left:96.0pt;
+	text-indent:-24.0pt;
+	font-family:Wingdings;
+	mso-bidi-font-family:"Times New Roman";}
+@list l0:level5
+	{mso-level-number-format:bullet;
+	mso-level-text:\F06E;
+	mso-level-tab-stop:120.0pt;
+	mso-level-number-position:left;
+	margin-left:120.0pt;
+	text-indent:-24.0pt;
+	font-family:Wingdings;
+	mso-bidi-font-family:"Times New Roman";}
+@list l0:level6
+	{mso-level-number-format:bullet;
+	mso-level-text:\F075;
+	mso-level-tab-stop:2.0in;
+	mso-level-number-position:left;
+	margin-left:2.0in;
+	text-indent:-24.0pt;
+	font-family:Wingdings;
+	mso-bidi-font-family:"Times New Roman";}
+@list l0:level7
+	{mso-level-number-format:bullet;
+	mso-level-text:\F06C;
+	mso-level-tab-stop:168.0pt;
+	mso-level-number-position:left;
+	margin-left:168.0pt;
+	text-indent:-24.0pt;
+	font-family:Wingdings;
+	mso-bidi-font-family:"Times New Roman";}
+@list l0:level8
+	{mso-level-number-format:bullet;
+	mso-level-text:\F06E;
+	mso-level-tab-stop:192.0pt;
+	mso-level-number-position:left;
+	margin-left:192.0pt;
+	text-indent:-24.0pt;
+	font-family:Wingdings;
+	mso-bidi-font-family:"Times New Roman";}
+@list l0:level9
+	{mso-level-number-format:bullet;
+	mso-level-text:\F075;
+	mso-level-tab-stop:3.0in;
+	mso-level-number-position:left;
+	margin-left:3.0in;
+	text-indent:-24.0pt;
+	font-family:Wingdings;
+	mso-bidi-font-family:"Times New Roman";}
+@list l1
+	{mso-list-id:230624732;
+	mso-list-type:hybrid;
+	mso-list-template-ids:-340992080 67698689 67698691 67698693 67698689 67698691 67698693 67698689 67698691 67698693;}
+@list l1:level1
+	{mso-level-number-format:bullet;
+	mso-level-text:\F06C;
+	mso-level-tab-stop:24.0pt;
+	mso-level-number-position:left;
+	margin-left:24.0pt;
+	text-indent:-24.0pt;
+	font-family:Wingdings;
+	mso-bidi-font-family:"Times New Roman";}
+@list l1:level2
+	{mso-level-number-format:bullet;
+	mso-level-text:\F06E;
+	mso-level-tab-stop:48.0pt;
+	mso-level-number-position:left;
+	margin-left:48.0pt;
+	text-indent:-24.0pt;
+	font-family:Wingdings;
+	mso-bidi-font-family:"Times New Roman";}
+@list l1:level3
+	{mso-level-number-format:bullet;
+	mso-level-text:\F075;
+	mso-level-tab-stop:1.0in;
+	mso-level-number-position:left;
+	margin-left:1.0in;
+	text-indent:-24.0pt;
+	font-family:Wingdings;
+	mso-bidi-font-family:"Times New Roman";}
+@list l1:level4
+	{mso-level-number-format:bullet;
+	mso-level-text:\F06C;
+	mso-level-tab-stop:96.0pt;
+	mso-level-number-position:left;
+	margin-left:96.0pt;
+	text-indent:-24.0pt;
+	font-family:Wingdings;
+	mso-bidi-font-family:"Times New Roman";}
+@list l1:level5
+	{mso-level-number-format:bullet;
+	mso-level-text:\F06E;
+	mso-level-tab-stop:120.0pt;
+	mso-level-number-position:left;
+	margin-left:120.0pt;
+	text-indent:-24.0pt;
+	font-family:Wingdings;
+	mso-bidi-font-family:"Times New Roman";}
+@list l1:level6
+	{mso-level-number-format:bullet;
+	mso-level-text:\F075;
+	mso-level-tab-stop:2.0in;
+	mso-level-number-position:left;
+	margin-left:2.0in;
+	text-indent:-24.0pt;
+	font-family:Wingdings;
+	mso-bidi-font-family:"Times New Roman";}
+@list l1:level7
+	{mso-level-number-format:bullet;
+	mso-level-text:\F06C;
+	mso-level-tab-stop:168.0pt;
+	mso-level-number-position:left;
+	margin-left:168.0pt;
+	text-indent:-24.0pt;
+	font-family:Wingdings;
+	mso-bidi-font-family:"Times New Roman";}
+@list l1:level8
+	{mso-level-number-format:bullet;
+	mso-level-text:\F06E;
+	mso-level-tab-stop:192.0pt;
+	mso-level-number-position:left;
+	margin-left:192.0pt;
+	text-indent:-24.0pt;
+	font-family:Wingdings;
+	mso-bidi-font-family:"Times New Roman";}
+@list l1:level9
+	{mso-level-number-format:bullet;
+	mso-level-text:\F075;
+	mso-level-tab-stop:3.0in;
+	mso-level-number-position:left;
+	margin-left:3.0in;
+	text-indent:-24.0pt;
+	font-family:Wingdings;
+	mso-bidi-font-family:"Times New Roman";}
+@list l2
+	{mso-list-id:703285002;
+	mso-list-type:hybrid;
+	mso-list-template-ids:609096698 67698689 67698691 67698693 67698689 67698691 67698693 67698689 67698691 67698693;}
+@list l2:level1
+	{mso-level-number-format:bullet;
+	mso-level-text:\F0B7;
+	mso-level-tab-stop:none;
+	mso-level-number-position:left;
+	text-indent:-.25in;
+	font-family:Symbol;}
+@list l3
+	{mso-list-id:713505981;
+	mso-list-type:hybrid;
+	mso-list-template-ids:-1295116996 67698689 67698691 67698693 67698689 67698691 67698693 67698689 67698691 67698693;}
+@list l3:level1
+	{mso-level-number-format:bullet;
+	mso-level-text:\F0B7;
+	mso-level-tab-stop:none;
+	mso-level-number-position:left;
+	text-indent:-.25in;
+	font-family:Symbol;}
+@list l4
+	{mso-list-id:1231765802;
+	mso-list-type:hybrid;
+	mso-list-template-ids:1153103082 67698703 67698713 67698715 67698703 67698713 67698715 67698703 67698713 67698715;}
+@list l4:level1
+	{mso-level-tab-stop:none;
+	mso-level-number-position:left;
+	text-indent:-.25in;}
+@list l5
+	{mso-list-id:1450510846;
+	mso-list-type:hybrid;
+	mso-list-template-ids:-1489223818 -644567986 67698703 67698715 67698703 67698713 67698715 67698703 67698713 67698715;}
+@list l5:level1
+	{mso-level-start-at:5;
+	mso-level-tab-stop:none;
+	mso-level-number-position:left;
+	text-indent:-.25in;}
+@list l5:level2
+	{mso-level-tab-stop:none;
+	mso-level-number-position:left;
+	text-indent:-.25in;}
+@list l6
+	{mso-list-id:1580754836;
+	mso-list-template-ids:-415306162;}
+@list l7
+	{mso-list-id:1639528992;
+	mso-list-type:hybrid;
+	mso-list-template-ids:1466481064 67698689 67698691 67698693 67698689 67698691 67698693 67698689 67698691 67698693;}
+@list l7:level1
+	{mso-level-number-format:bullet;
+	mso-level-text:\F06C;
+	mso-level-tab-stop:48.0pt;
+	mso-level-number-position:left;
+	margin-left:48.0pt;
+	text-indent:-24.0pt;
+	font-family:Wingdings;
+	mso-bidi-font-family:"Times New Roman";}
+@list l7:level2
+	{mso-level-number-format:bullet;
+	mso-level-text:\F06E;
+	mso-level-tab-stop:1.0in;
+	mso-level-number-position:left;
+	text-indent:-24.0pt;
+	font-family:Wingdings;
+	mso-bidi-font-family:"Times New Roman";}
+@list l7:level3
+	{mso-level-number-format:bullet;
+	mso-level-text:\F075;
+	mso-level-tab-stop:96.0pt;
+	mso-level-number-position:left;
+	margin-left:96.0pt;
+	text-indent:-24.0pt;
+	font-family:Wingdings;
+	mso-bidi-font-family:"Times New Roman";}
+@list l7:level4
+	{mso-level-number-format:bullet;
+	mso-level-text:\F06C;
+	mso-level-tab-stop:120.0pt;
+	mso-level-number-position:left;
+	margin-left:120.0pt;
+	text-indent:-24.0pt;
+	font-family:Wingdings;
+	mso-bidi-font-family:"Times New Roman";}
+@list l7:level5
+	{mso-level-number-format:bullet;
+	mso-level-text:\F06E;
+	mso-level-tab-stop:2.0in;
+	mso-level-number-position:left;
+	margin-left:2.0in;
+	text-indent:-24.0pt;
+	font-family:Wingdings;
+	mso-bidi-font-family:"Times New Roman";}
+@list l7:level6
+	{mso-level-number-format:bullet;
+	mso-level-text:\F075;
+	mso-level-tab-stop:168.0pt;
+	mso-level-number-position:left;
+	margin-left:168.0pt;
+	text-indent:-24.0pt;
+	font-family:Wingdings;
+	mso-bidi-font-family:"Times New Roman";}
+@list l7:level7
+	{mso-level-number-format:bullet;
+	mso-level-text:\F06C;
+	mso-level-tab-stop:192.0pt;
+	mso-level-number-position:left;
+	margin-left:192.0pt;
+	text-indent:-24.0pt;
+	font-family:Wingdings;
+	mso-bidi-font-family:"Times New Roman";}
+@list l7:level8
+	{mso-level-number-format:bullet;
+	mso-level-text:\F06E;
+	mso-level-tab-stop:3.0in;
+	mso-level-number-position:left;
+	margin-left:3.0in;
+	text-indent:-24.0pt;
+	font-family:Wingdings;
+	mso-bidi-font-family:"Times New Roman";}
+@list l7:level9
+	{mso-level-number-format:bullet;
+	mso-level-text:\F075;
+	mso-level-tab-stop:240.0pt;
+	mso-level-number-position:left;
+	margin-left:240.0pt;
+	text-indent:-24.0pt;
+	font-family:Wingdings;
+	mso-bidi-font-family:"Times New Roman";}
+@list l8
+	{mso-list-id:1646618412;
+	mso-list-type:hybrid;
+	mso-list-template-ids:853553918 67698703 67698689 67698715 67698703 67698713 67698715 67698703 67698713 67698715;}
+@list l8:level1
+	{mso-level-tab-stop:none;
+	mso-level-number-position:left;
+	text-indent:-.25in;}
+@list l8:level2
+	{mso-level-number-format:bullet;
+	mso-level-text:\F0B7;
+	mso-level-tab-stop:none;
+	mso-level-number-position:left;
+	text-indent:-.25in;
+	font-family:Symbol;}
+@list l9
+	{mso-list-id:1846506320;
+	mso-list-type:hybrid;
+	mso-list-template-ids:92068514 67698689 67698691 67698693 67698689 67698691 67698693 67698689 67698691 67698693;}
+@list l9:level1
+	{mso-level-number-format:bullet;
+	mso-level-text:\F06C;
+	mso-level-tab-stop:24.0pt;
+	mso-level-number-position:left;
+	margin-left:24.0pt;
+	text-indent:-24.0pt;
+	font-family:Wingdings;
+	mso-bidi-font-family:"Times New Roman";}
+@list l9:level2
+	{mso-level-number-format:bullet;
+	mso-level-text:\F06E;
+	mso-level-tab-stop:48.0pt;
+	mso-level-number-position:left;
+	margin-left:48.0pt;
+	text-indent:-24.0pt;
+	font-family:Wingdings;
+	mso-bidi-font-family:"Times New Roman";}
+@list l9:level3
+	{mso-level-number-format:bullet;
+	mso-level-text:\F075;
+	mso-level-tab-stop:1.0in;
+	mso-level-number-position:left;
+	margin-left:1.0in;
+	text-indent:-24.0pt;
+	font-family:Wingdings;
+	mso-bidi-font-family:"Times New Roman";}
+@list l9:level4
+	{mso-level-number-format:bullet;
+	mso-level-text:\F06C;
+	mso-level-tab-stop:96.0pt;
+	mso-level-number-position:left;
+	margin-left:96.0pt;
+	text-indent:-24.0pt;
+	font-family:Wingdings;
+	mso-bidi-font-family:"Times New Roman";}
+@list l9:level5
+	{mso-level-number-format:bullet;
+	mso-level-text:\F06E;
+	mso-level-tab-stop:120.0pt;
+	mso-level-number-position:left;
+	margin-left:120.0pt;
+	text-indent:-24.0pt;
+	font-family:Wingdings;
+	mso-bidi-font-family:"Times New Roman";}
+@list l9:level6
+	{mso-level-number-format:bullet;
+	mso-level-text:\F075;
+	mso-level-tab-stop:2.0in;
+	mso-level-number-position:left;
+	margin-left:2.0in;
+	text-indent:-24.0pt;
+	font-family:Wingdings;
+	mso-bidi-font-family:"Times New Roman";}
+@list l9:level7
+	{mso-level-number-format:bullet;
+	mso-level-text:\F06C;
+	mso-level-tab-stop:168.0pt;
+	mso-level-number-position:left;
+	margin-left:168.0pt;
+	text-indent:-24.0pt;
+	font-family:Wingdings;
+	mso-bidi-font-family:"Times New Roman";}
+@list l9:level8
+	{mso-level-number-format:bullet;
+	mso-level-text:\F06E;
+	mso-level-tab-stop:192.0pt;
+	mso-level-number-position:left;
+	margin-left:192.0pt;
+	text-indent:-24.0pt;
+	font-family:Wingdings;
+	mso-bidi-font-family:"Times New Roman";}
+@list l9:level9
+	{mso-level-number-format:bullet;
+	mso-level-text:\F075;
+	mso-level-tab-stop:3.0in;
+	mso-level-number-position:left;
+	margin-left:3.0in;
+	text-indent:-24.0pt;
+	font-family:Wingdings;
+	mso-bidi-font-family:"Times New Roman";}
+@list l10
+	{mso-list-id:1887137386;
+	mso-list-type:hybrid;
+	mso-list-template-ids:-1489223818 -644567986 67698703 67698715 67698703 67698713 67698715 67698703 67698713 67698715;}
+@list l10:level1
+	{mso-level-start-at:5;
+	mso-level-tab-stop:none;
+	mso-level-number-position:left;
+	text-indent:-.25in;}
+@list l10:level2
+	{mso-level-tab-stop:none;
+	mso-level-number-position:left;
+	text-indent:-.25in;}
+@list l10:level3
+	{mso-level-number-format:roman-lower;
+	mso-level-tab-stop:none;
+	mso-level-number-position:right;
+	text-indent:-9.0pt;}
+@list l11
+	{mso-list-id:2128156438;
+	mso-list-type:hybrid;
+	mso-list-template-ids:-1486847508 67698689 67698691 67698693 67698689 67698691 67698693 67698689 67698691 67698693;}
+@list l11:level1
+	{mso-level-number-format:bullet;
+	mso-level-text:\F06C;
+	mso-level-tab-stop:24.0pt;
+	mso-level-number-position:left;
+	margin-left:24.0pt;
+	text-indent:-24.0pt;
+	font-family:Wingdings;
+	mso-bidi-font-family:"Times New Roman";}
+@list l11:level2
+	{mso-level-number-format:bullet;
+	mso-level-text:\F06E;
+	mso-level-tab-stop:48.0pt;
+	mso-level-number-position:left;
+	margin-left:48.0pt;
+	text-indent:-24.0pt;
+	font-family:Wingdings;
+	mso-bidi-font-family:"Times New Roman";}
+@list l11:level3
+	{mso-level-number-format:bullet;
+	mso-level-text:\F075;
+	mso-level-tab-stop:1.0in;
+	mso-level-number-position:left;
+	margin-left:1.0in;
+	text-indent:-24.0pt;
+	font-family:Wingdings;
+	mso-bidi-font-family:"Times New Roman";}
+@list l11:level4
+	{mso-level-number-format:bullet;
+	mso-level-text:\F06C;
+	mso-level-tab-stop:96.0pt;
+	mso-level-number-position:left;
+	margin-left:96.0pt;
+	text-indent:-24.0pt;
+	font-family:Wingdings;
+	mso-bidi-font-family:"Times New Roman";}
+@list l11:level5
+	{mso-level-number-format:bullet;
+	mso-level-text:\F06E;
+	mso-level-tab-stop:120.0pt;
+	mso-level-number-position:left;
+	margin-left:120.0pt;
+	text-indent:-24.0pt;
+	font-family:Wingdings;
+	mso-bidi-font-family:"Times New Roman";}
+@list l11:level6
+	{mso-level-number-format:bullet;
+	mso-level-text:\F075;
+	mso-level-tab-stop:2.0in;
+	mso-level-number-position:left;
+	margin-left:2.0in;
+	text-indent:-24.0pt;
+	font-family:Wingdings;
+	mso-bidi-font-family:"Times New Roman";}
+@list l11:level7
+	{mso-level-number-format:bullet;
+	mso-level-text:\F06C;
+	mso-level-tab-stop:168.0pt;
+	mso-level-number-position:left;
+	margin-left:168.0pt;
+	text-indent:-24.0pt;
+	font-family:Wingdings;
+	mso-bidi-font-family:"Times New Roman";}
+@list l11:level8
+	{mso-level-number-format:bullet;
+	mso-level-text:\F06E;
+	mso-level-tab-stop:192.0pt;
+	mso-level-number-position:left;
+	margin-left:192.0pt;
+	text-indent:-24.0pt;
+	font-family:Wingdings;
+	mso-bidi-font-family:"Times New Roman";}
+@list l11:level9
+	{mso-level-number-format:bullet;
+	mso-level-text:\F075;
+	mso-level-tab-stop:3.0in;
+	mso-level-number-position:left;
+	margin-left:3.0in;
+	text-indent:-24.0pt;
+	font-family:Wingdings;
+	mso-bidi-font-family:"Times New Roman";}
+ol
+	{margin-bottom:0in;}
+ul
+	{margin-bottom:0in;}
+-->
+</style>
+<!--[if gte mso 10]>
+<style>
+ /* Style Definitions */
+ table.MsoNormalTable
+	{mso-style-name:"Table Normal";
+	mso-tstyle-rowband-size:0;
+	mso-tstyle-colband-size:0;
+	mso-style-noshow:yes;
+	mso-style-priority:99;
+	mso-style-qformat:yes;
+	mso-style-parent:"";
+	mso-padding-alt:0in 5.4pt 0in 5.4pt;
+	mso-para-margin:0in;
+	mso-para-margin-bottom:.0001pt;
+	mso-pagination:widow-orphan;
+	font-size:10.0pt;
+	font-family:"Times New Roman","serif";}
+</style>
+<![endif]--><!--[if gte mso 9]><xml>
+ <o:shapedefaults v:ext="edit" spidmax="2050"/>
+</xml><![endif]--><!--[if gte mso 9]><xml>
+ <o:shapelayout v:ext="edit">
+  <o:idmap v:ext="edit" data="1"/>
+ </o:shapelayout></xml><![endif]-->
+</head>
+
+<body lang=EN-US link="#0066A7" vlink=purple style='tab-interval:24.0pt;
+text-justify-trim:punctuation'>
+
+<div class=Section1 style='layout-grid:18.0pt'>
+
+<h1>Dandy Dungeon in FSharp for XNA</h1>
+
+<p class=MsoPlainText><span style='font-family:"Arial","sans-serif"'>Jack
+Palevich<span style='mso-spacerun:yes'>&nbsp; </span>jpalevic@microsoft.com<o:p></o:p></span></p>
+
+<p class=MsoPlainText><span style='font-family:"Arial","sans-serif"'>Version 1.1<o:p></o:p></span></p>
+
+<p class=MsoPlainText><span style='font-family:"Arial","sans-serif"'>March 2,
+2007<o:p></o:p></span></p>
+
+<p class=MsoPlainText><span style='font-family:"Arial","sans-serif"'><o:p>&nbsp;</o:p></span></p>
+
+<h2>Introduction</h2>
+
+<p class=MsoPlainText><span style='font-family:"Arial","sans-serif"'><o:p>&nbsp;</o:p></span></p>
+
+<p class=MsoPlainText><span style='font-family:"Arial","sans-serif"'>Dandy
+Dungeon is a 1-to-4 player cooperative action adventure game. Its graphics are
+quite primitive by modern standards, but the gameplay is still enjoyable,
+especially when two or more people are playing.<o:p></o:p></span></p>
+
+<p class=MsoPlainText><span style='font-family:"Arial","sans-serif"'><o:p>&nbsp;</o:p></span></p>
+
+<h2>Requirements</h2>
+
+<p class=MsoPlainText><span style='font-family:"Arial","sans-serif"'><o:p>&nbsp;</o:p></span></p>
+
+<p class=MsoPlainText style='margin-left:48.0pt;text-indent:-24.0pt;mso-list:
+l7 level1 lfo2;tab-stops:list 48.0pt'><![if !supportLists]><span
+style='font-family:Wingdings;mso-fareast-font-family:Wingdings;mso-bidi-font-family:
+Wingdings'><span style='mso-list:Ignore'>l<span style='font:7.0pt "Times New Roman"'>&nbsp;&nbsp;
+</span></span></span><![endif]><span style='font-family:"Arial","sans-serif"'>A
+Windows XP or Vista computer<o:p></o:p></span></p>
+
+<p class=MsoPlainText style='margin-left:48.0pt;text-indent:-24.0pt;mso-list:
+l7 level1 lfo2;tab-stops:list 48.0pt'><![if !supportLists]><span
+style='font-family:Wingdings;mso-fareast-font-family:Wingdings;mso-bidi-font-family:
+Wingdings'><span style='mso-list:Ignore'>l<span style='font:7.0pt "Times New Roman"'>&nbsp;&nbsp;
+</span></span></span><![endif]><span style='font-family:"Arial","sans-serif"'>A
+graphics card that supports Direct3D 9.0<o:p></o:p></span></p>
+
+<p class=MsoPlainText style='margin-left:1.0in;text-indent:-24.0pt;mso-list:
+l7 level2 lfo2;tab-stops:list 1.0in'><![if !supportLists]><span
+style='font-family:Wingdings;mso-fareast-font-family:Wingdings;mso-bidi-font-family:
+Wingdings'><span style='mso-list:Ignore'>n<span style='font:7.0pt "Times New Roman"'>&nbsp;&nbsp;
+</span></span></span><![endif]><span style='font-family:"Arial","sans-serif"'>or
+an Xbox 360 with a Creators Club subscription<o:p></o:p></span></p>
+
+<p class=MsoPlainText style='margin-left:48.0pt;text-indent:-24.0pt;mso-list:
+l7 level1 lfo2;tab-stops:list 48.0pt'><![if !supportLists]><span
+style='font-family:Wingdings;mso-fareast-font-family:Wingdings;mso-bidi-font-family:
+Wingdings'><span style='mso-list:Ignore'>l<span style='font:7.0pt "Times New Roman"'>&nbsp;&nbsp;
+</span></span></span><![endif]><span style='font-family:"Arial","sans-serif"'>DirectX
+9.0<o:p></o:p></span></p>
+
+<p class=MsoPlainText style='margin-left:48.0pt;text-indent:-24.0pt;mso-list:
+l7 level1 lfo2;tab-stops:list 48.0pt'><![if !supportLists]><span
+style='font-family:Wingdings;mso-fareast-font-family:Wingdings;mso-bidi-font-family:
+Wingdings'><span style='mso-list:Ignore'>l<span style='font:7.0pt "Times New Roman"'>&nbsp;&nbsp;
+</span></span></span><![endif]><span style='font-family:"Arial","sans-serif"'>XNA
+Game Studio Express<o:p></o:p></span></p>
+
+<p class=MsoPlainText><span style='font-family:"Arial","sans-serif"'><o:p>&nbsp;</o:p></span></p>
+
+<h2>How to Build</h2>
+
+<p class=MsoNormal>For historical reasons, XNA Game Studio Express only works
+with Visual C# Express, not with regular Visual Studio. This complicates the
+build process, as you will end up building with both Visual Studio (for the F#
+parts) and Visual Studio Express (for the content build pipeline, and for
+deploying to the Xbox 360.)</p>
+
+<p class=MsoListParagraphCxSpFirst style='text-indent:-.25in;mso-list:l8 level1 lfo14'><![if !supportLists]><span
+style='mso-fareast-font-family:"Times New Roman"'><span style='mso-list:Ignore'>1.<span
+style='font:7.0pt "Times New Roman"'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span></span></span><![endif]>Download
+and install Visual C# Express: <a
+href="http://msdn.microsoft.com/vstudio/express/visualcsharp/">Visual C#
+Express Home Page</a> </p>
+
+<p class=MsoListParagraphCxSpMiddle style='text-indent:-.25in;mso-list:l8 level1 lfo14'><![if !supportLists]><span
+style='mso-fareast-font-family:"Times New Roman"'><span style='mso-list:Ignore'>2.<span
+style='font:7.0pt "Times New Roman"'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span></span></span><![endif]>Download
+and install XNA Game Studio Express: <a
+href="http://msdn.microsoft.com/directx/xna/gse/">XNA Game Studio Express Home
+Page</a> </p>
+
+<p class=MsoListParagraphCxSpMiddle style='text-indent:-.25in;mso-list:l8 level1 lfo14'><![if !supportLists]><span
+style='mso-fareast-font-family:"Times New Roman"'><span style='mso-list:Ignore'>3.<span
+style='font:7.0pt "Times New Roman"'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span></span></span><![endif]>Download
+and install F#: <a href="http://research.microsoft.com/fsharp/fsharp.aspx">F#
+Home Page</a> </p>
+
+<p class=MsoListParagraphCxSpMiddle style='margin-left:1.0in;mso-add-space:
+auto;text-indent:-.25in;mso-list:l8 level2 lfo14'><![if !supportLists]><span
+style='font-family:Symbol;mso-fareast-font-family:Symbol;mso-bidi-font-family:
+Symbol'><span style='mso-list:Ignore'>·<span style='font:7.0pt "Times New Roman"'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+</span></span></span><![endif]>Note: This document is for F# version 1.9.1.1. You
+may have to make minor modifications if you use a different version.</p>
+
+<p class=MsoListParagraphCxSpMiddle style='text-indent:-.25in;mso-list:l8 level1 lfo14'><![if !supportLists]><span
+style='mso-fareast-font-family:"Times New Roman"'><span style='mso-list:Ignore'>4.<span
+style='font:7.0pt "Times New Roman"'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span></span></span><![endif]>Configure
+Visual C# Express to expose advanced features: </p>
+
+<p class=MsoListParagraphCxSpMiddle style='margin-left:1.0in;mso-add-space:
+auto;text-indent:-.25in;mso-list:l5 level2 lfo15'><![if !supportLists]><span
+style='mso-fareast-font-family:"Times New Roman"'><span style='mso-list:Ignore'>1.<span
+style='font:7.0pt "Times New Roman"'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span></span></span><![endif]>Choose
+the menu item Start:All Programs:Microsoft XNA Game Studio Express:XNA Game
+Studio Express </p>
+
+<p class=MsoListParagraphCxSpMiddle style='margin-left:1.0in;mso-add-space:
+auto;text-indent:-.25in;mso-list:l5 level2 lfo15'><![if !supportLists]><span
+style='mso-fareast-font-family:"Times New Roman"'><span style='mso-list:Ignore'>2.<span
+style='font:7.0pt "Times New Roman"'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span></span></span><![endif]>Choose
+menu item &quot;Tools:Options&quot; </p>
+
+<p class=MsoListParagraphCxSpMiddle style='margin-left:1.0in;mso-add-space:
+auto;text-indent:-.25in;mso-list:l5 level2 lfo15'><![if !supportLists]><span
+style='mso-fareast-font-family:"Times New Roman"'><span style='mso-list:Ignore'>3.<span
+style='font:7.0pt "Times New Roman"'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span></span></span><![endif]>Choose
+&quot;Projects &amp; Solutions:General&quot; </p>
+
+<p class=MsoListParagraphCxSpMiddle style='margin-left:1.0in;mso-add-space:
+auto;text-indent:-.25in;mso-list:l5 level2 lfo15'><![if !supportLists]><span
+style='mso-fareast-font-family:"Times New Roman"'><span style='mso-list:Ignore'>4.<span
+style='font:7.0pt "Times New Roman"'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span></span></span><![endif]>Check
+the &quot;Show advanced build configurations&quot; checkbox </p>
+
+<p class=MsoListParagraphCxSpMiddle style='margin-left:1.0in;mso-add-space:
+auto;text-indent:-.25in;mso-list:l5 level2 lfo15'><![if !supportLists]><span
+style='mso-fareast-font-family:"Times New Roman"'><span style='mso-list:Ignore'>5.<span
+style='font:7.0pt "Times New Roman"'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span></span></span><![endif]>Press
+the &quot;OK&quot; button </p>
+
+<p class=MsoListParagraphCxSpMiddle style='margin-left:1.0in;mso-add-space:
+auto;text-indent:-.25in;mso-list:l5 level2 lfo15'><![if !supportLists]><span
+style='mso-fareast-font-family:"Times New Roman"'><span style='mso-list:Ignore'>6.<span
+style='font:7.0pt "Times New Roman"'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span></span></span><![endif]>Choose
+the menu item &quot;File:Exit&quot;</p>
+
+<p class=MsoListParagraphCxSpMiddle style='text-indent:-.25in;mso-list:l10 level1 lfo16'><![if !supportLists]><span
+style='mso-fareast-font-family:"Times New Roman"'><span style='mso-list:Ignore'>5.<span
+style='font:7.0pt "Times New Roman"'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span></span></span><![endif]>Build
+the FSharp DLL that contains the bulk of the game logic</p>
+
+<p class=MsoListParagraphCxSpMiddle style='margin-left:1.0in;mso-add-space:
+auto;text-indent:-.25in;mso-list:l10 level2 lfo16'><![if !supportLists]><span
+style='mso-fareast-font-family:"Times New Roman"'><span style='mso-list:Ignore'>1.<span
+style='font:7.0pt "Times New Roman"'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span></span></span><![endif]>Open
+the Visual Studio solution file FsharpDandy.sln</p>
+
+<p class=MsoListParagraphCxSpMiddle style='margin-left:1.0in;mso-add-space:
+auto;text-indent:-.25in;mso-list:l10 level2 lfo16'><![if !supportLists]><span
+style='mso-fareast-font-family:"Times New Roman"'><span style='mso-list:Ignore'>2.<span
+style='font:7.0pt "Times New Roman"'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span></span></span><![endif]>Select
+Build:Build Solution</p>
+
+<p class=MsoListParagraphCxSpMiddle style='margin-left:1.0in;mso-add-space:
+auto;text-indent:-.25in;mso-list:l10 level2 lfo16'><![if !supportLists]><span
+style='mso-fareast-font-family:"Times New Roman"'><span style='mso-list:Ignore'>3.<span
+style='font:7.0pt "Times New Roman"'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span></span></span><![endif]>Exit
+Visual Studio. (This is optional. You can leave it open if you plan on making
+changes to the game code.)</p>
+
+<p class=MsoListParagraphCxSpMiddle style='text-indent:-.25in;mso-list:l10 level1 lfo16'><![if !supportLists]><span
+style='mso-fareast-font-family:"Times New Roman"'><span style='mso-list:Ignore'>6.<span
+style='font:7.0pt "Times New Roman"'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span></span></span><![endif]>Build
+and run the Windows executable</p>
+
+<p class=MsoListParagraphCxSpMiddle style='margin-left:1.0in;mso-add-space:
+auto;text-indent:-.25in;mso-list:l10 level2 lfo16'><![if !supportLists]><span
+style='mso-fareast-font-family:"Times New Roman"'><span style='mso-list:Ignore'>1.<span
+style='font:7.0pt "Times New Roman"'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span></span></span><![endif]>From
+Explorer, open the Visual Studio C# Express solution file “WindowsDandy\WindowsDandy.sln”</p>
+
+<p class=MsoListParagraphCxSpMiddle style='margin-left:1.0in;mso-add-space:
+auto;text-indent:-.25in;mso-list:l10 level2 lfo16'><![if !supportLists]><span
+style='mso-fareast-font-family:"Times New Roman"'><span style='mso-list:Ignore'>2.<span
+style='font:7.0pt "Times New Roman"'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span></span></span><![endif]>Select
+Build:Build Solution</p>
+
+<p class=MsoListParagraphCxSpMiddle style='margin-left:1.0in;mso-add-space:
+auto;text-indent:-.25in;mso-list:l10 level2 lfo16'><![if !supportLists]><span
+style='mso-fareast-font-family:"Times New Roman"'><span style='mso-list:Ignore'>3.<span
+style='font:7.0pt "Times New Roman"'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span></span></span><![endif]>Select
+Debug:Start Debugging</p>
+
+<p class=MsoListParagraphCxSpMiddle style='text-indent:-.25in;mso-list:l10 level1 lfo16'><![if !supportLists]><span
+style='mso-fareast-font-family:"Times New Roman"'><span style='mso-list:Ignore'>7.<span
+style='font:7.0pt "Times New Roman"'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span></span></span><![endif]><span
+style='mso-spacerun:yes'>&nbsp;</span>Build the Xbox 360 executable</p>
+
+<p class=MsoListParagraphCxSpMiddle style='margin-left:1.0in;mso-add-space:
+auto;text-indent:-.25in;mso-list:l10 level2 lfo16'><![if !supportLists]><span
+style='mso-fareast-font-family:"Times New Roman"'><span style='mso-list:Ignore'>1.<span
+style='font:7.0pt "Times New Roman"'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span></span></span><![endif]>From
+Explorer, open the Visual Studio C# Express solution file “Xbox360Dandy\ Xbox360Dandy.sln”</p>
+
+<p class=MsoListParagraphCxSpMiddle style='margin-left:1.0in;mso-add-space:
+auto;text-indent:-.25in;mso-list:l10 level2 lfo16'><![if !supportLists]><span
+style='mso-fareast-font-family:"Times New Roman"'><span style='mso-list:Ignore'>2.<span
+style='font:7.0pt "Times New Roman"'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span></span></span><![endif]>Select
+Build:Build Solution</p>
+
+<p class=MsoListParagraphCxSpMiddle style='margin-left:1.0in;mso-add-space:
+auto;text-indent:-.25in;mso-list:l10 level2 lfo16'><![if !supportLists]><span
+style='mso-fareast-font-family:"Times New Roman"'><span style='mso-list:Ignore'>3.<span
+style='font:7.0pt "Times New Roman"'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span></span></span><![endif]>Select
+Build:Deploy Solution</p>
+
+<p class=MsoListParagraphCxSpMiddle style='margin-left:1.5in;mso-add-space:
+auto;text-indent:-1.5in;mso-text-indent-alt:-9.0pt;mso-list:l10 level3 lfo16'><![if !supportLists]><span
+style='mso-fareast-font-family:"Times New Roman"'><span style='mso-list:Ignore'><span
+style='font:7.0pt "Times New Roman"'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+</span>i.<span style='font:7.0pt "Times New Roman"'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+</span></span></span><![endif]>If you run into trouble here, consult the XNA
+Game Studio docs. You will need to purchase a “Creator’s Club” membership, and
+also establish connectivity between your Xbox 360 and your PC.</p>
+
+<p class=MsoListParagraphCxSpLast style='margin-left:1.0in;mso-add-space:auto;
+text-indent:-.25in;mso-list:l10 level2 lfo16'><![if !supportLists]><span
+style='mso-fareast-font-family:"Times New Roman"'><span style='mso-list:Ignore'>4.<span
+style='font:7.0pt "Times New Roman"'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span></span></span><![endif]>Select
+Debug:Start Debugging</p>
+
+<h2>How To Play</h2>
+
+<p class=MsoPlainText><span style='font-family:"Arial","sans-serif"'><o:p>&nbsp;</o:p></span></p>
+
+<p class=MsoPlainText><span style='font-family:"Arial","sans-serif"'>Double-click
+on Dandy.exe (or run under the Visual Studio debugger) to start the game. The
+game window will come up.<o:p></o:p></span></p>
+
+<p class=MsoPlainText><span style='font-family:"Arial","sans-serif"'><o:p>&nbsp;</o:p></span></p>
+
+<p class=MsoPlainText><span style='font-family:"Arial","sans-serif"'><span
+style='mso-tab-count:1'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span>Note:
+The screen shots are for a slightly older version of the Dandy game. The
+screenshots show a version with text, but the attached version does not have
+text, so you won’t see any characters when you run the game. I’ve kept the old
+screenshots because they’re useful as documentation for the controls.<o:p></o:p></span></p>
+
+<p class=MsoPlainText><span style='font-family:"Arial","sans-serif"'><o:p>&nbsp;</o:p></span></p>
+
+<p class=MsoPlainText><span style='font-family:"Arial","sans-serif"'>If you are
+playing on the Xbox 360, or on the PC with an Xbox 360 Game Pad, the game controls
+are:<o:p></o:p></span></p>
+
+<p class=MsoPlainText style='margin-left:.5in;text-indent:-.25in;mso-list:l3 level1 lfo17'><![if !supportLists]><span
+style='font-family:Symbol;mso-fareast-font-family:Symbol;mso-bidi-font-family:
+Symbol'><span style='mso-list:Ignore'>·<span style='font:7.0pt "Times New Roman"'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+</span></span></span><![endif]><span style='font-family:"Arial","sans-serif"'>D-Pad
+or Left Analog Stick: Move player<o:p></o:p></span></p>
+
+<p class=MsoPlainText style='margin-left:.5in;text-indent:-.25in;mso-list:l3 level1 lfo17'><![if !supportLists]><span
+style='font-family:Symbol;mso-fareast-font-family:Symbol;mso-bidi-font-family:
+Symbol'><span style='mso-list:Ignore'>·<span style='font:7.0pt "Times New Roman"'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+</span></span></span><![endif]><span style='font-family:"Arial","sans-serif"'>A
+– Fire<o:p></o:p></span></p>
+
+<p class=MsoPlainText style='margin-left:.5in;text-indent:-.25in;mso-list:l3 level1 lfo17'><![if !supportLists]><span
+style='font-family:Symbol;mso-fareast-font-family:Symbol;mso-bidi-font-family:
+Symbol'><span style='mso-list:Ignore'>·<span style='font:7.0pt "Times New Roman"'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+</span></span></span><![endif]><span style='font-family:"Arial","sans-serif"'>B
+- Bomb<o:p></o:p></span></p>
+
+<p class=MsoPlainText><span style='font-family:"Arial","sans-serif"'><o:p>&nbsp;</o:p></span></p>
+
+<p class=MsoPlainText><span style='font-family:"Arial","sans-serif";mso-fareast-language:
+EN-US;mso-no-proof:yes'><!--[if gte vml 1]><v:shapetype id="_x0000_t75"
+ coordsize="21600,21600" o:spt="75" o:preferrelative="t" path="m@4@5l@4@11@9@11@9@5xe"
+ filled="f" stroked="f">
+ <v:stroke joinstyle="miter"/>
+ <v:formulas>
+  <v:f eqn="if lineDrawn pixelLineWidth 0"/>
+  <v:f eqn="sum @0 1 0"/>
+  <v:f eqn="sum 0 0 @1"/>
+  <v:f eqn="prod @2 1 2"/>
+  <v:f eqn="prod @3 21600 pixelWidth"/>
+  <v:f eqn="prod @3 21600 pixelHeight"/>
+  <v:f eqn="sum @0 0 1"/>
+  <v:f eqn="prod @6 1 2"/>
+  <v:f eqn="prod @7 21600 pixelWidth"/>
+  <v:f eqn="sum @8 21600 0"/>
+  <v:f eqn="prod @7 21600 pixelHeight"/>
+  <v:f eqn="sum @10 21600 0"/>
+ </v:formulas>
+ <v:path o:extrusionok="f" gradientshapeok="t" o:connecttype="rect"/>
+ <o:lock v:ext="edit" aspectratio="t"/>
+</v:shapetype><v:shape id="Picture_x0020_1" o:spid="_x0000_i1026" type="#_x0000_t75"
+ style='width:480pt;height:380.25pt;visibility:visible;mso-wrap-style:square'>
+ <v:imagedata src="Dandy.files/image001.png" o:title=""/>
+</v:shape><![endif]--><![if !vml]><img border=0 width=640 height=507
+src="Dandy.files/image002.jpg" v:shapes="Picture_x0020_1"><![endif]></span><span
+style='font-family:"Arial","sans-serif"'><o:p></o:p></span></p>
+
+<p class=MsoPlainText><span style='font-family:"Arial","sans-serif"'>As you can
+see from the instructions, up to four people can play. They share the keyboard
+– each player has their own set of six keys. There is a “fire” button that
+shoots arrows, a “bomb” button that sets off a smart bomb, and four “move”
+buttons. The move buttons are arranged in the standard inverted-T shape beloved
+by PC First Person Shooters.<o:p></o:p></span></p>
+
+<p class=MsoPlainText><span style='font-family:"Arial","sans-serif"'><o:p>&nbsp;</o:p></span></p>
+
+<p class=MsoPlainText><span style='font-family:"Arial","sans-serif"'>At the
+start of the game each player can join by pressing their respective “Fire”
+buttons. Any combination of players will work – for example if there are two
+players then it’s often easiest for them to use “Player 1” and “Player 4”.<o:p></o:p></span></p>
+
+<p class=MsoPlainText><span style='font-family:"Arial","sans-serif"'><o:p>&nbsp;</o:p></span></p>
+
+<p class=MsoPlainText><span style='font-family:"Arial","sans-serif"'>Once the
+players have joined the screen will look like this:<o:p></o:p></span></p>
+
+<p class=MsoPlainText><span style='font-family:"Arial","sans-serif";mso-fareast-language:
+EN-US;mso-no-proof:yes'><!--[if gte vml 1]><v:shape id="Picture_x0020_2"
+ o:spid="_x0000_i1025" type="#_x0000_t75" style='width:480pt;height:380.25pt;
+ visibility:visible;mso-wrap-style:square'>
+ <v:imagedata src="Dandy.files/image003.png" o:title=""/>
+</v:shape><![endif]--><![if !vml]><img border=0 width=640 height=507
+src="Dandy.files/image004.jpg" v:shapes="Picture_x0020_2"><![endif]></span><span
+style='font-family:"Arial","sans-serif"'><o:p></o:p></span></p>
+
+<p class=MsoPlainText><span style='font-family:"Arial","sans-serif"'><o:p>&nbsp;</o:p></span></p>
+
+<p class=MsoPlainText><span style='font-family:"Arial","sans-serif"'>As you can
+see, the players are little men with the numbers 1 thru 4 on their chests. Each
+level starts around the “U” symbol. (For “Up”, but you can’t actually go up to
+previous level.)<o:p></o:p></span></p>
+
+<p class=MsoPlainText><span style='font-family:"Arial","sans-serif"'><o:p>&nbsp;</o:p></span></p>
+
+<p class=MsoPlainText><span style='font-family:"Arial","sans-serif"'>The goal
+of the game is to explore the dungeon. There are 26 levels in the dungeon. To
+go down to the next level, find the “D” symbol and walk into it.<o:p></o:p></span></p>
+
+<p class=MsoPlainText><span style='font-family:"Arial","sans-serif"'><o:p>&nbsp;</o:p></span></p>
+
+<p class=MsoPlainText><span style='font-family:"Arial","sans-serif"'>You can
+walk around using your “move” keys. If you press two adjacent move keys at once
+you can move diagonally.<o:p></o:p></span></p>
+
+<p class=MsoPlainText><span style='font-family:"Arial","sans-serif"'><o:p>&nbsp;</o:p></span></p>
+
+<p class=MsoPlainText><span style='font-family:"Arial","sans-serif"'>You fire
+an arrow by pressing the “fire” key. You will fire an arrow in the same
+direction that you most recently moved. You can’t hurt other players with your
+arrows.<o:p></o:p></span></p>
+
+<p class=MsoPlainText><span style='font-family:"Arial","sans-serif"'><o:p>&nbsp;</o:p></span></p>
+
+<p class=MsoPlainText><span style='font-family:"Arial","sans-serif"'>Things
+you’ll see in the Dungeon:<o:p></o:p></span></p>
+
+<p class=MsoPlainText><span style='font-family:"Arial","sans-serif"'><o:p>&nbsp;</o:p></span></p>
+
+<p class=MsoPlainText style='margin-left:24.0pt;text-indent:-24.0pt;mso-list:
+l11 level1 lfo4;tab-stops:list 24.0pt'><![if !supportLists]><span
+style='font-family:Wingdings;mso-fareast-font-family:Wingdings;mso-bidi-font-family:
+Wingdings'><span style='mso-list:Ignore'>l<span style='font:7.0pt "Times New Roman"'>&nbsp;&nbsp;
+</span></span></span><![endif]><span style='font-family:"Arial","sans-serif"'>Monsters
+– there are three kinds of monsters: small, medium, and big. The monsters will
+try to attack the nearest player by running right at them. If the monster
+touches a player, it will reduce their health. When the player’s health goes to
+zero the player dies. The game is over when all the players in the party are
+dead. You can bring a player back to life by finding and<span
+style='mso-spacerun:yes'>&nbsp; </span>shooting a Heart.<o:p></o:p></span></p>
+
+<p class=MsoPlainText style='margin-left:24.0pt;text-indent:-24.0pt;mso-list:
+l11 level1 lfo4;tab-stops:list 24.0pt'><![if !supportLists]><span
+style='font-family:Wingdings;mso-fareast-font-family:Wingdings;mso-bidi-font-family:
+Wingdings'><span style='mso-list:Ignore'>l<span style='font:7.0pt "Times New Roman"'>&nbsp;&nbsp;
+</span></span></span><![endif]><span style='font-family:"Arial","sans-serif"'>Bone
+Piles – these generate monsters. Shoot them to get rid of them.<o:p></o:p></span></p>
+
+<p class=MsoPlainText style='margin-left:24.0pt;text-indent:-24.0pt;mso-list:
+l11 level1 lfo4;tab-stops:list 24.0pt'><![if !supportLists]><span
+style='font-family:Wingdings;mso-fareast-font-family:Wingdings;mso-bidi-font-family:
+Wingdings'><span style='mso-list:Ignore'>l<span style='font:7.0pt "Times New Roman"'>&nbsp;&nbsp;
+</span></span></span><![endif]><span style='font-family:"Arial","sans-serif"'>Walls
+– these are blue stone walls that can’t be walked through.<o:p></o:p></span></p>
+
+<p class=MsoPlainText style='margin-left:24.0pt;text-indent:-24.0pt;mso-list:
+l11 level1 lfo4;tab-stops:list 24.0pt'><![if !supportLists]><span
+style='font-family:Wingdings;mso-fareast-font-family:Wingdings;mso-bidi-font-family:
+Wingdings'><span style='mso-list:Ignore'>l<span style='font:7.0pt "Times New Roman"'>&nbsp;&nbsp;
+</span></span></span><![endif]><span style='font-family:"Arial","sans-serif"'>Keys
+– pick these up and use them to open doors<o:p></o:p></span></p>
+
+<p class=MsoPlainText style='margin-left:24.0pt;text-indent:-24.0pt;mso-list:
+l11 level1 lfo4;tab-stops:list 24.0pt'><![if !supportLists]><span
+style='font-family:Wingdings;mso-fareast-font-family:Wingdings;mso-bidi-font-family:
+Wingdings'><span style='mso-list:Ignore'>l<span style='font:7.0pt "Times New Roman"'>&nbsp;&nbsp;
+</span></span></span><![endif]><span style='font-family:"Arial","sans-serif"'>Doors
+– can be opened by using keys<o:p></o:p></span></p>
+
+<p class=MsoPlainText style='margin-left:24.0pt;text-indent:-24.0pt;mso-list:
+l11 level1 lfo4;tab-stops:list 24.0pt'><![if !supportLists]><span
+style='font-family:Wingdings;mso-fareast-font-family:Wingdings;mso-bidi-font-family:
+Wingdings'><span style='mso-list:Ignore'>l<span style='font:7.0pt "Times New Roman"'>&nbsp;&nbsp;
+</span></span></span><![endif]><span style='font-family:"Arial","sans-serif"'>Money
+– run over money to increase your score. There’s currently no benefit to a
+higher score, but it’s still fun to collect money. </span><span
+style='font-family:Wingdings;mso-ascii-font-family:Arial;mso-hansi-font-family:
+Arial;mso-bidi-font-family:Arial;mso-char-type:symbol;mso-symbol-font-family:
+Wingdings'><span style='mso-char-type:symbol;mso-symbol-font-family:Wingdings'>J</span></span><span
+style='font-family:"Arial","sans-serif"'> <o:p></o:p></span></p>
+
+<p class=MsoPlainText style='margin-left:24.0pt;text-indent:-24.0pt;mso-list:
+l11 level1 lfo4;tab-stops:list 24.0pt'><![if !supportLists]><span
+style='font-family:Wingdings;mso-fareast-font-family:Wingdings;mso-bidi-font-family:
+Wingdings'><span style='mso-list:Ignore'>l<span style='font:7.0pt "Times New Roman"'>&nbsp;&nbsp;
+</span></span></span><![endif]><span style='font-family:"Arial","sans-serif"'>Food
+– this adds 100% to your health<o:p></o:p></span></p>
+
+<p class=MsoPlainText style='margin-left:24.0pt;text-indent:-24.0pt;mso-list:
+l11 level1 lfo4;tab-stops:list 24.0pt'><![if !supportLists]><span
+style='font-family:Wingdings;mso-fareast-font-family:Wingdings;mso-bidi-font-family:
+Wingdings'><span style='mso-list:Ignore'>l<span style='font:7.0pt "Times New Roman"'>&nbsp;&nbsp;
+</span></span></span><![endif]><span style='font-family:"Arial","sans-serif"'>Smart
+Bombs – you can shoot a smart bomb or pick it up and use it later. When you
+shoot or use a smart bomb it kills all the monsters currently visible on the
+screen.<o:p></o:p></span></p>
+
+<p class=MsoPlainText style='margin-left:24.0pt;text-indent:-24.0pt;mso-list:
+l11 level1 lfo4;tab-stops:list 24.0pt'><![if !supportLists]><span
+style='font-family:Wingdings;mso-fareast-font-family:Wingdings;mso-bidi-font-family:
+Wingdings'><span style='mso-list:Ignore'>l<span style='font:7.0pt "Times New Roman"'>&nbsp;&nbsp;
+</span></span></span><![endif]><span style='font-family:"Arial","sans-serif"'>Hearts
+– used to return dead players to life. If nobody in the party is dead, then it
+will return a big monster to life.<o:p></o:p></span></p>
+
+<h2>Implementation</h2>
+
+<p class=MsoPlainText><span style='font-family:"Arial","sans-serif"'><o:p>&nbsp;</o:p></span></p>
+
+<p class=MsoPlainText><span style='font-family:"Arial","sans-serif"'>The source
+of the game is included as dandy.fs. It’s my first Fsharp program, so it’s
+probably got lots of peculiar uses of the language. I hope to clean it up in
+the future. Any feedback or comments on style are appreciated.<o:p></o:p></span></p>
+
+<p class=MsoPlainText><span style='font-family:"Arial","sans-serif"'><o:p>&nbsp;</o:p></span></p>
+
+<p class=MsoPlainText><span style='font-family:"Arial","sans-serif"'>This
+program was compiled using FSharp 1.9.1.1. You may need to edit the source code
+if you compile with other versions of FSharp.<o:p></o:p></span></p>
+
+<p class=MsoPlainText><span style='font-family:"Arial","sans-serif"'>(In any
+event you will have to edit the sources to match the version of Managed DirectX
+that you have installed. See the comments at the start of the file.)<o:p></o:p></span></p>
+
+<h2>Missing Features</h2>
+
+<p class=MsoNormal><span style='font-family:"Arial","sans-serif"'><o:p>&nbsp;</o:p></span></p>
+
+<p class=MsoNormal><span style='font-family:"Arial","sans-serif"'>Things I’d
+like to add in future releases. (These were all in the original version of
+Dandy.)<o:p></o:p></span></p>
+
+<p class=MsoNormal style='margin-left:24.0pt;text-indent:-24.0pt;mso-list:l9 level1 lfo6;
+tab-stops:list 24.0pt'><![if !supportLists]><span style='font-family:Wingdings;
+mso-fareast-font-family:Wingdings;mso-bidi-font-family:Wingdings'><span
+style='mso-list:Ignore'>l<span style='font:7.0pt "Times New Roman"'>&nbsp;&nbsp;
+</span></span></span><![endif]><span style='font-family:"Arial","sans-serif"'>On-screen
+instructions and score<o:p></o:p></span></p>
+
+<p class=MsoNormal style='margin-left:24.0pt;text-indent:-24.0pt;mso-list:l9 level1 lfo6;
+tab-stops:list 24.0pt'><![if !supportLists]><span style='font-family:Wingdings;
+mso-fareast-font-family:Wingdings;mso-bidi-font-family:Wingdings'><span
+style='mso-list:Ignore'>l<span style='font:7.0pt "Times New Roman"'>&nbsp;&nbsp;
+</span></span></span><![endif]><span style='font-family:"Arial","sans-serif"'>Level
+editor<o:p></o:p></span></p>
+
+<h2>License</h2>
+
+<p class=MsoPlainText><span style='font-family:"Arial","sans-serif"'>I place
+this code and the associated data files in the public domain. You can do
+anything you want with it. Have fun with it!<o:p></o:p></span></p>
+
+<h2>History of Dandy</h2>
+
+<p class=MsoPlainText><span style='font-family:"Arial","sans-serif"'>I
+originally wrote Dandy Dungeon in 1982 for the Atari 800 8-bit home computer. I
+wrote it as part of my bachelor’s thesis, then later expanded it and sold it
+through the Atari Program Exchange. The Atari coin-op game group liked playing
+Dandy so much that they were inspired to create the “Gauntlet” arcade game
+series.<o:p></o:p></span></p>
+
+<p class=MsoPlainText><span style='font-family:"Arial","sans-serif"'><o:p>&nbsp;</o:p></span></p>
+
+<p class=MsoPlainText><span style='font-family:"Arial","sans-serif"'>I had a
+great deal of fun making this game. I wrote it in my dorm room, and relied on
+my dorm-mates for play testing. I also relied on several of my friends for some
+of the level designs.<o:p></o:p></span></p>
+
+<p class=MsoPlainText><span style='font-family:"Arial","sans-serif"'><o:p>&nbsp;</o:p></span></p>
+
+<h2>Comparing Implementation Languages</h2>
+
+<p class=MsoNormal>For fun I have recently implemented Dandy in several
+different computer languages. You might think it’s a little bit
+obsessive-compulsive to keep writing the same game over again. But I found it
+helpful for understanding the differences in performance and development time.
+Here are some notes:</p>
+
+<p class=MsoNormal><o:p>&nbsp;</o:p></p>
+
+<h3>6502 Assembly Language on the Atari 800</h3>
+
+<p class=MsoNormal><o:p>&nbsp;</o:p></p>
+
+<p class=MsoNormal>This was the original version of Dandy. It took several
+minutes to compile the game. The game was roughly 2000 lines of 6502 assembly
+source code. (Unfortunately I’ve long since lost the source code.) Since the
+game data variables all fit in one byte, it was actually pretty easy to write
+this in assembly. Also the Atari 800 hardware directly supported smooth
+scrolling of the map, easy generation of sound effects, and 4 joystick ports.</p>
+
+<p class=MsoNormal><o:p>&nbsp;</o:p></p>
+
+<p class=MsoNormal>It took me three months of part-time work to write the game.
+Originally there was a second computer (a Hewlett-Packard Pascal Workstation)
+that acted as a “dungeon master console”. The idea was that there would be a
+fifth player that controlled the pace of the game. “Send in the next wave of
+monsters”, and stuff like that. But this ended up being just a file server, and
+was eventually replaced with files on the local disk.</p>
+
+<p class=MsoNormal><o:p>&nbsp;</o:p></p>
+
+<p class=MsoNormal>Another feature of the original game was that when you left
+a level its state was stored, so that when you returned to the level everything
+would be as you left it. But in my play-testing I noticed that the only time
+people went up was by mistake, so I cut that feature.</p>
+
+<p class=MsoNormal><o:p>&nbsp;</o:p></p>
+
+<h3>C++ and Direct3D 9.0 on Windows XP</h3>
+
+<p class=MsoNormal>This version took about 15 hours to write, and was around
+1500 lines of code. It was easy to write and debug. (But after all, I am a full
+time C++ programmer.)</p>
+
+<p class=MsoNormal><o:p>&nbsp;</o:p></p>
+
+<h3>C# and Managed Direct3D on Windows XP</h3>
+
+<p class=MsoPlainText><span style='font-family:"Arial","sans-serif"'><o:p>&nbsp;</o:p></span></p>
+
+<p class=MsoPlainText><span style='font-family:"Arial","sans-serif"'>This
+version was a port of the C++ version. It took about 5 hours to port, and ended
+up being around 1100 lines<o:p></o:p></span></p>
+
+<p class=MsoPlainText><span style='font-family:"Arial","sans-serif"'><o:p>&nbsp;</o:p></span></p>
+
+<h3>F# and Managed Direct3D on Windows XP</h3>
+
+<p class=MsoPlainText><span style='font-family:"Arial","sans-serif"'>This
+version was a re-write of the C# version, with Direct3D code lifted from the F#
+interactive 3D sample. It took quite a while (25 hours) to write, partly
+because I’m new to F# and partly because I was using a borrowed computer (I’m
+on vacation) that didn’t have Visual Studio installed. So I was stuck using fsi
+and notepad. Fsi has some benefits for rapid development, but it was tedious to
+track down errors by copying-and-pasting code between notepad and fsi.<o:p></o:p></span></p>
+
+<p class=MsoPlainText><span style='font-family:"Arial","sans-serif"'><o:p>&nbsp;</o:p></span></p>
+
+<p class=MsoPlainText><span style='font-family:"Arial","sans-serif"'>Currently
+the F# version has more features than the other versions, so it’s not fair to
+compare the line number count of the current version to the other versions.
+However, At the point where the fsharp version had the same functionality as
+the C# version, the line count was around 900 lines.<o:p></o:p></span></p>
+
+<h3>F# and XNA on Windows XP/Vista and Xbox 360</h3>
+
+<p class=MsoPlainText><span style='font-family:"Arial","sans-serif"'>This
+version was an adaptation of the Managed Direct 3D version. XNA is much cleaner
+to use than Managed Direct 3D. And it has support for audio and joysticks,
+which is great. (Also for the Xbox 360, which is wonderful!) But I lost support
+for text, and the build process is more complicated, due to the need to use
+both Visual Studio and Visual Studio Express.<o:p></o:p></span></p>
+
+<h2>Thoughts on F# for game development</h2>
+
+<p class=MsoNormal><span style='font-family:"Arial","sans-serif"'>If you do a
+web search for games written in non-C-derived languages, you’ll see that very
+few people write two games in a row in a non-C-derived language. I think the
+reason is that it’s currently still most convenient to write games in a
+C-derived language. However, to help people who are considering using F# for
+game development, here’s my thoughts on the benefits and problems:<o:p></o:p></span></p>
+
+<p class=MsoNormal><span style='font-family:"Arial","sans-serif"'><o:p>&nbsp;</o:p></span></p>
+
+<p class=MsoNormal><span style='font-family:"Arial","sans-serif"'>Benefits of
+F#<o:p></o:p></span></p>
+
+<p class=MsoNormal style='margin-left:24.0pt;text-indent:-24.0pt;mso-list:l0 level1 lfo8;
+tab-stops:list 24.0pt'><![if !supportLists]><span style='font-family:Wingdings;
+mso-fareast-font-family:Wingdings;mso-bidi-font-family:Wingdings'><span
+style='mso-list:Ignore'>l<span style='font:7.0pt "Times New Roman"'>&nbsp;&nbsp;
+</span></span></span><![endif]><span style='font-family:"Arial","sans-serif"'>Functional
+code makes it easy to factor out common code, making programs shorter<o:p></o:p></span></p>
+
+<p class=MsoNormal style='margin-left:24.0pt;text-indent:-24.0pt;mso-list:l0 level1 lfo8;
+tab-stops:list 24.0pt'><![if !supportLists]><span style='font-family:Wingdings;
+mso-fareast-font-family:Wingdings;mso-bidi-font-family:Wingdings'><span
+style='mso-list:Ignore'>l<span style='font:7.0pt "Times New Roman"'>&nbsp;&nbsp;
+</span></span></span><![endif]><span style='font-family:"Arial","sans-serif"'>Being
+able to omit type names in many places makes programs shorter<o:p></o:p></span></p>
+
+<p class=MsoNormal style='margin-left:24.0pt;text-indent:-24.0pt;mso-list:l0 level1 lfo8;
+tab-stops:list 24.0pt'><![if !supportLists]><span style='font-family:Wingdings;
+mso-fareast-font-family:Wingdings;mso-bidi-font-family:Wingdings'><span
+style='mso-list:Ignore'>l<span style='font:7.0pt "Times New Roman"'>&nbsp;&nbsp;
+</span></span></span><![endif]><span style='font-family:"Arial","sans-serif"'>Strong
+type checking and null-less programming means fewer runtime errors<o:p></o:p></span></p>
+
+<p class=MsoNormal style='margin-left:24.0pt;text-indent:-24.0pt;mso-list:l0 level1 lfo8;
+tab-stops:list 24.0pt'><![if !supportLists]><span style='font-family:Wingdings;
+mso-fareast-font-family:Wingdings;mso-bidi-font-family:Wingdings'><span
+style='mso-list:Ignore'>l<span style='font:7.0pt "Times New Roman"'>&nbsp;&nbsp;
+</span></span></span><![endif]><span style='font-family:"Arial","sans-serif"'>Fsi
+is helpful for use as a “console” during game development. It’s easy to inspect
+data structures and call code in your game to change game state and test out
+functions.<o:p></o:p></span></p>
+
+<p class=MsoNormal style='margin-left:24.0pt;text-indent:-24.0pt;mso-list:l0 level1 lfo8;
+tab-stops:list 24.0pt'><![if !supportLists]><span style='font-family:Wingdings;
+mso-fareast-font-family:Wingdings;mso-bidi-font-family:Wingdings'><span
+style='mso-list:Ignore'>l<span style='font:7.0pt "Times New Roman"'>&nbsp;&nbsp;
+</span></span></span><![endif]><span style='font-family:"Arial","sans-serif"'>The
+language support for tagged unions and the match / with language construct are
+helpful. For example in Dandy there’s a “piece” type that has all the types of
+data that are present in the game. It’s very handy to use “match” to process
+piece data in the game.<o:p></o:p></span></p>
+
+<p class=MsoNormal style='margin-left:24.0pt;text-indent:-24.0pt;mso-list:l0 level1 lfo8;
+tab-stops:list 24.0pt'><![if !supportLists]><span style='font-family:Wingdings;
+mso-fareast-font-family:Wingdings;mso-bidi-font-family:Wingdings'><span
+style='mso-list:Ignore'>l<span style='font:7.0pt "Times New Roman"'>&nbsp;&nbsp;
+</span></span></span><![endif]><span style='font-family:"Arial","sans-serif"'>Runs
+roughly as fast as C#.<o:p></o:p></span></p>
+
+<p class=MsoNormal><span style='font-family:"Arial","sans-serif"'><o:p>&nbsp;</o:p></span></p>
+
+<p class=MsoNormal><span style='font-family:"Arial","sans-serif"'>Problems with
+F#:<o:p></o:p></span></p>
+
+<p class=MsoNormal style='margin-left:24.0pt;text-indent:-24.0pt;mso-list:l1 level1 lfo10;
+tab-stops:list 24.0pt'><![if !supportLists]><span style='font-family:Wingdings;
+mso-fareast-font-family:Wingdings;mso-bidi-font-family:Wingdings'><span
+style='mso-list:Ignore'>l<span style='font:7.0pt "Times New Roman"'>&nbsp;&nbsp;
+</span></span></span><![endif]>For loops that execute their terminal value are
+confusing to C programmers. And the code ends up with lots of<span
+style='mso-spacerun:yes'>&nbsp; </span>for x = 0 to size – 1 statements. It’s too
+bad that there isn’t a for x = 0 until size syntax.</p>
+
+<p class=MsoNormal style='margin-left:24.0pt;text-indent:-24.0pt;mso-list:l1 level1 lfo10;
+tab-stops:list 24.0pt'><![if !supportLists]><span style='font-family:Wingdings;
+mso-fareast-font-family:Wingdings;mso-bidi-font-family:Wingdings'><span
+style='mso-list:Ignore'>l<span style='font:7.0pt "Times New Roman"'>&nbsp;&nbsp;
+</span></span></span><![endif]>Lack of a “break” statement makes loops harder
+to write. Yeah, I know you’re supposed to factor the loops into helper
+functions, or use recursive functions but it’s still a pain.</p>
+
+<p class=MsoNormal style='margin-left:24.0pt;text-indent:-24.0pt;mso-list:l1 level1 lfo10;
+tab-stops:list 24.0pt'><![if !supportLists]><span style='font-family:Wingdings;
+mso-fareast-font-family:Wingdings;mso-bidi-font-family:Wingdings'><span
+style='mso-list:Ignore'>l<span style='font:7.0pt "Times New Roman"'>&nbsp;&nbsp;
+</span></span></span><![endif]>No language support for enums with assigned
+integer values, and converting between ints and enums. This feature is very
+useful in games. You can kludge around it with helper functions, but it’s
+tedious to write them.</p>
+
+<p class=MsoNormal style='margin-left:24.0pt;text-indent:-24.0pt;mso-list:l1 level1 lfo10;
+tab-stops:list 24.0pt'><![if !supportLists]><span style='font-family:Wingdings;
+mso-fareast-font-family:Wingdings;mso-bidi-font-family:Wingdings'><span
+style='mso-list:Ignore'>l<span style='font:7.0pt "Times New Roman"'>&nbsp;&nbsp;
+</span></span></span><![endif]>Ugly array indexing syntax. I prefer foo[4] to
+foo.[4]</p>
+
+<p class=MsoNormal style='margin-left:24.0pt;text-indent:-24.0pt;mso-list:l1 level1 lfo10;
+tab-stops:list 24.0pt'><![if !supportLists]><span style='font-family:Wingdings;
+mso-fareast-font-family:Wingdings;mso-bidi-font-family:Wingdings'><span
+style='mso-list:Ignore'>l<span style='font:7.0pt "Times New Roman"'>&nbsp;&nbsp;
+</span></span></span><![endif]>It’s tedious to have to manually convert between
+floating point and integers.</p>
+
+<p class=MsoNormal style='margin-left:24.0pt;text-indent:-24.0pt;mso-list:l1 level1 lfo10;
+tab-stops:list 24.0pt'><![if !supportLists]><span style='font-family:Wingdings;
+mso-fareast-font-family:Wingdings;mso-bidi-font-family:Wingdings'><span
+style='mso-list:Ignore'>l<span style='font:7.0pt "Times New Roman"'>&nbsp;&nbsp;
+</span></span></span><![endif]>You have to know way too much in order to get
+code to work. For example, in order to call into the CLR code I needed to know
+F#, C#, the CLR, how F# marshals code into C#. Compare this to writing the same
+code in C# where I can just blindly copy-and-paste some example code from the
+docs.</p>
+
+<p class=MsoNormal style='margin-left:24.0pt;text-indent:-24.0pt;mso-list:l1 level1 lfo10;
+tab-stops:list 24.0pt'><![if !supportLists]><span style='font-family:Wingdings;
+mso-fareast-font-family:Wingdings;mso-bidi-font-family:Wingdings'><span
+style='mso-list:Ignore'>l<span style='font:7.0pt "Times New Roman"'>&nbsp;&nbsp;
+</span></span></span><![endif]>No free IDE. The Visual Studio IDE for FSharp is
+quite good, but it requires a non-free version of Visual Studio. Compare this
+to C or C# where you can get an excellent free version of Visual Studio.</p>
+
+<p class=MsoNormal style='margin-left:24.0pt;text-indent:-24.0pt;mso-list:l1 level1 lfo10;
+tab-stops:list 24.0pt'><![if !supportLists]><span style='font-family:Wingdings;
+mso-fareast-font-family:Wingdings;mso-bidi-font-family:Wingdings'><span
+style='mso-list:Ignore'>l<span style='font:7.0pt "Times New Roman"'>&nbsp;&nbsp;
+</span></span></span><![endif]>Hard to fix syntax errors. Because F# syntax is
+so different from C-like languages, and because F# lets you omit semicolons, if
+you accidentally make a syntax error in you source code the resulting error
+message from the compiler is typically not very helpful. Once you’ve written 20
+hours or so of F# code you finally get the hang of the F# syntax, and this
+becomes less of a problem.</p>
+
+<p class=MsoNormal style='margin-left:24.0pt;text-indent:-24.0pt;mso-list:l1 level1 lfo10;
+tab-stops:list 24.0pt'><![if !supportLists]><span style='font-family:Wingdings;
+mso-fareast-font-family:Wingdings;mso-bidi-font-family:Wingdings'><span
+style='mso-list:Ignore'>l<span style='font:7.0pt "Times New Roman"'>&nbsp;&nbsp;
+</span></span></span><![endif]>F# is not currently available on any video game
+consoles besides Xbox 360. Whereas C++ will work on all game consoles.</p>
+
+<p class=MsoNormal><o:p>&nbsp;</o:p></p>
+
+<p class=MsoNormal>Having ported a game to F#, I think I see lots of promise in
+the language. In the future I’d like to try writing a new, 3D game of some sort
+in F#. I’ll let you know how it goes.</p>
+
+<p class=MsoNormal><o:p>&nbsp;</o:p></p>
+
+</div>
+
+</body>
+
+</html>
