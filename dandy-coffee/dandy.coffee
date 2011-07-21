@@ -1,4 +1,4 @@
-levels: [
+levels = [
    ['************************************************************',
     '*2            1 1                111111                1111*',
     '*22          1 1          K                        ******* *',
@@ -780,11 +780,11 @@ levels: [
     '*iiiiiiiiii$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$*',
     '************************************************************']]
 
-encoding: ' *DudKF$i123mnop'
+encoding = ' *DudKF$i123mnop'
 
-strike: new Image()
+strike = new Image()
 
-strike.src: 'data:image/png;base64,'+
+strike.src = 'data:image/png;base64,'+
 'iVBORw0KGgoAAAANSUhEUgAAAQAAAAAgCAYAAAD9qabkAAAACXBIWXMAAB'+
 'cSAAAXEgFnn9JSAAAHtklEQVR4Ae2cv5IbRRDGVy5iilcgdNWVQ86khJBB'+
 'ALkLvwApoVNewP9iCOwMQmKUulzlkFeg/AA+dk/3k3Y/67uemR3J0s1e4F'+
@@ -834,130 +834,130 @@ strike.src: 'data:image/png;base64,'+
 'XudyBzCuRsOf3bOzlsThnDzdPvUZfz9ubnzNsxX+f3+vFigI7FSwAAAAAE'+
 'lFTkSuQmCC'
 
-levelWidth: 60
-levelHeight: 30
-tileWidth: 16
-tileHeight: 16
-windowTileWidth: 20
-windowTileHeight: 10
+levelWidth = 60
+levelHeight = 30
+tileWidth = 16
+tileHeight = 16
+windowTileWidth = 20
+windowTileHeight = 10
 
-kSpace: 0
-kWall: 1
-kDoor: 2
-kUp: 3
-kDown: 4
-kKey: 5
-kFood: 6
-kMoney: 7
-kBomb: 8
-kMonster1: 9
-kMonster2: 10
-kMonster3: 11
-kHeart: 12
-kGenerator1: 13
-kGenerator2: 14
-kGenerator3: 15
-kArrow: 16
-kPlayer1: kArrow + 8
+kSpace = 0
+kWall = 1
+kDoor = 2
+kUp = 3
+kDown = 4
+kKey = 5
+kFood = 6
+kMoney = 7
+kBomb = 8
+kMonster1 = 9
+kMonster2 = 10
+kMonster3 = 11
+kHeart = 12
+kGenerator1 = 13
+kGenerator2 = 14
+kGenerator3 = 15
+kArrow = 16
+kPlayer1 = kArrow + 8
 
-kDirToDeltaX: [0, 1, 1, 1, 0, -1 , -1, -1]
-kDirToDeltaY: [-1, -1, 0, 1, 1, 1, 0, -1]
-kDeltaToDir: [[7, 0, 1], [6, 0, 2], [5, 4, 3]]
-kSearchOrder: [0, -1, 1]
-kButtonsToDir: [
+kDirToDeltaX = [0, 1, 1, 1, 0, -1 , -1, -1]
+kDirToDeltaY = [-1, -1, 0, 1, 1, 1, 0, -1]
+kDeltaToDir = [[7, 0, 1], [6, 0, 2], [5, 4, 3]]
+kSearchOrder = [0, -1, 1]
+kButtonsToDir = [
   #     D U R L
   -1, # 0 0 0 0
   6,  # 0 0 0 1
-                     2, # 0 0 1 0
-                     -1, # 0 0 1 1
-                     0, # 0 1 0 0
-                     7, # 0 1 0 1
-                     1, # 0 1 1 0
-                     0, # 0 1 1 1
-                     4, # 1 0 0 0
-                     5, # 1 0 0 1
-                     3, # 1 0 1 0
-                     4, # 1 0 1 1
-                     -1, # 1 1 0 0
-                     6, # 1 1 0 1
-                     2, # 1 1 1 0
-                     -1  # 1 1 1 1
-                     ]
+  2,  # 0 0 1 0
+  -1, # 0 0 1 1
+  0,  # 0 1 0 0
+  7,  # 0 1 0 1
+  1,  # 0 1 1 0
+  0,  # 0 1 1 1
+  4,  # 1 0 0 0
+  5,  # 1 0 0 1
+  3,  # 1 0 1 0
+  4,  # 1 0 1 1
+  -1, # 1 1 0 0
+  6,  # 1 1 0 1
+  2,  # 1 1 1 0
+  -1  # 1 1 1 1
+  ]
 
 # Masks
-kButtonLeft: 1
-kButtonRight: 2
-kButtonUp: 4
-kButtonDown: 8
-kButtonFire: 16
-kButtonBomb: 32
+kButtonLeft = 1
+kButtonRight = 2
+kButtonUp = 4
+kButtonDown = 8
+kButtonFire = 16
+kButtonBomb = 32
 
-kTicksPerMove: 4
+kTicksPerMove = 4
 
-dirty: false
-map: []
-currentLevel: 0
-rotor: 0
+dirty = false
+map = []
+currentLevel = 0
+rotor = 0
 
-px: 0
-py: 0
-pHealth: 100
-pScore: 0
-pBombs: 0
-pKeys: 0
-pDir: 0
-pax: 0
-pay: 0
-paDir: -1
-pButtons: 0
-pOldButtons: 0
-pPlayerMoveTimer: 0
+px = 0
+py = 0
+pHealth = 100
+pScore = 0
+pBombs = 0
+pKeys = 0
+pDir = 0
+pax = 0
+pay = 0
+paDir = -1
+pButtons = 0
+pOldButtons = 0
+pPlayerMoveTimer = 0
 
-loadLevel: () ->
-  level: levels[currentLevel]
-  map: []
+loadLevel = () ->
+  level = levels[currentLevel]
+  map = []
   for line in level
     for x in [0...line.length]
       map.push(encoding.indexOf(line.charAt(x)))
   setPlayerStartPosition()
-  paDir: -1
+  paDir = -1
 
-findFirst: (item) ->
+findFirst = (item) ->
   for m, i in map
     if m is item
-       y: Math.floor(i / levelWidth)
-       x: i - y * levelWidth
+       y = Math.floor(i / levelWidth)
+       x = i - y * levelWidth
        return [x, y]
   null
 
-setPlayerStartPosition: () ->
-    v: findFirst(kUp)
-    if v
-        upx: v[0]
-        upy: v[1]
-    else
-        upx: 1
-        upy: 1
-    px: upx
-    py: upy-1
-    map[px + py * levelWidth]: kPlayer1
+setPlayerStartPosition = () ->
+  v = findFirst(kUp)
+  if v
+    upx = v[0]
+    upy = v[1]
+  else
+    upx = 1
+    upy = 1
+  px = upx
+  py = upy-1
+  map[px + py * levelWidth] = kPlayer1
 
-nextLevel: () ->
-    if currentLevel < 25
-        currentLevel++
-    loadLevel()
+nextLevel = () ->
+  if currentLevel < 25
+    currentLevel++
+  loadLevel()
 
-endGame: () ->
-    currentLevel: 0
-    pHealth: 100
-    pKeys: 0
-    pBombs: 0
-    pScore: 0
-    loadLevel()
+endGame = () ->
+  currentLevel = 0
+  pHealth = 100
+  pKeys = 0
+  pBombs = 0
+  pScore = 0
+  loadLevel()
 
-floodFill: (pos, oc, nc) ->
+floodFill = (pos, oc, nc) ->
     if oc == map[pos]
-        map[pos]: nc
+        map[pos] = nc
         floodFill(pos - levelWidth - 1, oc, nc)
         floodFill(pos - levelWidth, oc, nc)
         floodFill(pos - levelWidth + 1, oc, nc)
@@ -967,60 +967,72 @@ floodFill: (pos, oc, nc) ->
         floodFill(pos + levelWidth, oc, nc)
         floodFill(pos + levelWidth + 1, oc, nc)
 
-getVisibleTopLeftCorner: () ->
+getVisibleTopLeftCorner = () ->
   [clamp(px - (windowTileWidth >> 1), 0, levelWidth - windowTileWidth),
             clamp(py - (windowTileHeight >> 1), 0, levelHeight - windowTileHeight)]
 
-drawPicture: () ->
-    canvas: document.getElementById('gameCanvas')
-    context: canvas.getContext('2d')
-    tl: getVisibleTopLeftCorner()
-    baseX: tl[0]
-    baseY: tl[1]
-    canvasTileWidth: tileWidth * 2
-    canvasTileHeight: tileHeight * 2
+drawPicture = () ->
+    canvas = document.getElementById('gameCanvas')
+    context = canvas.getContext('2d')
+    tl = getVisibleTopLeftCorner()
+    baseX = tl[0]
+    baseY = tl[1]
+    canvasTileWidth = tileWidth * 2
+    canvasTileHeight = tileHeight * 2
     for y in [0...windowTileHeight]
       for x in [0...windowTileWidth]
-        d: map[(baseX + x) + (baseY + y)*levelWidth]
-        tx: tileWidth * (d & 15)
-        ty: tileHeight * (d >> 4)
+        d = map[(baseX + x) + (baseY + y)*levelWidth]
+        tx = tileWidth * (d & 15)
+        ty = tileHeight * (d >> 4)
         context.drawImage(strike, tx, ty, tileWidth, tileHeight,
           x * canvasTileWidth, y * canvasTileHeight,
           canvasTileWidth, canvasTileHeight)
     null
 
-game: () ->
-    loadLevel()
-    setInterval(gameStep, 15)
+# Provide requestAnimationFrame in a cross browser way. 
+window.requestAnimFrame = 
+  (() ->
+    window.requestAnimationFrame ||
+    window.webkitRequestAnimationFrame ||
+    window.mozRequestAnimationFrame ||
+    window.oRequestAnimationFrame ||
+    window.msRequestAnimationFrame ||
+    (callback, element) -> window.setTimeout(callback, 1000/60)
+  )()
+           
+game = () ->
+  loadLevel()
+  requestAnimFrame(gameStep)
 
-gameStep: () ->
-    doButtons()
-    moveArrow()
-    moveMonsters()
-    if dirty
-        drawPicture()
-        dirty: false
-    if pHealth <= 0
-        endGame()
+gameStep = () ->
+  doButtons()
+  moveArrow()
+  moveMonsters()
+  if dirty
+    drawPicture()
+    dirty = false
+  if pHealth <= 0
+    endGame()
+  requestAnimFrame(gameStep)
 
-clamp: (x, min, max) ->
+clamp = (x, min, max) ->
     Math.min(max, Math.max(min, x))
 
-move: (dir) ->
-    nx: clamp(px + kDirToDeltaX[dir], 0, levelWidth-1)
-    ny: clamp(py + kDirToDeltaY[dir], 0, levelHeight-1)
-    pos: nx + ny * levelWidth
-    v: map[pos]
-    canMove: true
+move = (dir) ->
+    nx = clamp(px + kDirToDeltaX[dir], 0, levelWidth-1)
+    ny = clamp(py + kDirToDeltaY[dir], 0, levelHeight-1)
+    pos = nx + ny * levelWidth
+    v = map[pos]
+    canMove = true
     switch v
       when kSpace
-        0 # pass
+        break
       when kDoor
           if pKeys > 0
               pKeys -= 1
               floodFill(pos, kDoor, kSpace)
           else
-              canMove: false
+              canMove = false
       when kMoney
           pScore += 100
       when kKey
@@ -1031,65 +1043,65 @@ move: (dir) ->
           pHealth += 100
       when kDown
           nextLevel()
-          canMove: false
+          canMove = false
       else
-          canMove: false
+          canMove = false
     if canMove
-        map[px + py * levelWidth]: kSpace
-        px: nx
-        py: ny
-        map[px + py * levelWidth]: kPlayer1
-        dirty: true
+        map[px + py * levelWidth] = kSpace
+        px = nx
+        py = ny
+        map[px + py * levelWidth] = kPlayer1
+        dirty = true
     canMove
 
-moveArrow: () ->
+moveArrow = () ->
     if paDir != -1
-        nx: clamp(pax + kDirToDeltaX[paDir], 0, levelWidth-1)
-        ny: clamp(pay + kDirToDeltaY[paDir], 0, levelHeight-1)
-        tl: getVisibleTopLeftCorner()
-        baseX: tl[0]
-        baseY: tl[1]
-        pos: pax + pay * levelWidth
-        npos: nx + ny * levelWidth
-        v: map[pos]
-        nv: map[npos]
+        nx = clamp(pax + kDirToDeltaX[paDir], 0, levelWidth-1)
+        ny = clamp(pay + kDirToDeltaY[paDir], 0, levelHeight-1)
+        tl = getVisibleTopLeftCorner()
+        baseX = tl[0]
+        baseY = tl[1]
+        pos = pax + pay * levelWidth
+        npos = nx + ny * levelWidth
+        v = map[pos]
+        nv = map[npos]
         if v >= kArrow && v <= kArrow + 7
-            map[pos]: kSpace
+            map[pos] = kSpace
         if nx < baseX || ny < baseY || nx >= baseX + windowTileWidth ||
           ny >= baseY + windowTileHeight
-            nv: -1 # Kill arrow
+            nv = -1 # Kill arrow
         if nv != kSpace
-            paDir: -1
+            paDir = -1
             if nv >= kBomb && nv < kArrow
-                rv: kSpace
+                rv = kSpace
                 if nv == kBomb
                     doBomb()
                 else if nv == kHeart
-                    rv: kMonster3
+                    rv = kMonster3
                 else if nv == kMonster2 || nv == kMonster3
-                    rv: nv - 1
-                map[npos]: rv
+                    rv = nv - 1
+                map[npos] = rv
         else
-            map[npos]: kArrow + ((paDir - 5) & 7)
-            pax: nx
-            pay: ny
-        dirty: true
+            map[npos] = kArrow + ((paDir - 5) & 7)
+            pax = nx
+            pay = ny
+        dirty = true
 
-doBomb: () ->
-    tl: getVisibleTopLeftCorner()
-    baseX: tl[0]
-    baseY: tl[1]
+doBomb = () ->
+    tl = getVisibleTopLeftCorner()
+    baseX = tl[0]
+    baseY = tl[1]
 
     for y in [0...windowTileHeight]
         for x in [0...windowTileWidth]
-            pos: (baseX + x) + (baseY + y) * levelWidth
-            v: map[pos]
+            pos = (baseX + x) + (baseY + y) * levelWidth
+            v = map[pos]
             if (v >= kMonster1 && v <= kMonster3) ||
                     (v >= kGenerator1 && v <= kGenerator3)
-                map[pos]: kSpace
-    dirty: true
+                map[pos] = kSpace
+    dirty = true
 
-toDelta: (a, b) ->
+toDelta = (a, b) ->
     if a > b
       1
     else if a < b
@@ -1097,75 +1109,75 @@ toDelta: (a, b) ->
     else
       0
 
-adjust: (x, m, dx) ->
+adjust = (x, m, dx) ->
     m * Math.floor(x / m) + dx
 
-moveMonsters: () ->
-    tl: getVisibleTopLeftCorner()
-    baseX: tl[0]
-    baseY: tl[1]
+moveMonsters = () ->
+    tl = getVisibleTopLeftCorner()
+    baseX = tl[0]
+    baseY = tl[1]
 
-    dx: 4
-    dy: 4
+    dx = 4
+    dy = 4
 
     if ++rotor >= (dx * dy)
-        rotor: 0
+        rotor = 0
 
-    xBase: adjust(baseX, dx, rotor % dx)
-    yBase: adjust(baseY, dy, Math.floor(rotor / dx))
-    xEnd: baseX + windowTileWidth
-    yEnd: baseY + windowTileHeight
+    xBase = adjust(baseX, dx, rotor % dx)
+    yBase = adjust(baseY, dy, Math.floor(rotor / dx))
+    xEnd = baseX + windowTileWidth
+    yEnd = baseY + windowTileHeight
     for my in [yBase...yEnd] by dy
         for mx in [xBase...xEnd] by dx
-            pos: mx + my * levelWidth
-            v: map[pos]
+            pos = mx + my * levelWidth
+            v = map[pos]
             if v >= kMonster1 && v <= kMonster3
-                mDir: kDeltaToDir[toDelta(py, my) + 1][toDelta(px, mx) + 1]
+                mDir = kDeltaToDir[toDelta(py, my) + 1][toDelta(px, mx) + 1]
                 for d in [0...3]
-                    dd: (mDir + kSearchOrder[d]) & 7
-                    npos: pos + kDirToDeltaX[dd] + kDirToDeltaY[dd] * levelWidth
-                    nv: map[npos]
+                    dd = (mDir + kSearchOrder[d]) & 7
+                    npos = pos + kDirToDeltaX[dd] + kDirToDeltaY[dd] * levelWidth
+                    nv = map[npos]
                     if nv == kPlayer1
-                        map[pos]: kSpace
+                        map[pos] = kSpace
                         pHealth -= 10 * (v - kMonster1 + 1)
-                        dirty: true
+                        dirty = true
                         break
                     else if nv == kSpace
-                        map[pos]: kSpace
-                        map[npos]: v
-                        dirty: true
+                        map[pos] = kSpace
+                        map[npos] = v
+                        dirty = true
                         break
                     else if nv >= kArrow && nv <= kArrow+7
                         # Don't try to walk around arrows.
                         break
             else if v >= kGenerator1 && v <= kGenerator3
-                ran_number: Math.floor(Math.random()*8)
+                ran_number = Math.floor(Math.random()*8)
                 if (ran_number < 4)
-                    gd: ran_number * 2
+                    gd = ran_number * 2
                     for dd in [0...8] by 2
-                        gd2: (gd + dd) % 7
-                        gpos: pos + kDirToDeltaX[gd2] + kDirToDeltaY[gd2] * levelWidth
+                        gd2 = (gd + dd) % 7
+                        gpos = pos + kDirToDeltaX[gd2] + kDirToDeltaY[gd2] * levelWidth
                         if map[gpos] == kSpace
-                            map[gpos]: kMonster1 + (v - kGenerator1)
+                            map[gpos] = kMonster1 + (v - kGenerator1)
                             break
     null
 
-fire: () ->
+fire = () ->
     if paDir == -1
-        pax: px
-        pay: py
-        paDir: pDir
+        pax = px
+        pay = py
+        paDir = pDir
 
-doPlayerMove: () ->
+doPlayerMove = () ->
   for di in [0...3]
-    dd: (pDir + kSearchOrder[di]) & 7;
+    dd = (pDir + kSearchOrder[di]) & 7;
     if move(dd)
       break
   null
 
-doButtons: () ->
-    deltaDown: pButtons & ~ pOldButtons
-    pOldButtons: pButtons
+doButtons = () ->
+    deltaDown = pButtons & ~ pOldButtons
+    pOldButtons = pButtons
     if deltaDown & kButtonBomb
         if pBombs > 0
             pBombs--
@@ -1173,49 +1185,51 @@ doButtons: () ->
 
     if pButtons & kButtonFire
         fire()
-    d: kButtonsToDir[pButtons & 15]
+    d = kButtonsToDir[pButtons & 15]
 
     if d >= 0
-        pDir: d
+        pDir = d
         if pPlayerMoveTimer == 0
-            pPlayerMoveTimer: kTicksPerMove
+            pPlayerMoveTimer = kTicksPerMove
             doPlayerMove()
     if pPlayerMoveTimer > 0
         pPlayerMoveTimer--;
 
-onkeydown: (e) ->
-    e: || window.event
-    pButtons: updateMask(pButtons, e.keyCode, 1)
+onkeydown = (e) ->
+    e ||= window.event
+    pButtons = updateMask(pButtons, e.keyCode, 1)
 
-onkeyup: (e) ->
-    e: || window.event
-    pButtons: updateMask(pButtons, e.keyCode, 0)
+onkeyup = (e) ->
+    e ||= window.event
+    pButtons = updateMask(pButtons, e.keyCode, 0)
 
-updateMask: (mask, code, down) ->
-    k: 0
+updateMask = (mask, code, down) ->
+    k = 0
     switch code
       when 37
-          k: kButtonLeft
+          k = kButtonLeft
       when 38
-          k: kButtonUp
+          k = kButtonUp
       when 39
-          k: kButtonRight
+          k = kButtonRight
       when 40
-          k: kButtonDown
+          k = kButtonDown
       when 66
-          k: kButtonBomb
+          k = kButtonBomb
       when 32
-          k: kButtonFire
+          k = kButtonFire
       else
           return mask
     if down
-        mask: mask | k
+        mask = mask | k
     else
-        mask: mask & ~ k
+        mask = mask & ~ k
     return mask
 
-document.onkeydown: onkeydown
-document.onkeyup: onkeyup
+# Bind to the document event methods
+
+document.onkeydown = onkeydown
+document.onkeyup = onkeyup
 
 # Export our game function
-window.game: game
+window.game = game
