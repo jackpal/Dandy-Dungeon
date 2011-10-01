@@ -1,3 +1,6 @@
+#library('Dandy');
+
+#import('dart:dom');
 
 class Point {
   final int x;
@@ -5,15 +8,12 @@ class Point {
   Point(this.x, this.y);
 }
 
-class Dandy {
 
-  static void main() {
-    new Dandy().run();
-  }
+class Dandy {
 
   Dandy() {
     initializeStrike();
-    map = new Array<int>(levelWidth * levelHeight);
+    map = new List<int>(levelWidth * levelHeight);
   }
 
   void run() {
@@ -25,7 +25,7 @@ class Dandy {
       (Event event) { onkeyup(event); }, false);
   }
 
-  static final Array<Array<String>> levels = [
+  static final List<List<String>> levels = [
                 [@"************************************************************",
                  @"*2            1 1                111111                1111*",
                  @"*22          1 1          K                        ******* *",
@@ -890,11 +890,11 @@ class Dandy {
   static final int kArrow = 16;
   static final int kPlayer1 = kArrow + 8;
   
-  static final Array<int> kDirToDeltaX = [0, 1, 1, 1, 0, -1 , -1, -1];
-  static final Array<int> kDirToDeltaY = [-1, -1, 0, 1, 1, 1, 0, -1];
-  static final Array<Array<int>> kDeltaToDir = [[7, 0, 1], [6, 0, 2], [5, 4, 3]];
-  static final Array<int> kSearchOrder = [0, -1, 1];
-  static final Array<int> kButtonsToDir = [
+  static final List<int> kDirToDeltaX = [0, 1, 1, 1, 0, -1 , -1, -1];
+  static final List<int> kDirToDeltaY = [-1, -1, 0, 1, 1, 1, 0, -1];
+  static final List<List<int>> kDeltaToDir = [[7, 0, 1], [6, 0, 2], [5, 4, 3]];
+  static final List<int> kSearchOrder = [0, -1, 1];
+  static final List<int> kButtonsToDir = [
                         // D U R L
                     -1, // 0 0 0 0
                     6, // 0 0 0 1
@@ -926,7 +926,7 @@ class Dandy {
   
 
   bool dirty = false;
-  Array<int> map;
+  List<int> map;
   int currentLevel = 0;
   int rotor = 0;
 
@@ -945,7 +945,7 @@ class Dandy {
   int pPlayerMoveTimer = 0;
 
   void loadLevel() {
-      Array<String> level = levels[currentLevel];
+      List<String> level = levels[currentLevel];
       for (int y = 0; y < levelHeight; y++) {
           String line = level[y];
           for (int x = 0; x < levelWidth; x++) {
@@ -1001,7 +1001,7 @@ class Dandy {
       loadLevel();
   }
 
-  void floodFill(pos, oc, nc) {
+  void floodFill(int pos, int oc, int nc) {
       if (oc == map[pos]) {
           map[pos] = nc;
           floodFill(pos - levelWidth - 1, oc, nc);
@@ -1293,15 +1293,15 @@ class Dandy {
       }
   }
 
-  void onkeydown(e) {
-      pButtons = updateMask(pButtons, e.keyCode, 1);
+  void onkeydown(KeyboardEvent e) {
+      pButtons = updateMask(pButtons, e.keyCode, true);
   }
 
-  void onkeyup(e) {
-      pButtons = updateMask(pButtons, e.keyCode, 0);
+  void onkeyup(KeyboardEvent e) {
+      pButtons = updateMask(pButtons, e.keyCode, false);
   }
 
-  int updateMask(mask, code, down) {
+  int updateMask(int mask, int code, bool down) {
       int k = 0;
       switch (code) {
       case 37:
@@ -1332,4 +1332,8 @@ class Dandy {
       }
       return mask;
   }
+}
+
+void main() {
+  new Dandy().run();
 }
