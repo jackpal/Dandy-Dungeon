@@ -1,6 +1,5 @@
-#library('Dandy');
+#import('dart:html', prefix: 'html');
 
-#import('dart:dom');
 
 class Point {
   final int x;
@@ -17,12 +16,10 @@ class Dandy {
   }
 
   void run() {
-    window.addEventListener("DOMContentLoaded",
-      (Event event) { game(); }, false);
-    window.addEventListener("keydown",
-      (Event event) { onkeydown(event); }, false);
-    window.addEventListener("keyup",
-      (Event event) { onkeyup(event); }, false);
+    html.window.on.contentLoaded.add(
+      (html.Event event) { game(); });
+    html.window.on.keyDown.add(onkeydown);
+    html.window.on.keyUp.add(onkeyup);
   }
 
   static final List<List<String>> levels = const [
@@ -809,10 +806,10 @@ class Dandy {
 
   static final String encoding = @" *DudKF$i123mnop";
   
-  HTMLImageElement strike;
+  html.ImageElement strike;
 
   void initializeStrike() {
-    strike = window.document.createElement('img');
+    strike = new html.Element.tag('img');
     strike.src = "data:image/png;base64,"+
     "iVBORw0KGgoAAAANSUhEUgAAAQAAAAAgCAYAAAD9qabkAAAACXBIWXMAAB"+
     "cSAAAXEgFnn9JSAAAHtklEQVR4Ae2cv5IbRRDGVy5iilcgdNWVQ86khJBB"+
@@ -1021,9 +1018,8 @@ class Dandy {
   }
 
   void drawPicture(){
-      HTMLCanvasElement canvas = document.getElementById('gameCanvas');
-
-      CanvasRenderingContext2D context = canvas.getContext('2d');
+      html.CanvasElement canvas = html.document.query('#gameCanvas');
+      html.CanvasRenderingContext2D context = canvas.getContext('2d');
 
       Point tl = getVisibleTopLeftCorner();
       int baseX = tl.x;
@@ -1046,7 +1042,7 @@ class Dandy {
 
   void game() {
     loadLevel();
-    window.setInterval(gameStep, 15);
+    html.window.setInterval(gameStep, 15);
   }
 
   void gameStep() {
@@ -1293,11 +1289,11 @@ class Dandy {
       }
   }
 
-  void onkeydown(KeyboardEvent e) {
+  void onkeydown(html.KeyboardEvent e) {
       pButtons = updateMask(pButtons, e.keyCode, true);
   }
 
-  void onkeyup(KeyboardEvent e) {
+  void onkeyup(html.KeyboardEvent e) {
       pButtons = updateMask(pButtons, e.keyCode, false);
   }
 
