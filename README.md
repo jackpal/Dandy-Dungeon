@@ -16,5 +16,8 @@ but it helps me get a feel for a new programming language. Perhaps it might
 be useful for other people wishing to compare and contrast different programming
 langauge styles.
 
+Demo
+----
 
+[Play the JavaScript version of Dandy Dungeon](http://jackpal.github.com/Dandy-Dungeon/)
 
