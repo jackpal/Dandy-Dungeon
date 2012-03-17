@@ -1256,16 +1256,20 @@ function doButtons() {
 
 function onkeydown(e) {
     if(!e) {
-        e = window.event
+        e = window.event;
     }
     pButtons = updateMask(pButtons, e.keyCode, 1);
+    // Suppress default behavior
+    return false;
 }
 
 function onkeyup(e) {
     if(!e) {
-        e = window.event
+        e = window.event;
     }
     pButtons = updateMask(pButtons, e.keyCode, 0);
+    // Suppress default behavior
+    return false;
 }
 
 function updateMask(mask, code, down) {
