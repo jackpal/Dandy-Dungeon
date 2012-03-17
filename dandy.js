@@ -1259,6 +1259,8 @@ function onkeydown(e) {
         e = window.event
     }
     pButtons = updateMask(pButtons, e.keyCode, 1);
+    // Suppress default behavior
+    return false;
 }
 
 function onkeyup(e) {
@@ -1266,6 +1268,8 @@ function onkeyup(e) {
         e = window.event
     }
     pButtons = updateMask(pButtons, e.keyCode, 0);
+    // Suppress default behavior
+    return false;
 }
 
 function updateMask(mask, code, down) {
