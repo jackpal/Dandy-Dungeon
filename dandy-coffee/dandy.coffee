@@ -1198,10 +1198,12 @@ doButtons = () ->
 onkeydown = (e) ->
     e ||= window.event
     pButtons = updateMask(pButtons, e.keyCode, 1)
+    false
 
 onkeyup = (e) ->
     e ||= window.event
     pButtons = updateMask(pButtons, e.keyCode, 0)
+    false
 
 updateMask = (mask, code, down) ->
     k = 0
