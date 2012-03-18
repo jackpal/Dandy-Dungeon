@@ -1291,10 +1291,12 @@ class Dandy {
 
   void onkeydown(html.KeyboardEvent e) {
       pButtons = updateMask(pButtons, e.keyCode, true);
+      e.preventDefault();
   }
 
   void onkeyup(html.KeyboardEvent e) {
       pButtons = updateMask(pButtons, e.keyCode, false);
+      e.preventDefault();
   }
 
   int updateMask(int mask, int code, bool down) {
