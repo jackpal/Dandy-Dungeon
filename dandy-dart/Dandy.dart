@@ -1,5 +1,10 @@
+#library('dandy');
+
 #import('dart:html', prefix: 'html');
 
+void main() {
+  new Dandy();
+}
 
 class Point {
   final int x;
@@ -8,18 +13,12 @@ class Point {
 }
 
 class Dandy {
-
-
   Dandy() {
     initializeStrike();
     map = new List<int>(levelWidth * levelHeight);
-  }
-
-  void run() {
-    html.window.on.contentLoaded.add(
-      (html.Event event) { game(); });
     html.window.on.keyDown.add(onkeydown);
     html.window.on.keyUp.add(onkeyup);
+    game();
   }
 
   static final List<List<String>> levels = const [
@@ -1330,8 +1329,4 @@ class Dandy {
       }
       return mask;
   }
-}
-
-void main() {
-  new Dandy().run();
 }
