@@ -833,7 +833,7 @@
 "S2oBwOeeRJF/55c46CM/To+f8UlQ8+TXuLn5gidP9Qefi8NuoW1XYLkDaP"
 "v6L6tvvALhOwDqwwkD/6monoQurxLcIU/+3Hpp/s5+7vqd31bk4zu/VtY8"
 "XudyBzCuRsOf3bOzlsThnDzdPvUZfz9ubnzNsxX+f3+vFigI7FSwAAAAAE"
-"lFTkSuQmCC"))
+"lFTkSuQmCC"]))
 
 (def levelWidth 60)
 (def levelHeight 30)
@@ -859,33 +859,33 @@
 (def kGenerator2 14)
 (def kGenerator3 15)
 (def kArrow 16)
-(def kPlayer1 kArrow + 8)
+(def kPlayer1 (+ kArrow 8))
 
 (def kDirToDeltaX [0 1 1 1 0 -1  -1 -1])
 (def kDirToDeltaY [-1 -1 0 1 1 1 0 -1])
 (def kDeltaToDir [[7 0 1] [6 0 2] [5 4 3]])
 (def kSearchOrder [0 -1 1])
 (def kButtonsToDir [
-                     // D U R L
-                     -1 // 0 0 0 0
-                     6 // 0 0 0 1
-                     2 // 0 0 1 0
-                     -1 // 0 0 1 1
-                     0 // 0 1 0 0
-                     7 // 0 1 0 1
-                     1 // 0 1 1 0
-                     0 // 0 1 1 1
-                     4 // 1 0 0 0
-                     5 // 1 0 0 1
-                     3 // 1 0 1 0
-                     4 // 1 0 1 1
-                     -1 // 1 1 0 0
-                     6 // 1 1 0 1
-                     2 // 1 1 1 0
-                     -1  // 1 1 1 1
+                     ; D U R L
+                     -1 ; 0 0 0 0
+                     6 ; 0 0 0 1
+                     2 ; 0 0 1 0
+                     -1 ; 0 0 1 1
+                     0 ; 0 1 0 0
+                     7 ; 0 1 0 1
+                     1 ; 0 1 1 0
+                     0 ; 0 1 1 1
+                     4 ; 1 0 0 0
+                     5 ; 1 0 0 1
+                     3 ; 1 0 1 0
+                     4 ; 1 0 1 1
+                     -1 ; 1 1 0 0
+                     6 ; 1 1 0 1
+                     2 ; 1 1 1 0
+                     -1  ; 1 1 1 1
                      ])
 
-// Masks
+; Masks
 (def kButtonLeft 1)
 (def kButtonRight 2)
 (def kButtonUp 4)
@@ -896,7 +896,7 @@
 (def kTicksPerMove 4)
 
 (def dirty false)
-(def map [])
+(def level [])
 (def currentLevel 0)
 (def rotor 0)
 
@@ -920,9 +920,8 @@
       (dotimes [y levelHeight]
         (let [line  (aref level y)]
           (dotimes [x levelWidth]
-            (aset map (+ x (* y levelWidth)
-                         (.indexOf encoding
-                           (.charAt line x))))
+            (aset level (+ x (* y levelWidth))
+                (.indexOf encoding (.charAt line x)))
         ))))
     (setPlayerStartPosition)
     (setf paDir -1)
