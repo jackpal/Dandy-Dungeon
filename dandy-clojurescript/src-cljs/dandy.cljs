@@ -785,7 +785,7 @@
 
 (def encoding " *DudKF$i123mnop")
 (def strike (js/Image.))
-(. (strike :src) (join ["data:image/png;base64,"
+(set! (.-src strike) (str "data:image/png;base64,"
 "iVBORw0KGgoAAAANSUhEUgAAAQAAAAAgCAYAAAD9qabkAAAACXBIWXMAAB"
 "cSAAAXEgFnn9JSAAAHtklEQVR4Ae2cv5IbRRDGVy5iilcgdNWVQ86khJBB"
 "ALkLvwApoVNewP9iCOwMQmKUulzlkFeg/AA+dk/3k3Y/67uemR3J0s1e4F"
@@ -833,7 +833,7 @@
 "S2oBwOeeRJF/55c46CM/To+f8UlQ8+TXuLn5gidP9Qefi8NuoW1XYLkDaP"
 "v6L6tvvALhOwDqwwkD/6monoQurxLcIU/+3Hpp/s5+7vqd31bk4zu/VtY8"
 "XudyBzCuRsOf3bOzlsThnDzdPvUZfz9ubnzNsxX+f3+vFigI7FSwAAAAAE"
-"lFTkSuQmCC"]))
+"lFTkSuQmCC"))
 
 (def levelWidth 60)
 (def levelHeight 30)
@@ -914,15 +914,22 @@
 (def pOldButtons 0)
 (def pPlayerMoveTimer 0)
 
-
 (defn loadLevel []
-    (let [level  (aref levels currentLevel)]
+    (let [level (levels currentLevel)]
       (dotimes [y levelHeight]
-        (let [line  (aref level y)]
+        (let [line  (level y)]
           (dotimes [x levelWidth]
             (aset level (+ x (* y levelWidth))
                 (.indexOf encoding (.charAt line x)))
         ))))
-    (setPlayerStartPosition)
-    (setf paDir -1)
+    ;(setPlayerStartPosition)
+    ;(setf paDir -1)
 )
+
+(defn readLevel [level]
+  (vec
+    (for [line level]
+      (for [c line]
+        (.indexOf encoding c)))))
+
+(.log js/console (clj->js (readLevel (levels 0))))
