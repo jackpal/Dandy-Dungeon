@@ -840,8 +840,6 @@
 (def tileWidth 16)
 (def tileHeight 16)
 (def tileScale 2)
-(def windowTileWidth 20)
-(def windowTileHeight 10)
 
 (def kSpace 0)
 (def kWall 1)
@@ -937,11 +935,11 @@
         (for [c line]
           (.indexOf encoding c))))))
 
-(defn log [x]
+(defn log [& x]
   (.log js/console (clj->js x)))
 
 
-;; baseX baseY is the visible top-left-corner in tiles
+;; baseX baseY is the visible top left in tiles
 
 (defn drawLevel [canvas strike tileWidth tileHeight scale level baseX baseY]
   (let [canvasTileWidth (* scale tileWidth)
@@ -949,21 +947,46 @@
         context (.getContext canvas "2d")
         cw (.-width canvas)
         ch (.-height canvas)
-        windowTileWidth (.floor js/Math (/ cw tileWidth))
-        windowTileHeight (.floor js/Math (/ ch tileHeight))]
-    (doseq [y (range windowTileHeight)]
-      (let [line (level (+ y baseY))]
-        (doseq [x (range windowTileWidth)]
-          (let [d (line (+ x baseX))
+        windowTileWidth (.floor js/Math (/ cw canvasTileWidth))
+        windowTileHeight (.floor js/Math (/ ch canvasTileHeight))
+        endY (min (count level) (+ baseY windowTileHeight))
+        startY (- endY windowTileHeight)]
+    (doseq [y (range startY endY)]
+      (let [line (level y)
+          endX (min (count line) (+ baseX windowTileWidth))
+          startX (- endX windowTileWidth)]
+        (doseq [x (range startX endX)]
+          (let [d (line x)
                 tx (* tileWidth (bit-and d 15))
                 ty (* tileHeight (bit-shift-right d 4))]
             (.drawImage context strike tx ty tileWidth tileHeight
-                  (* x canvasTileWidth) (* y canvasTileHeight)
+                  (* (- x startX) canvasTileWidth)
+                  (* (- y startY) canvasTileHeight)
                   canvasTileWidth canvasTileHeight)))))))
+
+(defn some-indexed
+  "Returns the first logical true value of (pred x index) for any x in
+  coll, else nil.  One common idiom is to use a set as pred, for example
+  this will return index0 if :fred is in the sequence, otherwise nil:
+  (some-index #{:fred} coll)"
+  [pred coll]
+    (loop [index 0 coll2 coll]
+      (when (seq coll2)
+        (or (pred (first coll2) index)
+          (recur (inc index) (next coll2))))))
+
+(defn find-first [item level]
+  (some-indexed
+    (fn [e i] (let [j (some-indexed (fn [e2 i2] (if (= e2 item) i2 nil)) e)]
+        (if j [j i] nil))) level))
 
 (defn game []
   (let [canvas (.getElementById js/document "gameCanvas")
-        level (readLevel (levels 0))]
-    (drawLevel canvas strike tileWidth tileHeight tileScale level 0 0)))
+    level (readLevel (levels 0))
+    up (find-first kUp level)
+    px (if up (- (get up 0) 1) 0)
+    py (if up (get up 1) 0)
+        ]
+    (drawLevel canvas strike tileWidth tileHeight tileScale level px py)))
 
 (.addEventListener js/window "load" game false)
