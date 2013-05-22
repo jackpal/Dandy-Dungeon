@@ -839,6 +839,7 @@
 (def levelHeight 30)
 (def tileWidth 16)
 (def tileHeight 16)
+(def tileScale 2)
 (def windowTileWidth 20)
 (def windowTileHeight 10)
 
@@ -914,6 +915,9 @@
 (def pOldButtons 0)
 (def pPlayerMoveTimer 0)
 
+(def ! aset)
+(def ? aget)
+
 (defn loadLevel []
     (let [level (levels currentLevel)]
       (dotimes [y levelHeight]
@@ -929,7 +933,37 @@
 (defn readLevel [level]
   (vec
     (for [line level]
-      (for [c line]
-        (.indexOf encoding c)))))
+      (vec
+        (for [c line]
+          (.indexOf encoding c))))))
 
-(.log js/console (clj->js (readLevel (levels 0))))
+(defn log [x]
+  (.log js/console (clj->js x)))
+
+
+;; baseX baseY is the visible top-left-corner in tiles
+
+(defn drawLevel [canvas strike tileWidth tileHeight scale level baseX baseY]
+  (let [canvasTileWidth (* scale tileWidth)
+        canvasTileHeight (* scale tileHeight)
+        context (.getContext canvas "2d")
+        cw (.-width canvas)
+        ch (.-height canvas)
+        windowTileWidth (.floor js/Math (/ cw tileWidth))
+        windowTileHeight (.floor js/Math (/ ch tileHeight))]
+    (doseq [y (range windowTileHeight)]
+      (let [line (level (+ y baseY))]
+        (doseq [x (range windowTileWidth)]
+          (let [d (line (+ x baseX))
+                tx (* tileWidth (bit-and d 15))
+                ty (* tileHeight (bit-shift-right d 4))]
+            (.drawImage context strike tx ty tileWidth tileHeight
+                  (* x canvasTileWidth) (* y canvasTileHeight)
+                  canvasTileWidth canvasTileHeight)))))))
+
+(defn game []
+  (let [canvas (.getElementById js/document "gameCanvas")
+        level (readLevel (levels 0))]
+    (drawLevel canvas strike tileWidth tileHeight tileScale level 0 0)))
+
+(.addEventListener js/window "load" game false)
