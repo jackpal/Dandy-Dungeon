@@ -6,9 +6,11 @@
 //  Copyright (c) 2013 Jack Palevich. All rights reserved.
 //
 
-varying lowp vec4 colorVarying;
+precision mediump float;
+
+varying vec2 vTexCoord;
 
 void main()
 {
-    gl_FragColor = colorVarying;
+    gl_FragColor = vec4(vTexCoord,0.5,1.0);
 }
