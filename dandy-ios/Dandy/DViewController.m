@@ -60,7 +60,7 @@ TileVertex gTileVertexData[TILES*VERTS_PER_TILE] =
     GLuint _program;
     
     GLKMatrix4 _modelViewProjectionMatrix;
-    
+
     GLuint _vertexArray;
     GLuint _vertexBuffer;
 }
@@ -164,16 +164,18 @@ TileVertex gTileVertexData[TILES*VERTS_PER_TILE] =
 
 - (void)update
 {
-    float aspect = fabsf(self.view.bounds.size.width / self.view.bounds.size.height);
-    GLKMatrix4 projectionMatrix = GLKMatrix4MakePerspective(GLKMathDegreesToRadians(65.0f), aspect, 0.1f, 100.0f);
+  float aspect = fabsf(self.view.bounds.size.width / self.view.bounds.size.height);
+  float halfWidth = 20.0f/2.0f;
+  float halfHeight = halfWidth / aspect;
+  GLKMatrix4 projectionMatrix = GLKMatrix4MakeOrtho(-halfWidth, halfWidth, -halfHeight, halfHeight, 0.1f, 10.0f);
 
-    GLKMatrix4 baseModelViewMatrix = GLKMatrix4MakeTranslation(0.0f, 0.0f, -4.0f);
+  GLKMatrix4 baseModelViewMatrix = GLKMatrix4MakeTranslation(0.0f, 0.0f, -4.0f);
 
-    // Compute the model view matrix for the object rendered with ES2
-    GLKMatrix4 modelViewMatrix = GLKMatrix4MakeTranslation(0.0f, 0.0f, 1.5f);
-    modelViewMatrix = GLKMatrix4Multiply(baseModelViewMatrix, modelViewMatrix);
+  // Compute the model view matrix for the object rendered with ES2
+  GLKMatrix4 modelViewMatrix = GLKMatrix4MakeTranslation(0.0f, 0.0f, 1.5f);
+  modelViewMatrix = GLKMatrix4Multiply(baseModelViewMatrix, modelViewMatrix);
 
-    _modelViewProjectionMatrix = GLKMatrix4Multiply(projectionMatrix, modelViewMatrix);
+  _modelViewProjectionMatrix = GLKMatrix4Multiply(projectionMatrix, modelViewMatrix);
 }
 
 - (void)glkView:(GLKView *)view drawInRect:(CGRect)rect
