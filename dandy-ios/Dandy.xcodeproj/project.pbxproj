@@ -7,6 +7,36 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		36134439186A7BC40056AB33 /* a.bin in Resources */ = {isa = PBXBuildFile; fileRef = 3613441D186A7BC40056AB33 /* a.bin */; };
+		3613443A186A7BC40056AB33 /* b.bin in Resources */ = {isa = PBXBuildFile; fileRef = 3613441E186A7BC40056AB33 /* b.bin */; };
+		3613443B186A7BC40056AB33 /* c.bin in Resources */ = {isa = PBXBuildFile; fileRef = 3613441F186A7BC40056AB33 /* c.bin */; };
+		3613443C186A7BC40056AB33 /* d.bin in Resources */ = {isa = PBXBuildFile; fileRef = 36134420186A7BC40056AB33 /* d.bin */; };
+		3613443D186A7BC40056AB33 /* e.bin in Resources */ = {isa = PBXBuildFile; fileRef = 36134421186A7BC40056AB33 /* e.bin */; };
+		3613443E186A7BC40056AB33 /* f.bin in Resources */ = {isa = PBXBuildFile; fileRef = 36134422186A7BC40056AB33 /* f.bin */; };
+		3613443F186A7BC40056AB33 /* g.bin in Resources */ = {isa = PBXBuildFile; fileRef = 36134423186A7BC40056AB33 /* g.bin */; };
+		36134440186A7BC40056AB33 /* h.bin in Resources */ = {isa = PBXBuildFile; fileRef = 36134424186A7BC40056AB33 /* h.bin */; };
+		36134441186A7BC40056AB33 /* i.bin in Resources */ = {isa = PBXBuildFile; fileRef = 36134425186A7BC40056AB33 /* i.bin */; };
+		36134442186A7BC40056AB33 /* j.bin in Resources */ = {isa = PBXBuildFile; fileRef = 36134426186A7BC40056AB33 /* j.bin */; };
+		36134443186A7BC40056AB33 /* k.bin in Resources */ = {isa = PBXBuildFile; fileRef = 36134427186A7BC40056AB33 /* k.bin */; };
+		36134444186A7BC40056AB33 /* l.bin in Resources */ = {isa = PBXBuildFile; fileRef = 36134428186A7BC40056AB33 /* l.bin */; };
+		36134445186A7BC40056AB33 /* m.bin in Resources */ = {isa = PBXBuildFile; fileRef = 36134429186A7BC40056AB33 /* m.bin */; };
+		36134446186A7BC40056AB33 /* n.bin in Resources */ = {isa = PBXBuildFile; fileRef = 3613442A186A7BC40056AB33 /* n.bin */; };
+		36134447186A7BC40056AB33 /* o.bin in Resources */ = {isa = PBXBuildFile; fileRef = 3613442B186A7BC40056AB33 /* o.bin */; };
+		36134448186A7BC40056AB33 /* p.bin in Resources */ = {isa = PBXBuildFile; fileRef = 3613442C186A7BC40056AB33 /* p.bin */; };
+		36134449186A7BC40056AB33 /* q.bin in Resources */ = {isa = PBXBuildFile; fileRef = 3613442D186A7BC40056AB33 /* q.bin */; };
+		3613444A186A7BC40056AB33 /* r.bin in Resources */ = {isa = PBXBuildFile; fileRef = 3613442E186A7BC40056AB33 /* r.bin */; };
+		3613444B186A7BC40056AB33 /* s.bin in Resources */ = {isa = PBXBuildFile; fileRef = 3613442F186A7BC40056AB33 /* s.bin */; };
+		3613444C186A7BC40056AB33 /* t.bin in Resources */ = {isa = PBXBuildFile; fileRef = 36134430186A7BC40056AB33 /* t.bin */; };
+		3613444D186A7BC40056AB33 /* u.bin in Resources */ = {isa = PBXBuildFile; fileRef = 36134431186A7BC40056AB33 /* u.bin */; };
+		3613444E186A7BC40056AB33 /* v.bin in Resources */ = {isa = PBXBuildFile; fileRef = 36134432186A7BC40056AB33 /* v.bin */; };
+		3613444F186A7BC40056AB33 /* w.bin in Resources */ = {isa = PBXBuildFile; fileRef = 36134433186A7BC40056AB33 /* w.bin */; };
+		36134450186A7BC40056AB33 /* x.bin in Resources */ = {isa = PBXBuildFile; fileRef = 36134434186A7BC40056AB33 /* x.bin */; };
+		36134451186A7BC40056AB33 /* y.bin in Resources */ = {isa = PBXBuildFile; fileRef = 36134435186A7BC40056AB33 /* y.bin */; };
+		36134452186A7BC40056AB33 /* z.bin in Resources */ = {isa = PBXBuildFile; fileRef = 36134436186A7BC40056AB33 /* z.bin */; };
+		36134453186A7BC40056AB33 /* dandy.png in Resources */ = {isa = PBXBuildFile; fileRef = 36134438186A7BC40056AB33 /* dandy.png */; };
+		36134456186A7CB40056AB33 /* Level.m in Sources */ = {isa = PBXBuildFile; fileRef = 36134455186A7CB40056AB33 /* Level.m */; };
+		36134459186B5C1C0056AB33 /* DGame.m in Sources */ = {isa = PBXBuildFile; fileRef = 36134458186B5C1C0056AB33 /* DGame.m */; };
+		3613445C186B6E760056AB33 /* LevelRenderer.m in Sources */ = {isa = PBXBuildFile; fileRef = 3613445B186B6E760056AB33 /* LevelRenderer.m */; };
 		36C00208186A75D0001EBF13 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 36C00207186A75D0001EBF13 /* Foundation.framework */; };
 		36C0020A186A75D0001EBF13 /* CoreGraphics.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 36C00209186A75D0001EBF13 /* CoreGraphics.framework */; };
 		36C0020C186A75D0001EBF13 /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 36C0020B186A75D0001EBF13 /* UIKit.framework */; };
@@ -39,6 +69,39 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		3613441D186A7BC40056AB33 /* a.bin */ = {isa = PBXFileReference; lastKnownFileType = archive.macbinary; path = a.bin; sourceTree = "<group>"; };
+		3613441E186A7BC40056AB33 /* b.bin */ = {isa = PBXFileReference; lastKnownFileType = archive.macbinary; path = b.bin; sourceTree = "<group>"; };
+		3613441F186A7BC40056AB33 /* c.bin */ = {isa = PBXFileReference; lastKnownFileType = archive.macbinary; path = c.bin; sourceTree = "<group>"; };
+		36134420186A7BC40056AB33 /* d.bin */ = {isa = PBXFileReference; lastKnownFileType = archive.macbinary; path = d.bin; sourceTree = "<group>"; };
+		36134421186A7BC40056AB33 /* e.bin */ = {isa = PBXFileReference; lastKnownFileType = archive.macbinary; path = e.bin; sourceTree = "<group>"; };
+		36134422186A7BC40056AB33 /* f.bin */ = {isa = PBXFileReference; lastKnownFileType = archive.macbinary; path = f.bin; sourceTree = "<group>"; };
+		36134423186A7BC40056AB33 /* g.bin */ = {isa = PBXFileReference; lastKnownFileType = archive.macbinary; path = g.bin; sourceTree = "<group>"; };
+		36134424186A7BC40056AB33 /* h.bin */ = {isa = PBXFileReference; lastKnownFileType = archive.macbinary; path = h.bin; sourceTree = "<group>"; };
+		36134425186A7BC40056AB33 /* i.bin */ = {isa = PBXFileReference; lastKnownFileType = archive.macbinary; path = i.bin; sourceTree = "<group>"; };
+		36134426186A7BC40056AB33 /* j.bin */ = {isa = PBXFileReference; lastKnownFileType = archive.macbinary; path = j.bin; sourceTree = "<group>"; };
+		36134427186A7BC40056AB33 /* k.bin */ = {isa = PBXFileReference; lastKnownFileType = archive.macbinary; path = k.bin; sourceTree = "<group>"; };
+		36134428186A7BC40056AB33 /* l.bin */ = {isa = PBXFileReference; lastKnownFileType = archive.macbinary; path = l.bin; sourceTree = "<group>"; };
+		36134429186A7BC40056AB33 /* m.bin */ = {isa = PBXFileReference; lastKnownFileType = archive.macbinary; path = m.bin; sourceTree = "<group>"; };
+		3613442A186A7BC40056AB33 /* n.bin */ = {isa = PBXFileReference; lastKnownFileType = archive.macbinary; path = n.bin; sourceTree = "<group>"; };
+		3613442B186A7BC40056AB33 /* o.bin */ = {isa = PBXFileReference; lastKnownFileType = archive.macbinary; path = o.bin; sourceTree = "<group>"; };
+		3613442C186A7BC40056AB33 /* p.bin */ = {isa = PBXFileReference; lastKnownFileType = archive.macbinary; path = p.bin; sourceTree = "<group>"; };
+		3613442D186A7BC40056AB33 /* q.bin */ = {isa = PBXFileReference; lastKnownFileType = archive.macbinary; path = q.bin; sourceTree = "<group>"; };
+		3613442E186A7BC40056AB33 /* r.bin */ = {isa = PBXFileReference; lastKnownFileType = archive.macbinary; path = r.bin; sourceTree = "<group>"; };
+		3613442F186A7BC40056AB33 /* s.bin */ = {isa = PBXFileReference; lastKnownFileType = archive.macbinary; path = s.bin; sourceTree = "<group>"; };
+		36134430186A7BC40056AB33 /* t.bin */ = {isa = PBXFileReference; lastKnownFileType = archive.macbinary; path = t.bin; sourceTree = "<group>"; };
+		36134431186A7BC40056AB33 /* u.bin */ = {isa = PBXFileReference; lastKnownFileType = archive.macbinary; path = u.bin; sourceTree = "<group>"; };
+		36134432186A7BC40056AB33 /* v.bin */ = {isa = PBXFileReference; lastKnownFileType = archive.macbinary; path = v.bin; sourceTree = "<group>"; };
+		36134433186A7BC40056AB33 /* w.bin */ = {isa = PBXFileReference; lastKnownFileType = archive.macbinary; path = w.bin; sourceTree = "<group>"; };
+		36134434186A7BC40056AB33 /* x.bin */ = {isa = PBXFileReference; lastKnownFileType = archive.macbinary; path = x.bin; sourceTree = "<group>"; };
+		36134435186A7BC40056AB33 /* y.bin */ = {isa = PBXFileReference; lastKnownFileType = archive.macbinary; path = y.bin; sourceTree = "<group>"; };
+		36134436186A7BC40056AB33 /* z.bin */ = {isa = PBXFileReference; lastKnownFileType = archive.macbinary; path = z.bin; sourceTree = "<group>"; };
+		36134438186A7BC40056AB33 /* dandy.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = dandy.png; sourceTree = "<group>"; };
+		36134454186A7CB40056AB33 /* Level.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Level.h; sourceTree = "<group>"; };
+		36134455186A7CB40056AB33 /* Level.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = Level.m; sourceTree = "<group>"; };
+		36134457186B5C1C0056AB33 /* DGame.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DGame.h; sourceTree = "<group>"; };
+		36134458186B5C1C0056AB33 /* DGame.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = DGame.m; sourceTree = "<group>"; };
+		3613445A186B6E760056AB33 /* LevelRenderer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = LevelRenderer.h; sourceTree = "<group>"; };
+		3613445B186B6E760056AB33 /* LevelRenderer.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = LevelRenderer.m; sourceTree = "<group>"; };
 		36C00204186A75D0001EBF13 /* Dandy.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Dandy.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		36C00207186A75D0001EBF13 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
 		36C00209186A75D0001EBF13 /* CoreGraphics.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreGraphics.framework; path = System/Library/Frameworks/CoreGraphics.framework; sourceTree = SDKROOT; };
@@ -91,6 +154,56 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		3613441B186A7BC40056AB33 /* assets */ = {
+			isa = PBXGroup;
+			children = (
+				3613441C186A7BC40056AB33 /* levels */,
+				36134437186A7BC40056AB33 /* textures */,
+			);
+			path = assets;
+			sourceTree = "<group>";
+		};
+		3613441C186A7BC40056AB33 /* levels */ = {
+			isa = PBXGroup;
+			children = (
+				3613441D186A7BC40056AB33 /* a.bin */,
+				3613441E186A7BC40056AB33 /* b.bin */,
+				3613441F186A7BC40056AB33 /* c.bin */,
+				36134420186A7BC40056AB33 /* d.bin */,
+				36134421186A7BC40056AB33 /* e.bin */,
+				36134422186A7BC40056AB33 /* f.bin */,
+				36134423186A7BC40056AB33 /* g.bin */,
+				36134424186A7BC40056AB33 /* h.bin */,
+				36134425186A7BC40056AB33 /* i.bin */,
+				36134426186A7BC40056AB33 /* j.bin */,
+				36134427186A7BC40056AB33 /* k.bin */,
+				36134428186A7BC40056AB33 /* l.bin */,
+				36134429186A7BC40056AB33 /* m.bin */,
+				3613442A186A7BC40056AB33 /* n.bin */,
+				3613442B186A7BC40056AB33 /* o.bin */,
+				3613442C186A7BC40056AB33 /* p.bin */,
+				3613442D186A7BC40056AB33 /* q.bin */,
+				3613442E186A7BC40056AB33 /* r.bin */,
+				3613442F186A7BC40056AB33 /* s.bin */,
+				36134430186A7BC40056AB33 /* t.bin */,
+				36134431186A7BC40056AB33 /* u.bin */,
+				36134432186A7BC40056AB33 /* v.bin */,
+				36134433186A7BC40056AB33 /* w.bin */,
+				36134434186A7BC40056AB33 /* x.bin */,
+				36134435186A7BC40056AB33 /* y.bin */,
+				36134436186A7BC40056AB33 /* z.bin */,
+			);
+			path = levels;
+			sourceTree = "<group>";
+		};
+		36134437186A7BC40056AB33 /* textures */ = {
+			isa = PBXGroup;
+			children = (
+				36134438186A7BC40056AB33 /* dandy.png */,
+			);
+			path = textures;
+			sourceTree = "<group>";
+		};
 		36C001FB186A75D0001EBF13 = {
 			isa = PBXGroup;
 			children = (
@@ -126,6 +239,7 @@
 		36C00211186A75D0001EBF13 /* Dandy */ = {
 			isa = PBXGroup;
 			children = (
+				3613441B186A7BC40056AB33 /* assets */,
 				36C0021A186A75D0001EBF13 /* DAppDelegate.h */,
 				36C0021B186A75D0001EBF13 /* DAppDelegate.m */,
 				36C0021D186A75D0001EBF13 /* Main_iPhone.storyboard */,
@@ -136,6 +250,12 @@
 				36C00228186A75D0001EBF13 /* DViewController.m */,
 				36C0022A186A75D0001EBF13 /* Images.xcassets */,
 				36C00212186A75D0001EBF13 /* Supporting Files */,
+				36134454186A7CB40056AB33 /* Level.h */,
+				36134455186A7CB40056AB33 /* Level.m */,
+				3613445A186B6E760056AB33 /* LevelRenderer.h */,
+				3613445B186B6E760056AB33 /* LevelRenderer.m */,
+				36134457186B5C1C0056AB33 /* DGame.h */,
+				36134458186B5C1C0056AB33 /* DGame.m */,
 			);
 			path = Dandy;
 			sourceTree = "<group>";
@@ -246,12 +366,39 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				36134450186A7BC40056AB33 /* x.bin in Resources */,
+				36134448186A7BC40056AB33 /* p.bin in Resources */,
+				36134444186A7BC40056AB33 /* l.bin in Resources */,
+				36134441186A7BC40056AB33 /* i.bin in Resources */,
+				3613443D186A7BC40056AB33 /* e.bin in Resources */,
+				3613443C186A7BC40056AB33 /* d.bin in Resources */,
+				36134452186A7BC40056AB33 /* z.bin in Resources */,
+				3613443B186A7BC40056AB33 /* c.bin in Resources */,
+				3613444A186A7BC40056AB33 /* r.bin in Resources */,
+				36134451186A7BC40056AB33 /* y.bin in Resources */,
 				36C00224186A75D0001EBF13 /* Shader.fsh in Resources */,
+				3613444C186A7BC40056AB33 /* t.bin in Resources */,
+				3613444F186A7BC40056AB33 /* w.bin in Resources */,
+				3613444D186A7BC40056AB33 /* u.bin in Resources */,
+				36134449186A7BC40056AB33 /* q.bin in Resources */,
+				36134440186A7BC40056AB33 /* h.bin in Resources */,
+				36134453186A7BC40056AB33 /* dandy.png in Resources */,
+				36134442186A7BC40056AB33 /* j.bin in Resources */,
+				36134445186A7BC40056AB33 /* m.bin in Resources */,
 				36C00222186A75D0001EBF13 /* Main_iPad.storyboard in Resources */,
+				36134446186A7BC40056AB33 /* n.bin in Resources */,
 				36C0021F186A75D0001EBF13 /* Main_iPhone.storyboard in Resources */,
+				3613443E186A7BC40056AB33 /* f.bin in Resources */,
+				3613444E186A7BC40056AB33 /* v.bin in Resources */,
 				36C0022B186A75D0001EBF13 /* Images.xcassets in Resources */,
+				3613443F186A7BC40056AB33 /* g.bin in Resources */,
+				36134439186A7BC40056AB33 /* a.bin in Resources */,
 				36C00216186A75D0001EBF13 /* InfoPlist.strings in Resources */,
+				3613444B186A7BC40056AB33 /* s.bin in Resources */,
+				3613443A186A7BC40056AB33 /* b.bin in Resources */,
+				36134447186A7BC40056AB33 /* o.bin in Resources */,
 				36C00226186A75D0001EBF13 /* Shader.vsh in Resources */,
+				36134443186A7BC40056AB33 /* k.bin in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -272,7 +419,10 @@
 			files = (
 				36C00229186A75D0001EBF13 /* DViewController.m in Sources */,
 				36C00218186A75D0001EBF13 /* main.m in Sources */,
+				36134459186B5C1C0056AB33 /* DGame.m in Sources */,
+				3613445C186B6E760056AB33 /* LevelRenderer.m in Sources */,
 				36C0021C186A75D0001EBF13 /* DAppDelegate.m in Sources */,
+				36134456186A7CB40056AB33 /* Level.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -491,6 +641,7 @@
 				36C00243186A75D0001EBF13 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 		36C00244186A75D0001EBF13 /* Build configuration list for PBXNativeTarget "DandyTests" */ = {
 			isa = XCConfigurationList;
@@ -499,6 +650,7 @@
 				36C00246186A75D0001EBF13 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
 	};

@@ -7,6 +7,7 @@
 //
 
 #import "DViewController.h"
+#import "DGame.h"
 
 #define BUFFER_OFFSET(i) ((char *)NULL + (i))
 
@@ -86,6 +87,7 @@ GLfloat gCubeVertexData[216] =
 }
 @property (strong, nonatomic) EAGLContext *context;
 @property (strong, nonatomic) GLKBaseEffect *effect;
+@property (strong, nonatomic) DGame *game;
 
 - (void)setupGL;
 - (void)tearDownGL;
@@ -100,19 +102,21 @@ GLfloat gCubeVertexData[216] =
 
 - (void)viewDidLoad
 {
-    [super viewDidLoad];
-    
-    self.context = [[EAGLContext alloc] initWithAPI:kEAGLRenderingAPIOpenGLES2];
+  [super viewDidLoad];
 
-    if (!self.context) {
-        NSLog(@"Failed to create ES context");
-    }
-    
-    GLKView *view = (GLKView *)self.view;
-    view.context = self.context;
-    view.drawableDepthFormat = GLKViewDrawableDepthFormat24;
-    
-    [self setupGL];
+  self.game = [[DGame alloc] init];
+
+  self.context = [[EAGLContext alloc] initWithAPI:kEAGLRenderingAPIOpenGLES2];
+
+  if (!self.context) {
+    NSLog(@"Failed to create ES context");
+  }
+
+  GLKView *view = (GLKView *)self.view;
+  view.context = self.context;
+  view.drawableDepthFormat = GLKViewDrawableDepthFormat24;
+
+  [self setupGL];
 }
 
 - (void)dealloc
