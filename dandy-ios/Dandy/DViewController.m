@@ -48,21 +48,29 @@ TileVertex gTileVertexData[TILES*VERTS_PER_TILE] =
     // Data layout for each line below is:
     // x, y,      u, v,
     0.0f, 0.0f,   0.0f, 0.0f, // a
-    1.0f, 0.0f,   1.0f, 0.0f, // b
-    1.0f, 1.0f,   1.0f, 1.0f, // d
+    100.0f, 0.0f,   1.0f, 0.0f, // b
+    100.0f, 100.0f,   1.0f, 1.0f, // d
 
     0.0f, 0.0f,   0.0f, 0.0f, // a
-    1.0f, 1.0f,   1.0f, 1.0f, // d
-    0.0f, 1.0f,   0.0f, 1.0f, // c
+    100.0f, 100.0f,   1.0f, 1.0f, // d
+    0.0f, 100.0f,   0.0f, 1.0f, // c
 };
 
 @interface DViewController () {
-    GLuint _program;
-    
-    GLKMatrix4 _modelViewProjectionMatrix;
+  GLuint _program;
 
-    GLuint _vertexArray;
-    GLuint _vertexBuffer;
+  GLKMatrix4 _modelViewProjectionMatrix;
+
+  GLuint _vertexArray;
+  GLuint _vertexBuffer;
+
+  GLfloat _scissorX;
+  GLfloat _scissorY;
+  GLfloat _scissorW;
+  GLfloat _scissorH;
+
+  GLfloat _tileW;
+  GLfloat _tileH;
 }
 @property (strong, nonatomic) EAGLContext *context;
 @property (strong, nonatomic) DGame *game;
@@ -124,27 +132,58 @@ TileVertex gTileVertexData[TILES*VERTS_PER_TILE] =
     // Dispose of any resources that can be recreated.
 }
 
+- (void)viewDidLayoutSubviews
+{
+  [super viewDidLayoutSubviews];
+  // In OpenGL window coordinate system -- pixels, (0,0) is lower left
+  _scissorX = 0.0f;
+  _scissorY = 0.0f;
+  _scissorW = self.view.bounds.size.width;
+  _scissorH = self.view.bounds.size.height;
+  float viewAspect = fabsf(self.view.bounds.size.width / self.view.bounds.size.height);
+  float gameH = _scissorH;
+  float gameW = _scissorW;
+  // Compute the largest 8:5 aspect ratio rectangle that can fit in the view.
+  float gameAspect = 8.0f / 5.0f;
+  if (viewAspect >= gameAspect) {
+    // View is wider than it needs to be. Center game horizontally.
+    gameW = gameAspect * gameH;
+    _scissorX = (_scissorW - gameW) * 0.5f;
+    _scissorW = gameW;
+  } else {
+    // View is taller than it needs to be. Center game vertically.
+    gameH =  gameW / gameAspect;
+    _scissorY = (_scissorH - gameH) * 0.5f;
+    _scissorH = gameH;
+  }
+
+  _tileW = gameW / 20.0f;
+  _tileH = gameH / 10.0f;
+}
+
 - (void)setupGL
 {
-    [EAGLContext setCurrentContext:self.context];
-    
-    [self loadShaders];
+  [EAGLContext setCurrentContext:self.context];
 
-    glEnable(GL_DEPTH_TEST);
-    
-    glGenVertexArraysOES(1, &_vertexArray);
-    glBindVertexArrayOES(_vertexArray);
-    
-    glGenBuffers(1, &_vertexBuffer);
-    glBindBuffer(GL_ARRAY_BUFFER, _vertexBuffer);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(gTileVertexData), gTileVertexData, GL_STATIC_DRAW);
-    
-    glEnableVertexAttribArray(GLKVertexAttribPosition);
-    glVertexAttribPointer(GLKVertexAttribPosition, 2, GL_FLOAT, GL_FALSE, sizeof(TileVertex), BUFFER_OFFSET(0));
-    glEnableVertexAttribArray(GLKVertexAttribTexCoord0);
-    glVertexAttribPointer(GLKVertexAttribTexCoord0, 2, GL_FLOAT, GL_FALSE, sizeof(TileVertex), BUFFER_OFFSET(8));
-    
-    glBindVertexArrayOES(0);
+  [self loadShaders];
+
+  glEnable(GL_DEPTH_TEST);
+
+  glGenVertexArraysOES(1, &_vertexArray);
+  glBindVertexArrayOES(_vertexArray);
+
+  glGenBuffers(1, &_vertexBuffer);
+  glBindBuffer(GL_ARRAY_BUFFER, _vertexBuffer);
+  glBufferData(GL_ARRAY_BUFFER, sizeof(gTileVertexData), gTileVertexData, GL_STATIC_DRAW);
+
+  glEnableVertexAttribArray(GLKVertexAttribPosition);
+  glVertexAttribPointer(GLKVertexAttribPosition, 2, GL_FLOAT, GL_FALSE, sizeof(TileVertex), BUFFER_OFFSET(0));
+  glEnableVertexAttribArray(GLKVertexAttribTexCoord0);
+  glVertexAttribPointer(GLKVertexAttribTexCoord0, 2, GL_FLOAT, GL_FALSE, sizeof(TileVertex), BUFFER_OFFSET(8));
+
+  glBindVertexArrayOES(0);
+
+  glScissor(_scissorX, _scissorY, _scissorW, _scissorH);
 }
 
 - (void)tearDownGL
@@ -164,10 +203,13 @@ TileVertex gTileVertexData[TILES*VERTS_PER_TILE] =
 
 - (void)update
 {
-  float aspect = fabsf(self.view.bounds.size.width / self.view.bounds.size.height);
-  float halfWidth = 20.0f/2.0f;
-  float halfHeight = halfWidth / aspect;
-  GLKMatrix4 projectionMatrix = GLKMatrix4MakeOrtho(-halfWidth, halfWidth, -halfHeight, halfHeight, 0.1f, 10.0f);
+  float width = self.view.bounds.size.width;
+  float height = self.view.bounds.size.height;
+  float left = -_scissorX;
+  float right = left + width;
+  float top = -_scissorY;
+  float bottom = top + height;
+  GLKMatrix4 projectionMatrix = GLKMatrix4MakeOrtho(left, right, bottom, top, 0.1f, 10.0f);
 
   GLKMatrix4 baseModelViewMatrix = GLKMatrix4MakeTranslation(0.0f, 0.0f, -4.0f);
 
