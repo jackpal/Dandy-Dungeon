@@ -6,11 +6,10 @@
 //  Copyright (c) 2013 Jack Palevich. All rights reserved.
 //
 
-precision mediump float;
-
-varying vec2 vTexCoord;
+varying mediump vec2 vTexCoord;
+uniform sampler2D texture;
 
 void main()
 {
-    gl_FragColor = vec4(vTexCoord,0.5,1.0);
+    gl_FragColor = texture2D(texture,vTexCoord);
 }

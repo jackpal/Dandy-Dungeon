@@ -21,6 +21,8 @@ enum
 };
 GLint uniforms[NUM_UNIFORMS];
 
+GLint textureUniform;
+
 // Attribute index.
 enum
 {
@@ -212,6 +214,11 @@ TileVertex gTileVertexData[TILES*VERTS_PER_TILE];
                                                 elementWidth:16
                                                elementHeight:16
                                                 elementCount:28];
+  glActiveTexture(GL_TEXTURE0);
+  glBindTexture(self.texture.target, self.texture.name);
+  // For that aliased look.
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 }
 
 - (void) calcVertexData
@@ -302,6 +309,7 @@ TileVertex gTileVertexData[TILES*VERTS_PER_TILE];
   glUseProgram(_program);
 
   glUniformMatrix4fv(uniforms[UNIFORM_MODELVIEWPROJECTION_MATRIX], 1, 0, _modelViewProjectionMatrix.m);
+  glUniform1i(textureUniform, 0);
 
   glScissor(_scissorX, _scissorY, _scissorW, _scissorH);
   glEnable(GL_SCISSOR_TEST);
@@ -313,78 +321,79 @@ TileVertex gTileVertexData[TILES*VERTS_PER_TILE];
 
 - (BOOL)loadShaders
 {
-    GLuint vertShader, fragShader;
-    NSString *vertShaderPathname, *fragShaderPathname;
-    
-    // Create shader program.
-    _program = glCreateProgram();
-    
-    // Create and compile vertex shader.
-    vertShaderPathname = [[NSBundle mainBundle] pathForResource:@"Shader" ofType:@"vsh"];
-    if (![self compileShader:&vertShader type:GL_VERTEX_SHADER file:vertShaderPathname]) {
-        NSLog(@"Failed to compile vertex shader");
-        return NO;
-    }
-    
-    // Create and compile fragment shader.
-    fragShaderPathname = [[NSBundle mainBundle] pathForResource:@"Shader" ofType:@"fsh"];
-    if (![self compileShader:&fragShader type:GL_FRAGMENT_SHADER file:fragShaderPathname]) {
-        NSLog(@"Failed to compile fragment shader");
-        return NO;
-    }
-    
-    // Attach vertex shader to program.
-    glAttachShader(_program, vertShader);
-    
-    // Attach fragment shader to program.
-    glAttachShader(_program, fragShader);
-    
-    // Bind attribute locations.
-    // This needs to be done prior to linking.
-    glBindAttribLocation(_program, GLKVertexAttribPosition, "position");
-    glBindAttribLocation(_program, GLKVertexAttribTexCoord0, "texCoord");
-    
-    // Link program.
-    if (![self linkProgram:_program]) {
-        NSLog(@"Failed to link program: %d", _program);
-        
-        if (vertShader) {
-            glDeleteShader(vertShader);
-            vertShader = 0;
-        }
-        if (fragShader) {
-            glDeleteShader(fragShader);
-            fragShader = 0;
-        }
-        if (_program) {
-            glDeleteProgram(_program);
-            _program = 0;
-        }
-        
-        return NO;
-    }
-    
-    // Get uniform locations.
-    uniforms[UNIFORM_MODELVIEWPROJECTION_MATRIX] = glGetUniformLocation(_program, "modelViewProjectionMatrix");
-    
-    // Release vertex and fragment shaders.
+  GLuint vertShader, fragShader;
+  NSString *vertShaderPathname, *fragShaderPathname;
+
+  // Create shader program.
+  _program = glCreateProgram();
+
+  // Create and compile vertex shader.
+  vertShaderPathname = [[NSBundle mainBundle] pathForResource:@"Shader" ofType:@"vsh"];
+  if (![self compileShader:&vertShader type:GL_VERTEX_SHADER file:vertShaderPathname]) {
+    NSLog(@"Failed to compile vertex shader");
+    return NO;
+  }
+
+  // Create and compile fragment shader.
+  fragShaderPathname = [[NSBundle mainBundle] pathForResource:@"Shader" ofType:@"fsh"];
+  if (![self compileShader:&fragShader type:GL_FRAGMENT_SHADER file:fragShaderPathname]) {
+    NSLog(@"Failed to compile fragment shader");
+    return NO;
+  }
+
+  // Attach vertex shader to program.
+  glAttachShader(_program, vertShader);
+
+  // Attach fragment shader to program.
+  glAttachShader(_program, fragShader);
+
+  // Bind attribute locations.
+  // This needs to be done prior to linking.
+  glBindAttribLocation(_program, GLKVertexAttribPosition, "position");
+  glBindAttribLocation(_program, GLKVertexAttribTexCoord0, "texCoord");
+
+  // Link program.
+  if (![self linkProgram:_program]) {
+    NSLog(@"Failed to link program: %d", _program);
+
     if (vertShader) {
-        glDetachShader(_program, vertShader);
-        glDeleteShader(vertShader);
+      glDeleteShader(vertShader);
+      vertShader = 0;
     }
     if (fragShader) {
-        glDetachShader(_program, fragShader);
-        glDeleteShader(fragShader);
+      glDeleteShader(fragShader);
+      fragShader = 0;
     }
-    
-    return YES;
+    if (_program) {
+      glDeleteProgram(_program);
+      _program = 0;
+    }
+
+    return NO;
+  }
+
+  // Get uniform locations.
+  uniforms[UNIFORM_MODELVIEWPROJECTION_MATRIX] = glGetUniformLocation(_program, "modelViewProjectionMatrix");
+  textureUniform = glGetUniformLocation(_program, "texture");
+
+  // Release vertex and fragment shaders.
+  if (vertShader) {
+    glDetachShader(_program, vertShader);
+    glDeleteShader(vertShader);
+  }
+  if (fragShader) {
+    glDetachShader(_program, fragShader);
+    glDeleteShader(fragShader);
+  }
+
+  return YES;
 }
 
 - (BOOL)compileShader:(GLuint *)shader type:(GLenum)type file:(NSString *)file
 {
     GLint status;
     const GLchar *source;
-    
+
     source = (GLchar *)[[NSString stringWithContentsOfFile:file encoding:NSUTF8StringEncoding error:nil] UTF8String];
     if (!source) {
         NSLog(@"Failed to load vertex shader");
