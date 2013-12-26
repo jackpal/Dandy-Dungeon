@@ -7,7 +7,8 @@
 //
 
 #import <Foundation/Foundation.h>
+#import "Level.h"
 
 @interface DGame : NSObject
-
+@property Level level;
 @end

@@ -7,11 +7,9 @@
 //
 
 #import "DGame.h"
-#import "Level.h"
 
 @interface DGame ()
 
-@property Level level;
 @property int levelIndex;
 
 @end

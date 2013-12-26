@@ -8,6 +8,7 @@
 
 #import "DViewController.h"
 #import "DGame.h"
+#import "Level.h"
 
 #define BUFFER_OFFSET(i) ((char *)NULL + (i))
 
@@ -31,30 +32,10 @@ typedef struct {
   GLfloat x, y, u, v;
 } TileVertex;
 
-const int TILES = 1;
+const int TILES = (LEVEL_VIEW_WIDTH + 1) * (LEVEL_VIEW_HEIGHT + 1);
 const int VERTS_PER_TILE = 6;
 
-// TODO: switch to indexed mesh to avoid duplicating verts a and d
-
-//    u
-//  a--b
-//v |\ |
-//  | \|
-//  c--d
-// Triangles a b d a d c
-
-TileVertex gTileVertexData[TILES*VERTS_PER_TILE] =
-{
-    // Data layout for each line below is:
-    // x, y,      u, v,
-    0.0f, 0.0f,   0.0f, 0.0f, // a
-    100.0f, 0.0f,   1.0f, 0.0f, // b
-    100.0f, 100.0f,   1.0f, 1.0f, // d
-
-    0.0f, 0.0f,   0.0f, 0.0f, // a
-    100.0f, 100.0f,   1.0f, 1.0f, // d
-    0.0f, 100.0f,   0.0f, 1.0f, // c
-};
+TileVertex gTileVertexData[TILES*VERTS_PER_TILE];
 
 @interface DViewController () {
   GLuint _program;
@@ -64,11 +45,21 @@ TileVertex gTileVertexData[TILES*VERTS_PER_TILE] =
   GLuint _vertexArray;
   GLuint _vertexBuffer;
 
+  // In GL window coordinate system. This is frame buffer pixels. On retina
+  // displays this will be higher resolution than IOS view system coordinates.
+  // Also (0,0) is the lower-left-hand corner.
   GLfloat _scissorX;
   GLfloat _scissorY;
   GLfloat _scissorW;
   GLfloat _scissorH;
 
+  // In GL viewport coordinates, which we set equal to IOS view
+  // system coordinates.
+  GLfloat _gameX;
+  GLfloat _gameY;
+
+  // In GL viewport coordinates, which we set equal to IOS view
+  // system coordinates.
   GLfloat _tileW;
   GLfloat _tileH;
 }
@@ -105,6 +96,13 @@ TileVertex gTileVertexData[TILES*VERTS_PER_TILE] =
   [self setupGL];
 }
 
+- (void)didRotateFromInterfaceOrientation:(UIInterfaceOrientation)orientation
+{
+  [super didRotateFromInterfaceOrientation:orientation];
+  // Ensures we recalculate the tile geometry.
+  _tileW = 0;
+}
+
 - (void)dealloc
 {    
     [self tearDownGL];
@@ -132,14 +130,19 @@ TileVertex gTileVertexData[TILES*VERTS_PER_TILE] =
     // Dispose of any resources that can be recreated.
 }
 
-- (void)viewDidLayoutSubviews
+- (void)ensureViewGeometry
 {
-  [super viewDidLayoutSubviews];
+  if (_tileW != 0) {
+    return;
+  }
+  int iosViewWidth = self.view.bounds.size.width;
+  int iosViewHeight = self.view.bounds.size.height;
+
   // In OpenGL window coordinate system -- pixels, (0,0) is lower left
   _scissorX = 0.0f;
   _scissorY = 0.0f;
-  _scissorW = self.view.bounds.size.width;
-  _scissorH = self.view.bounds.size.height;
+  _scissorW = iosViewWidth;
+  _scissorH = iosViewHeight;
   float viewAspect = fabsf(self.view.bounds.size.width / self.view.bounds.size.height);
   float gameH = _scissorH;
   float gameW = _scissorW;
@@ -157,8 +160,19 @@ TileVertex gTileVertexData[TILES*VERTS_PER_TILE] =
     _scissorH = gameH;
   }
 
+  _gameX = _scissorX;
+  _gameY = _scissorY;
+
   _tileW = gameW / 20.0f;
   _tileH = gameH / 10.0f;
+
+
+  // Calculate scale factor between view system coordinates and OpenGL coords
+  float uiToPixelScale = [[UIScreen mainScreen] scale];
+  _scissorX *= uiToPixelScale;
+  _scissorY *= uiToPixelScale;
+  _scissorW *= uiToPixelScale;
+  _scissorH *= uiToPixelScale;
 }
 
 - (void)setupGL
@@ -170,20 +184,7 @@ TileVertex gTileVertexData[TILES*VERTS_PER_TILE] =
   glEnable(GL_DEPTH_TEST);
 
   glGenVertexArraysOES(1, &_vertexArray);
-  glBindVertexArrayOES(_vertexArray);
-
   glGenBuffers(1, &_vertexBuffer);
-  glBindBuffer(GL_ARRAY_BUFFER, _vertexBuffer);
-  glBufferData(GL_ARRAY_BUFFER, sizeof(gTileVertexData), gTileVertexData, GL_STATIC_DRAW);
-
-  glEnableVertexAttribArray(GLKVertexAttribPosition);
-  glVertexAttribPointer(GLKVertexAttribPosition, 2, GL_FLOAT, GL_FALSE, sizeof(TileVertex), BUFFER_OFFSET(0));
-  glEnableVertexAttribArray(GLKVertexAttribTexCoord0);
-  glVertexAttribPointer(GLKVertexAttribTexCoord0, 2, GL_FLOAT, GL_FALSE, sizeof(TileVertex), BUFFER_OFFSET(8));
-
-  glBindVertexArrayOES(0);
-
-  glScissor(_scissorX, _scissorY, _scissorW, _scissorH);
 }
 
 - (void)tearDownGL
@@ -199,15 +200,57 @@ TileVertex gTileVertexData[TILES*VERTS_PER_TILE] =
     }
 }
 
+- (void) calcVertexData
+{
+  TileVertex *pTile = gTileVertexData;
+  Level level = _game.level;
+  for (int vty = 0; vty <= LEVEL_VIEW_HEIGHT; vty++) {
+    for (int vtx = 0; vtx <= LEVEL_VIEW_WIDTH; vtx++) {
+      // TODO: switch to indexed mesh to avoid duplicating verts a and d
+
+      //    u
+      //  a--b
+      //v |\ |
+      //  | \|
+      //  c--d
+      // Triangles a b d a d c
+
+      GLfloat x0 = _tileW * vtx;
+      GLfloat x1 = _tileW * (vtx + 1);
+      GLfloat y0 = _tileH * vty;
+      GLfloat y1 = _tileH * (vty + 1);
+
+      GLfloat u0 = 0.0f;
+      GLfloat u1 = 1.0f;
+      GLfloat v0 = 0.0f;
+      GLfloat v1 = 1.0f;
+
+      TileVertex a = {x0, y0, u0, v0};
+      TileVertex b = {x1, y0, u1, v0};
+      TileVertex c = {x0, y1, u0, v1};
+      TileVertex d = {x1, y1, u1, v1};
+
+      *pTile++ = a;
+      *pTile++ = b;
+      *pTile++ = d;
+
+      *pTile++ = a;
+      *pTile++ = d;
+      *pTile++ = c;
+    }
+  }
+}
+
 #pragma mark - GLKView and GLKViewController delegate methods
 
 - (void)update
 {
+  [self ensureViewGeometry];
   float width = self.view.bounds.size.width;
   float height = self.view.bounds.size.height;
-  float left = -_scissorX;
+  float left = -_gameX;
   float right = left + width;
-  float top = -_scissorY;
+  float top = -_gameY;
   float bottom = top + height;
   GLKMatrix4 projectionMatrix = GLKMatrix4MakeOrtho(left, right, bottom, top, 0.1f, 10.0f);
 
@@ -222,16 +265,28 @@ TileVertex gTileVertexData[TILES*VERTS_PER_TILE] =
 
 - (void)glkView:(GLKView *)view drawInRect:(CGRect)rect
 {
-    glClearColor(0.0f, 0.5f, 0.0f, 1.0f);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    
-    glBindVertexArrayOES(_vertexArray);
-    
-    glUseProgram(_program);
-    
-    glUniformMatrix4fv(uniforms[UNIFORM_MODELVIEWPROJECTION_MATRIX], 1, 0, _modelViewProjectionMatrix.m);
+  glClearColor(0.0f, 0.5f, 0.0f, 1.0f);
+  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    glDrawArrays(GL_TRIANGLES, 0, 36);
+  [self calcVertexData];
+
+  glBindVertexArrayOES(_vertexArray);
+  glBindBuffer(GL_ARRAY_BUFFER, _vertexBuffer);
+  glBufferData(GL_ARRAY_BUFFER, sizeof(gTileVertexData), gTileVertexData, GL_DYNAMIC_DRAW);
+
+  glEnableVertexAttribArray(GLKVertexAttribPosition);
+  glVertexAttribPointer(GLKVertexAttribPosition, 2, GL_FLOAT, GL_FALSE, sizeof(TileVertex), BUFFER_OFFSET(0));
+  glEnableVertexAttribArray(GLKVertexAttribTexCoord0);
+  glVertexAttribPointer(GLKVertexAttribTexCoord0, 2, GL_FLOAT, GL_FALSE, sizeof(TileVertex), BUFFER_OFFSET(8));
+
+  glUseProgram(_program);
+
+  glUniformMatrix4fv(uniforms[UNIFORM_MODELVIEWPROJECTION_MATRIX], 1, 0, _modelViewProjectionMatrix.m);
+
+  glScissor(_scissorX, _scissorY, _scissorW, _scissorH);
+  glEnable(GL_SCISSOR_TEST);
+  glDrawArrays(GL_TRIANGLES, 0, sizeof(gTileVertexData) / sizeof(TileVertex));
+  glDisable(GL_SCISSOR_TEST);
 }
 
 #pragma mark -  OpenGL ES 2 shader compilation

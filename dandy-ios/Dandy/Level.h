@@ -30,8 +30,11 @@ NS_ENUM(unsigned char, _Cell) {
 };
 typedef enum _Cell Cell;
 
-const int LEVEL_WIDTH = 60;
-const int LEVEL_HEIGHT = 30;
+#define LEVEL_WIDTH 60
+#define LEVEL_HEIGHT 30
+
+#define LEVEL_VIEW_WIDTH 20
+#define LEVEL_VIEW_HEIGHT 10
 
 typedef Cell *Level;
 
