@@ -95,7 +95,6 @@ TileVertex gTileVertexData[TILES*VERTS_PER_TILE];
 
   GLKView *view = (GLKView *)self.view;
   view.context = self.context;
-  view.drawableDepthFormat = GLKViewDrawableDepthFormat24;
 
   [self setupGL];
 }
@@ -185,8 +184,6 @@ TileVertex gTileVertexData[TILES*VERTS_PER_TILE];
 
   [self loadShaders];
   [self loadTextures];
-
-  glEnable(GL_DEPTH_TEST);
 
   glGenVertexArraysOES(1, &_vertexArray);
   glGenBuffers(1, &_vertexBuffer);
@@ -293,7 +290,7 @@ TileVertex gTileVertexData[TILES*VERTS_PER_TILE];
 - (void)glkView:(GLKView *)view drawInRect:(CGRect)rect
 {
   glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+  glClear(GL_COLOR_BUFFER_BIT);
 
   [self calcVertexData];
 
