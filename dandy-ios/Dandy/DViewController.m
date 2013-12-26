@@ -9,6 +9,7 @@
 #import "DViewController.h"
 #import "DGame.h"
 #import "Level.h"
+#import "TextureAtlas.h"
 
 #define BUFFER_OFFSET(i) ((char *)NULL + (i))
 
@@ -65,6 +66,8 @@ TileVertex gTileVertexData[TILES*VERTS_PER_TILE];
 }
 @property (strong, nonatomic) EAGLContext *context;
 @property (strong, nonatomic) DGame *game;
+@property (strong, nonatomic) GLKTextureInfo *texture;
+@property (strong, nonatomic) TextureAtlas *textureAtlas;
 
 - (void)setupGL;
 - (void)tearDownGL;
@@ -82,7 +85,6 @@ TileVertex gTileVertexData[TILES*VERTS_PER_TILE];
   [super viewDidLoad];
 
   self.game = [[DGame alloc] init];
-
   self.context = [[EAGLContext alloc] initWithAPI:kEAGLRenderingAPIOpenGLES2];
 
   if (!self.context) {
@@ -180,6 +182,7 @@ TileVertex gTileVertexData[TILES*VERTS_PER_TILE];
   [EAGLContext setCurrentContext:self.context];
 
   [self loadShaders];
+  [self loadTextures];
 
   glEnable(GL_DEPTH_TEST);
 
@@ -200,12 +203,29 @@ TileVertex gTileVertexData[TILES*VERTS_PER_TILE];
     }
 }
 
+- (void) loadTextures
+{
+  NSString *filePath = [[NSBundle mainBundle] pathForResource:@"dandy" ofType:@"png"];
+  self.texture = [GLKTextureLoader textureWithContentsOfFile:filePath options:nil error:nil];
+  self.textureAtlas = [[TextureAtlas alloc] initTextureWidth:self.texture.width
+                                               textureHeight:self.texture.height
+                                                elementWidth:16
+                                               elementHeight:16
+                                                elementCount:28];
+}
+
 - (void) calcVertexData
 {
   TileVertex *pTile = gTileVertexData;
   Level level = _game.level;
   for (int vty = 0; vty <= LEVEL_VIEW_HEIGHT; vty++) {
     for (int vtx = 0; vtx <= LEVEL_VIEW_WIDTH; vtx++) {
+
+      Cell cell = LevelAt(level, vtx, vty);
+
+      GLfloat buffer[4];
+      [self.textureAtlas getUvs:buffer forElementIndex:cell];
+
       // TODO: switch to indexed mesh to avoid duplicating verts a and d
 
       //    u
@@ -220,10 +240,10 @@ TileVertex gTileVertexData[TILES*VERTS_PER_TILE];
       GLfloat y0 = _tileH * vty;
       GLfloat y1 = _tileH * (vty + 1);
 
-      GLfloat u0 = 0.0f;
-      GLfloat u1 = 1.0f;
-      GLfloat v0 = 0.0f;
-      GLfloat v1 = 1.0f;
+      GLfloat u0 = buffer[0];
+      GLfloat v0 = buffer[1];
+      GLfloat u1 = buffer[2];
+      GLfloat v1 = buffer[3];
 
       TileVertex a = {x0, y0, u0, v0};
       TileVertex b = {x1, y0, u1, v0};
@@ -265,7 +285,7 @@ TileVertex gTileVertexData[TILES*VERTS_PER_TILE];
 
 - (void)glkView:(GLKView *)view drawInRect:(CGRect)rect
 {
-  glClearColor(0.0f, 0.5f, 0.0f, 1.0f);
+  glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
   [self calcVertexData];

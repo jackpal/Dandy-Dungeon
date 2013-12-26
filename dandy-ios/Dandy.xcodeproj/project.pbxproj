@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		360D64EE186CD9BA001E39CC /* TextureAtlas.m in Sources */ = {isa = PBXBuildFile; fileRef = 360D64ED186CD9BA001E39CC /* TextureAtlas.m */; };
 		36134439186A7BC40056AB33 /* a.bin in Resources */ = {isa = PBXBuildFile; fileRef = 3613441D186A7BC40056AB33 /* a.bin */; };
 		3613443A186A7BC40056AB33 /* b.bin in Resources */ = {isa = PBXBuildFile; fileRef = 3613441E186A7BC40056AB33 /* b.bin */; };
 		3613443B186A7BC40056AB33 /* c.bin in Resources */ = {isa = PBXBuildFile; fileRef = 3613441F186A7BC40056AB33 /* c.bin */; };
@@ -69,6 +70,8 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		360D64EC186CD9BA001E39CC /* TextureAtlas.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TextureAtlas.h; sourceTree = "<group>"; };
+		360D64ED186CD9BA001E39CC /* TextureAtlas.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TextureAtlas.m; sourceTree = "<group>"; };
 		3613441D186A7BC40056AB33 /* a.bin */ = {isa = PBXFileReference; lastKnownFileType = archive.macbinary; path = a.bin; sourceTree = "<group>"; };
 		3613441E186A7BC40056AB33 /* b.bin */ = {isa = PBXFileReference; lastKnownFileType = archive.macbinary; path = b.bin; sourceTree = "<group>"; };
 		3613441F186A7BC40056AB33 /* c.bin */ = {isa = PBXFileReference; lastKnownFileType = archive.macbinary; path = c.bin; sourceTree = "<group>"; };
@@ -248,6 +251,8 @@
 				36C00225186A75D0001EBF13 /* Shader.vsh */,
 				36C00227186A75D0001EBF13 /* DViewController.h */,
 				36C00228186A75D0001EBF13 /* DViewController.m */,
+				360D64EC186CD9BA001E39CC /* TextureAtlas.h */,
+				360D64ED186CD9BA001E39CC /* TextureAtlas.m */,
 				36C0022A186A75D0001EBF13 /* Images.xcassets */,
 				36C00212186A75D0001EBF13 /* Supporting Files */,
 				36134454186A7CB40056AB33 /* Level.h */,
@@ -417,6 +422,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				360D64EE186CD9BA001E39CC /* TextureAtlas.m in Sources */,
 				36C00229186A75D0001EBF13 /* DViewController.m in Sources */,
 				36C00218186A75D0001EBF13 /* main.m in Sources */,
 				36134459186B5C1C0056AB33 /* DGame.m in Sources */,
