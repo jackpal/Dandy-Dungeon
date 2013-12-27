@@ -80,7 +80,15 @@ Level LevelCreate();
 
 void LevelRead(Level level, int index);
 
+bool LevelFind(Level level, Cell cell, int* pX, int* pY);
+
+void LevelOpenDoor(Level level, int x, int y);
+
 void LevelDelete(Level level);
 
 NSString *LevelToString(Level level);
+
+// x,y are the desired center-of-view. left-top-right-bottom are the bounds
+// clipped to [0..LEVEL_WIDTH] in x and [0..LEVEL_HEIGHT] in y.
+void LevelGetActiveBounds(int x, int y, int* left, int* top, int* right, int* bottom);
 

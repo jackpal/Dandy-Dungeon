@@ -7,6 +7,7 @@
 //
 
 #import "Level.h"
+#import "math.h"
 
 Level LevelCreate(){
   return (Level) malloc(LEVEL_WIDTH*LEVEL_HEIGHT*sizeof(Cell));
@@ -34,6 +35,38 @@ void LevelRead(Level level, int index) {
   }
 }
 
+bool LevelFind(Level level, Cell cell, int* pX, int* pY) {
+  for (int y = 0; y < LEVEL_HEIGHT; y++) {
+    for (int x = 0; x < LEVEL_WIDTH; x++) {
+      if(level[x + y * LEVEL_WIDTH] == cell) {
+        if (pX) {
+          *pX = x;
+        }
+        if (pY) {
+          *pY = y;
+        }
+        return true;
+      }
+    }
+  }
+  return false;
+
+}
+
+void LevelOpenDoor(Level level, int x, int y) {
+  // Flood fill from this coord
+  int index = x + y * LEVEL_WIDTH;
+  if (level[index] == kDoor) {
+    level[index] = kSpace;
+    for (int dy = -1;dy <= 1; dy++) {
+      for (int dx = -1;dx <= 1; dx++) {
+        if (dx != 0 || dy != 0) {
+          LevelOpenDoor(level, x + dx, y + dy);
+        }
+      }
+    }
+  }
+}
 
 NSString* CellToNSString(Cell c) {
   static NSArray *cellToChar;
@@ -83,4 +116,21 @@ NSString *LevelToString(Level level) {
     [s appendString:@"\n"];
   }
   return s;
+}
+
+static void ActiveBoundsHelper(int x, int* left, int* right, int width, int viewWidth) {
+  x -= (viewWidth / 2);
+  x = MAX(x, 0);
+  x = MIN(x, width - viewWidth);
+  if (left) {
+    *left = x;
+  }
+  if (right) {
+    *right = MIN(x + viewWidth + 1, width);
+  }
+}
+
+void LevelGetActiveBounds(int x, int y, int* left, int* top, int* right, int* bottom){
+  ActiveBoundsHelper(x, left, right, LEVEL_WIDTH, LEVEL_VIEW_WIDTH);
+  ActiveBoundsHelper(y, top, bottom, LEVEL_HEIGHT, LEVEL_VIEW_HEIGHT);
 }

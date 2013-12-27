@@ -11,4 +11,5 @@
 
 @interface DGame : NSObject
 @property Level level;
+
 @end

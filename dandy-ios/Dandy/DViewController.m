@@ -65,6 +65,10 @@ TileVertex gTileVertexData[TILES*VERTS_PER_TILE];
   // system coordinates.
   GLfloat _tileW;
   GLfloat _tileH;
+
+  // Offset of game center of interest
+  GLfloat _gameOffsetX;
+  GLfloat _gameOffsetY;
 }
 @property (strong, nonatomic) EAGLContext *context;
 @property (strong, nonatomic) DGame *game;
@@ -85,6 +89,8 @@ TileVertex gTileVertexData[TILES*VERTS_PER_TILE];
 - (void)viewDidLoad
 {
   [super viewDidLoad];
+
+  self.preferredFramesPerSecond = 60;
 
   self.game = [[DGame alloc] init];
   self.context = [[EAGLContext alloc] initWithAPI:kEAGLRenderingAPIOpenGLES2];
@@ -222,8 +228,19 @@ TileVertex gTileVertexData[TILES*VERTS_PER_TILE];
 {
   TileVertex *pTile = gTileVertexData;
   Level level = _game.level;
-  for (int vty = 0; vty <= LEVEL_VIEW_HEIGHT; vty++) {
-    for (int vtx = 0; vtx <= LEVEL_VIEW_WIDTH; vtx++) {
+  int tileLeft;
+  int tileTop;
+  int tileRight;
+  int tileBottom;
+  int cogX = LEVEL_VIEW_WIDTH / 2 -_gameOffsetX/_tileW;
+  int cogY = LEVEL_VIEW_HEIGHT / 2 -_gameOffsetY/_tileH;
+  LevelGetActiveBounds(cogX, cogY, &tileLeft, &tileTop, &tileRight, &tileBottom);
+  int tileViewWidth = tileRight - tileLeft;
+  int tileViewHeight = tileBottom - tileTop;
+  for (int y = 0; y < tileViewHeight; y++) {
+    for (int x = 0; x < tileViewWidth; x++) {
+      int vtx = x + tileLeft;
+      int vty = y + tileTop;
 
       Cell cell = LevelAt(level, vtx, vty);
 
@@ -278,7 +295,7 @@ TileVertex gTileVertexData[TILES*VERTS_PER_TILE];
   float bottom = top + height;
   GLKMatrix4 projectionMatrix = GLKMatrix4MakeOrtho(left, right, bottom, top, 0.1f, 10.0f);
 
-  GLKMatrix4 baseModelViewMatrix = GLKMatrix4MakeTranslation(0.0f, 0.0f, -4.0f);
+  GLKMatrix4 baseModelViewMatrix = GLKMatrix4MakeTranslation(_gameOffsetX, _gameOffsetY, -4.0f);
 
   // Compute the model view matrix for the object rendered with ES2
   GLKMatrix4 modelViewMatrix = GLKMatrix4MakeTranslation(0.0f, 0.0f, 1.5f);
@@ -464,6 +481,35 @@ TileVertex gTileVertexData[TILES*VERTS_PER_TILE];
     }
     
     return YES;
+}
+
+
+#pragma mark - touch input
+
+- (void)touchesBegan:(NSSet *)touches withEvent:(UIEvent *)event {
+  [super touchesBegan:touches withEvent:event];
+  NSLog(@"TouchesBegan ");
+}
+
+- (void)touchesMoved:(NSSet *)touches withEvent:(UIEvent *)event {
+  [super touchesMoved:touches withEvent:event];
+  NSLog(@"touchesMoved ");
+  UITouch *aTouch = [touches anyObject];
+  UIView *view = self.view;
+  CGPoint loc = [aTouch locationInView:view];
+  CGPoint prevloc = [aTouch previousLocationInView:view];
+  _gameOffsetX += (loc.x - prevloc.x);
+  _gameOffsetY += (loc.y - prevloc.y);
+}
+
+- (void)touchesEnded:(NSSet *)touches withEvent:(UIEvent *)event {
+  [super touchesEnded:touches withEvent:event];
+  NSLog(@"touchesEnded ");
+}
+
+- (void)touchesCancelled:(NSSet *)touches withEvent:(UIEvent *)event {
+  [super touchesCancelled:touches withEvent:event];
+  NSLog(@"touchesCancelled ");
 }
 
 @end
