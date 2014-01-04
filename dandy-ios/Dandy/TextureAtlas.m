@@ -47,7 +47,8 @@
   if (index < 0 || index >= _elementCount) {
     @throw([NSException
             exceptionWithName: @"IndexOutOfBounds"
-            reason:[NSString stringWithFormat:@"index:%d", index]
+            reason:[NSString stringWithFormat:@"index:%ld",
+                    (long) index]
             userInfo:nil ]);
   }
   NSInteger y = index / _elementStride;
