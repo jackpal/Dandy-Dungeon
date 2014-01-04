@@ -488,12 +488,12 @@ TileVertex gTileVertexData[TILES*VERTS_PER_TILE];
 
 - (void)touchesBegan:(NSSet *)touches withEvent:(UIEvent *)event {
   [super touchesBegan:touches withEvent:event];
-  NSLog(@"TouchesBegan ");
+  // NSLog(@"TouchesBegan ");
 }
 
 - (void)touchesMoved:(NSSet *)touches withEvent:(UIEvent *)event {
   [super touchesMoved:touches withEvent:event];
-  NSLog(@"touchesMoved ");
+  // NSLog(@"touchesMoved ");
   UITouch *aTouch = [touches anyObject];
   UIView *view = self.view;
   CGPoint loc = [aTouch locationInView:view];
@@ -504,12 +504,12 @@ TileVertex gTileVertexData[TILES*VERTS_PER_TILE];
 
 - (void)touchesEnded:(NSSet *)touches withEvent:(UIEvent *)event {
   [super touchesEnded:touches withEvent:event];
-  NSLog(@"touchesEnded ");
+  // NSLog(@"touchesEnded ");
 }
 
 - (void)touchesCancelled:(NSSet *)touches withEvent:(UIEvent *)event {
   [super touchesCancelled:touches withEvent:event];
-  NSLog(@"touchesCancelled ");
+  // NSLog(@"touchesCancelled ");
 }
 
 @end
