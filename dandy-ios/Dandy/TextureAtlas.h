@@ -10,13 +10,13 @@
 
 @interface TextureAtlas : NSObject
 
--(id) initTextureWidth:(NSInteger)textureWidth
+- (id)initTextureWidth:(NSInteger)textureWidth
          textureHeight:(NSInteger)textureHeight
           elementWidth:(NSInteger)elementWidth
          elementHeight:(NSInteger)elementHeight
           elementCount:(NSInteger)elementCount;
 
 // Returns [u0 v0 u1 v1]
--(void) getUvs:(GLfloat*)buffer forElementIndex:(NSInteger) index;
+- (void)getUvs:(GLfloat *)buffer forElementIndex:(NSInteger)index;
 
 @end

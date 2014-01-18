@@ -14,21 +14,19 @@
 #define BUFFER_OFFSET(i) ((char *)NULL + (i))
 
 // Uniform index.
-enum
-{
-    UNIFORM_MODELVIEWPROJECTION_MATRIX,
-    NUM_UNIFORMS
+enum {
+  UNIFORM_MODELVIEWPROJECTION_MATRIX,
+  NUM_UNIFORMS
 };
 GLint uniforms[NUM_UNIFORMS];
 
 GLint textureUniform;
 
 // Attribute index.
-enum
-{
-    ATTRIB_VERTEX,
-    ATTRIB_UV,
-    NUM_ATTRIBUTES
+enum {
+  ATTRIB_VERTEX,
+  ATTRIB_UV,
+  NUM_ATTRIBUTES
 };
 
 typedef struct {
@@ -38,7 +36,7 @@ typedef struct {
 const int TILES = (LEVEL_VIEW_WIDTH + 1) * (LEVEL_VIEW_HEIGHT + 1);
 const int VERTS_PER_TILE = 6;
 
-TileVertex gTileVertexData[TILES*VERTS_PER_TILE];
+TileVertex gTileVertexData[TILES * VERTS_PER_TILE];
 
 @interface DViewController () {
   GLuint _program;
@@ -70,10 +68,10 @@ TileVertex gTileVertexData[TILES*VERTS_PER_TILE];
   GLfloat _gameOffsetX;
   GLfloat _gameOffsetY;
 }
-@property (strong, nonatomic) EAGLContext *context;
-@property (strong, nonatomic) DGame *game;
-@property (strong, nonatomic) GLKTextureInfo *texture;
-@property (strong, nonatomic) TextureAtlas *textureAtlas;
+@property(strong, nonatomic) EAGLContext *context;
+@property(strong, nonatomic) DGame *game;
+@property(strong, nonatomic) GLKTextureInfo *texture;
+@property(strong, nonatomic) TextureAtlas *textureAtlas;
 
 - (void)setupGL;
 - (void)tearDownGL;
@@ -86,8 +84,7 @@ TileVertex gTileVertexData[TILES*VERTS_PER_TILE];
 
 @implementation DViewController
 
-- (void)viewDidLoad
-{
+- (void)viewDidLoad {
   [super viewDidLoad];
 
   self.preferredFramesPerSecond = 60;
@@ -105,42 +102,38 @@ TileVertex gTileVertexData[TILES*VERTS_PER_TILE];
   [self setupGL];
 }
 
-- (void)didRotateFromInterfaceOrientation:(UIInterfaceOrientation)orientation
-{
+- (void)didRotateFromInterfaceOrientation:(UIInterfaceOrientation)orientation {
   [super didRotateFromInterfaceOrientation:orientation];
   // Ensures we recalculate the tile geometry.
   _tileW = 0;
 }
 
-- (void)dealloc
-{    
+- (void)dealloc {
+  [self tearDownGL];
+
+  if ([EAGLContext currentContext] == self.context) {
+    [EAGLContext setCurrentContext:nil];
+  }
+}
+
+- (void)didReceiveMemoryWarning {
+  [super didReceiveMemoryWarning];
+
+  if ([self isViewLoaded] && ([[self view] window] == nil)) {
+    self.view = nil;
+
     [self tearDownGL];
-    
+
     if ([EAGLContext currentContext] == self.context) {
-        [EAGLContext setCurrentContext:nil];
+      [EAGLContext setCurrentContext:nil];
     }
+    self.context = nil;
+  }
+
+  // Dispose of any resources that can be recreated.
 }
 
-- (void)didReceiveMemoryWarning
-{
-    [super didReceiveMemoryWarning];
-
-    if ([self isViewLoaded] && ([[self view] window] == nil)) {
-        self.view = nil;
-        
-        [self tearDownGL];
-        
-        if ([EAGLContext currentContext] == self.context) {
-            [EAGLContext setCurrentContext:nil];
-        }
-        self.context = nil;
-    }
-
-    // Dispose of any resources that can be recreated.
-}
-
-- (void)ensureViewGeometry
-{
+- (void)ensureViewGeometry {
   if (_tileW != 0) {
     return;
   }
@@ -152,7 +145,8 @@ TileVertex gTileVertexData[TILES*VERTS_PER_TILE];
   _scissorY = 0.0f;
   _scissorW = iosViewWidth;
   _scissorH = iosViewHeight;
-  float viewAspect = fabsf(self.view.bounds.size.width / self.view.bounds.size.height);
+  float viewAspect =
+      fabsf(self.view.bounds.size.width / self.view.bounds.size.height);
   float gameH = _scissorH;
   float gameW = _scissorW;
   // Compute the largest 8:5 aspect ratio rectangle that can fit in the view.
@@ -164,7 +158,7 @@ TileVertex gTileVertexData[TILES*VERTS_PER_TILE];
     _scissorW = gameW;
   } else {
     // View is taller than it needs to be. Center game vertically.
-    gameH =  gameW / gameAspect;
+    gameH = gameW / gameAspect;
     _scissorY = (_scissorH - gameH) * 0.5f;
     _scissorH = gameH;
   }
@@ -175,7 +169,6 @@ TileVertex gTileVertexData[TILES*VERTS_PER_TILE];
   _tileW = gameW / 20.0f;
   _tileH = gameH / 10.0f;
 
-
   // Calculate scale factor between view system coordinates and OpenGL coords
   float uiToPixelScale = [[UIScreen mainScreen] scale];
   _scissorX *= uiToPixelScale;
@@ -184,8 +177,7 @@ TileVertex gTileVertexData[TILES*VERTS_PER_TILE];
   _scissorH *= uiToPixelScale;
 }
 
-- (void)setupGL
-{
+- (void)setupGL {
   [EAGLContext setCurrentContext:self.context];
 
   [self loadShaders];
@@ -195,23 +187,24 @@ TileVertex gTileVertexData[TILES*VERTS_PER_TILE];
   glGenBuffers(1, &_vertexBuffer);
 }
 
-- (void)tearDownGL
-{
-    [EAGLContext setCurrentContext:self.context];
-    
-    glDeleteBuffers(1, &_vertexBuffer);
-    glDeleteVertexArraysOES(1, &_vertexArray);
-    
-    if (_program) {
-        glDeleteProgram(_program);
-        _program = 0;
-    }
+- (void)tearDownGL {
+  [EAGLContext setCurrentContext:self.context];
+
+  glDeleteBuffers(1, &_vertexBuffer);
+  glDeleteVertexArraysOES(1, &_vertexArray);
+
+  if (_program) {
+    glDeleteProgram(_program);
+    _program = 0;
+  }
 }
 
-- (void) loadTextures
-{
-  NSString *filePath = [[NSBundle mainBundle] pathForResource:@"dandy" ofType:@"png"];
-  self.texture = [GLKTextureLoader textureWithContentsOfFile:filePath options:nil error:nil];
+- (void)loadTextures {
+  NSString *filePath =
+      [[NSBundle mainBundle] pathForResource:@"dandy" ofType:@"png"];
+  self.texture = [GLKTextureLoader textureWithContentsOfFile:filePath
+                                                     options:nil
+                                                       error:nil];
   self.textureAtlas = [[TextureAtlas alloc] initTextureWidth:self.texture.width
                                                textureHeight:self.texture.height
                                                 elementWidth:16
@@ -224,17 +217,17 @@ TileVertex gTileVertexData[TILES*VERTS_PER_TILE];
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 }
 
-- (void) calcVertexData
-{
+- (void)calcVertexData {
   TileVertex *pTile = gTileVertexData;
   Level level = _game.level;
   int tileLeft;
   int tileTop;
   int tileRight;
   int tileBottom;
-  int cogX = LEVEL_VIEW_WIDTH / 2 -_gameOffsetX/_tileW;
-  int cogY = LEVEL_VIEW_HEIGHT / 2 -_gameOffsetY/_tileH;
-  LevelGetActiveBounds(cogX, cogY, &tileLeft, &tileTop, &tileRight, &tileBottom);
+  int cogX = LEVEL_VIEW_WIDTH / 2 - _gameOffsetX / _tileW;
+  int cogY = LEVEL_VIEW_HEIGHT / 2 - _gameOffsetY / _tileH;
+  LevelGetActiveBounds(cogX, cogY, &tileLeft, &tileTop, &tileRight,
+                       &tileBottom);
   int tileViewWidth = tileRight - tileLeft;
   int tileViewHeight = tileBottom - tileTop;
   for (int y = 0; y < tileViewHeight; y++) {
@@ -251,7 +244,7 @@ TileVertex gTileVertexData[TILES*VERTS_PER_TILE];
 
       //    u
       //  a--b
-      //v |\ |
+      // v |\ |
       //  | \|
       //  c--d
       // Triangles a b d a d c
@@ -284,8 +277,7 @@ TileVertex gTileVertexData[TILES*VERTS_PER_TILE];
 
 #pragma mark - GLKView and GLKViewController delegate methods
 
-- (void)update
-{
+- (void)update {
   [self ensureViewGeometry];
   float width = self.view.bounds.size.width;
   float height = self.view.bounds.size.height;
@@ -293,19 +285,21 @@ TileVertex gTileVertexData[TILES*VERTS_PER_TILE];
   float right = left + width;
   float top = -_gameY;
   float bottom = top + height;
-  GLKMatrix4 projectionMatrix = GLKMatrix4MakeOrtho(left, right, bottom, top, 0.1f, 10.0f);
+  GLKMatrix4 projectionMatrix =
+      GLKMatrix4MakeOrtho(left, right, bottom, top, 0.1f, 10.0f);
 
-  GLKMatrix4 baseModelViewMatrix = GLKMatrix4MakeTranslation(_gameOffsetX, _gameOffsetY, -4.0f);
+  GLKMatrix4 baseModelViewMatrix =
+      GLKMatrix4MakeTranslation(_gameOffsetX, _gameOffsetY, -4.0f);
 
   // Compute the model view matrix for the object rendered with ES2
   GLKMatrix4 modelViewMatrix = GLKMatrix4MakeTranslation(0.0f, 0.0f, 1.5f);
   modelViewMatrix = GLKMatrix4Multiply(baseModelViewMatrix, modelViewMatrix);
 
-  _modelViewProjectionMatrix = GLKMatrix4Multiply(projectionMatrix, modelViewMatrix);
+  _modelViewProjectionMatrix =
+      GLKMatrix4Multiply(projectionMatrix, modelViewMatrix);
 }
 
-- (void)glkView:(GLKView *)view drawInRect:(CGRect)rect
-{
+- (void)glkView:(GLKView *)view drawInRect:(CGRect)rect {
   glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
   glClear(GL_COLOR_BUFFER_BIT);
 
@@ -313,16 +307,20 @@ TileVertex gTileVertexData[TILES*VERTS_PER_TILE];
 
   glBindVertexArrayOES(_vertexArray);
   glBindBuffer(GL_ARRAY_BUFFER, _vertexBuffer);
-  glBufferData(GL_ARRAY_BUFFER, sizeof(gTileVertexData), gTileVertexData, GL_DYNAMIC_DRAW);
+  glBufferData(GL_ARRAY_BUFFER, sizeof(gTileVertexData), gTileVertexData,
+               GL_DYNAMIC_DRAW);
 
   glEnableVertexAttribArray(GLKVertexAttribPosition);
-  glVertexAttribPointer(GLKVertexAttribPosition, 2, GL_FLOAT, GL_FALSE, sizeof(TileVertex), BUFFER_OFFSET(0));
+  glVertexAttribPointer(GLKVertexAttribPosition, 2, GL_FLOAT, GL_FALSE,
+                        sizeof(TileVertex), BUFFER_OFFSET(0));
   glEnableVertexAttribArray(GLKVertexAttribTexCoord0);
-  glVertexAttribPointer(GLKVertexAttribTexCoord0, 2, GL_FLOAT, GL_FALSE, sizeof(TileVertex), BUFFER_OFFSET(8));
+  glVertexAttribPointer(GLKVertexAttribTexCoord0, 2, GL_FLOAT, GL_FALSE,
+                        sizeof(TileVertex), BUFFER_OFFSET(8));
 
   glUseProgram(_program);
 
-  glUniformMatrix4fv(uniforms[UNIFORM_MODELVIEWPROJECTION_MATRIX], 1, 0, _modelViewProjectionMatrix.m);
+  glUniformMatrix4fv(uniforms[UNIFORM_MODELVIEWPROJECTION_MATRIX], 1, 0,
+                     _modelViewProjectionMatrix.m);
   glUniform1i(textureUniform, 0);
 
   glScissor(_scissorX, _scissorY, _scissorW, _scissorH);
@@ -331,10 +329,9 @@ TileVertex gTileVertexData[TILES*VERTS_PER_TILE];
   glDisable(GL_SCISSOR_TEST);
 }
 
-#pragma mark -  OpenGL ES 2 shader compilation
+#pragma mark - OpenGL ES 2 shader compilation
 
-- (BOOL)loadShaders
-{
+- (BOOL)loadShaders {
   GLuint vertShader, fragShader;
   NSString *vertShaderPathname, *fragShaderPathname;
 
@@ -342,15 +339,21 @@ TileVertex gTileVertexData[TILES*VERTS_PER_TILE];
   _program = glCreateProgram();
 
   // Create and compile vertex shader.
-  vertShaderPathname = [[NSBundle mainBundle] pathForResource:@"Shader" ofType:@"vsh"];
-  if (![self compileShader:&vertShader type:GL_VERTEX_SHADER file:vertShaderPathname]) {
+  vertShaderPathname =
+      [[NSBundle mainBundle] pathForResource:@"Shader" ofType:@"vsh"];
+  if (![self compileShader:&vertShader
+                      type:GL_VERTEX_SHADER
+                      file:vertShaderPathname]) {
     NSLog(@"Failed to compile vertex shader");
     return NO;
   }
 
   // Create and compile fragment shader.
-  fragShaderPathname = [[NSBundle mainBundle] pathForResource:@"Shader" ofType:@"fsh"];
-  if (![self compileShader:&fragShader type:GL_FRAGMENT_SHADER file:fragShaderPathname]) {
+  fragShaderPathname =
+      [[NSBundle mainBundle] pathForResource:@"Shader" ofType:@"fsh"];
+  if (![self compileShader:&fragShader
+                      type:GL_FRAGMENT_SHADER
+                      file:fragShaderPathname]) {
     NSLog(@"Failed to compile fragment shader");
     return NO;
   }
@@ -387,7 +390,8 @@ TileVertex gTileVertexData[TILES*VERTS_PER_TILE];
   }
 
   // Get uniform locations.
-  uniforms[UNIFORM_MODELVIEWPROJECTION_MATRIX] = glGetUniformLocation(_program, "modelViewProjectionMatrix");
+  uniforms[UNIFORM_MODELVIEWPROJECTION_MATRIX] =
+      glGetUniformLocation(_program, "modelViewProjectionMatrix");
   textureUniform = glGetUniformLocation(_program, "texture");
 
   // Release vertex and fragment shaders.
@@ -403,86 +407,84 @@ TileVertex gTileVertexData[TILES*VERTS_PER_TILE];
   return YES;
 }
 
-- (BOOL)compileShader:(GLuint *)shader type:(GLenum)type file:(NSString *)file
-{
-    GLint status;
-    const GLchar *source;
+- (BOOL)compileShader:(GLuint *)shader type:(GLenum)type file:(NSString *)file {
+  GLint status;
+  const GLchar *source;
 
-    source = (GLchar *)[[NSString stringWithContentsOfFile:file encoding:NSUTF8StringEncoding error:nil] UTF8String];
-    if (!source) {
-        NSLog(@"Failed to load vertex shader");
-        return NO;
-    }
-    
-    *shader = glCreateShader(type);
-    glShaderSource(*shader, 1, &source, NULL);
-    glCompileShader(*shader);
-    
+  source = (GLchar *)[[NSString stringWithContentsOfFile:file
+                                                encoding:NSUTF8StringEncoding
+                                                   error:nil] UTF8String];
+  if (!source) {
+    NSLog(@"Failed to load vertex shader");
+    return NO;
+  }
+
+  *shader = glCreateShader(type);
+  glShaderSource(*shader, 1, &source, NULL);
+  glCompileShader(*shader);
+
 #if defined(DEBUG)
-    GLint logLength;
-    glGetShaderiv(*shader, GL_INFO_LOG_LENGTH, &logLength);
-    if (logLength > 0) {
-        GLchar *log = (GLchar *)malloc(logLength);
-        glGetShaderInfoLog(*shader, logLength, &logLength, log);
-        NSLog(@"Shader compile log:\n%s", log);
-        free(log);
-    }
+  GLint logLength;
+  glGetShaderiv(*shader, GL_INFO_LOG_LENGTH, &logLength);
+  if (logLength > 0) {
+    GLchar *log = (GLchar *)malloc(logLength);
+    glGetShaderInfoLog(*shader, logLength, &logLength, log);
+    NSLog(@"Shader compile log:\n%s", log);
+    free(log);
+  }
 #endif
-    
-    glGetShaderiv(*shader, GL_COMPILE_STATUS, &status);
-    if (status == 0) {
-        glDeleteShader(*shader);
-        return NO;
-    }
-    
-    return YES;
+
+  glGetShaderiv(*shader, GL_COMPILE_STATUS, &status);
+  if (status == 0) {
+    glDeleteShader(*shader);
+    return NO;
+  }
+
+  return YES;
 }
 
-- (BOOL)linkProgram:(GLuint)prog
-{
-    GLint status;
-    glLinkProgram(prog);
-    
+- (BOOL)linkProgram:(GLuint)prog {
+  GLint status;
+  glLinkProgram(prog);
+
 #if defined(DEBUG)
-    GLint logLength;
-    glGetProgramiv(prog, GL_INFO_LOG_LENGTH, &logLength);
-    if (logLength > 0) {
-        GLchar *log = (GLchar *)malloc(logLength);
-        glGetProgramInfoLog(prog, logLength, &logLength, log);
-        NSLog(@"Program link log:\n%s", log);
-        free(log);
-    }
+  GLint logLength;
+  glGetProgramiv(prog, GL_INFO_LOG_LENGTH, &logLength);
+  if (logLength > 0) {
+    GLchar *log = (GLchar *)malloc(logLength);
+    glGetProgramInfoLog(prog, logLength, &logLength, log);
+    NSLog(@"Program link log:\n%s", log);
+    free(log);
+  }
 #endif
-    
-    glGetProgramiv(prog, GL_LINK_STATUS, &status);
-    if (status == 0) {
-        return NO;
-    }
-    
-    return YES;
+
+  glGetProgramiv(prog, GL_LINK_STATUS, &status);
+  if (status == 0) {
+    return NO;
+  }
+
+  return YES;
 }
 
-- (BOOL)validateProgram:(GLuint)prog
-{
-    GLint logLength, status;
-    
-    glValidateProgram(prog);
-    glGetProgramiv(prog, GL_INFO_LOG_LENGTH, &logLength);
-    if (logLength > 0) {
-        GLchar *log = (GLchar *)malloc(logLength);
-        glGetProgramInfoLog(prog, logLength, &logLength, log);
-        NSLog(@"Program validate log:\n%s", log);
-        free(log);
-    }
-    
-    glGetProgramiv(prog, GL_VALIDATE_STATUS, &status);
-    if (status == 0) {
-        return NO;
-    }
-    
-    return YES;
-}
+- (BOOL)validateProgram:(GLuint)prog {
+  GLint logLength, status;
 
+  glValidateProgram(prog);
+  glGetProgramiv(prog, GL_INFO_LOG_LENGTH, &logLength);
+  if (logLength > 0) {
+    GLchar *log = (GLchar *)malloc(logLength);
+    glGetProgramInfoLog(prog, logLength, &logLength, log);
+    NSLog(@"Program validate log:\n%s", log);
+    free(log);
+  }
+
+  glGetProgramiv(prog, GL_VALIDATE_STATUS, &status);
+  if (status == 0) {
+    return NO;
+  }
+
+  return YES;
+}
 
 #pragma mark - touch input
 

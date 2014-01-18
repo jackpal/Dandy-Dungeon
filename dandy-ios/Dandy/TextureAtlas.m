@@ -10,25 +10,24 @@
 
 @interface TextureAtlas ()
 
-@property (nonatomic) NSInteger textureWidth;
-@property (nonatomic) NSInteger textureHeight;
-@property (nonatomic) NSInteger elementWidth;
-@property (nonatomic) NSInteger elementHeight;
-@property (nonatomic) NSInteger elementCount;
+@property(nonatomic) NSInteger textureWidth;
+@property(nonatomic) NSInteger textureHeight;
+@property(nonatomic) NSInteger elementWidth;
+@property(nonatomic) NSInteger elementHeight;
+@property(nonatomic) NSInteger elementCount;
 
-@property (nonatomic) NSInteger elementStride;
-@property (nonatomic) GLfloat elementU;
-@property (nonatomic) GLfloat elementV;
+@property(nonatomic) NSInteger elementStride;
+@property(nonatomic) GLfloat elementU;
+@property(nonatomic) GLfloat elementV;
 
 @end
 
 @implementation TextureAtlas
--(id) initTextureWidth:(NSInteger)textureWidth
+- (id)initTextureWidth:(NSInteger)textureWidth
          textureHeight:(NSInteger)textureHeight
           elementWidth:(NSInteger)elementWidth
          elementHeight:(NSInteger)elementHeight
-          elementCount:(NSInteger)elementCount
-{
+          elementCount:(NSInteger)elementCount {
   self = [super init];
   if (self) {
     _textureWidth = textureWidth;
@@ -37,19 +36,18 @@
     _elementHeight = elementHeight;
     _elementCount = elementCount;
     _elementStride = textureWidth / elementWidth;
-    _elementU = ((GLfloat) elementWidth) / ((GLfloat) textureWidth);
-    _elementV = ((GLfloat) elementHeight) / ((GLfloat) textureHeight);
+    _elementU = ((GLfloat)elementWidth) / ((GLfloat)textureWidth);
+    _elementV = ((GLfloat)elementHeight) / ((GLfloat)textureHeight);
   }
   return self;
 }
 
--(void) getUvs:(GLfloat*)buffer forElementIndex:(NSInteger) index {
+- (void)getUvs:(GLfloat *)buffer forElementIndex:(NSInteger)index {
   if (index < 0 || index >= _elementCount) {
     @throw([NSException
-            exceptionWithName: @"IndexOutOfBounds"
-            reason:[NSString stringWithFormat:@"index:%ld",
-                    (long) index]
-            userInfo:nil ]);
+        exceptionWithName:@"IndexOutOfBounds"
+                   reason:[NSString stringWithFormat:@"index:%ld", (long)index]
+                 userInfo:nil]);
   }
   NSInteger y = index / _elementStride;
   NSInteger x = index - y * _elementStride;
