@@ -18,13 +18,14 @@
 
 - (id)init {
   self = [super init];
-  if (!self) return nil;
+  if (self) {
+    return nil;
 
-  _level = LevelCreate();
+    _level = LevelCreate();
 
-  LevelRead(_level, _levelIndex);
-  NSLog(@"Level %d:\n%@", _levelIndex, LevelToString(_level));
-
+    LevelRead(_level, _levelIndex);
+    // NSLog(@"Level %d:\n%@", _levelIndex, LevelToString(_level));
+  }
   return self;
 }
 
