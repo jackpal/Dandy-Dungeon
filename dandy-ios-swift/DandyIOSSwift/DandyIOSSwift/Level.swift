@@ -88,11 +88,13 @@ class Level {
     }
   }
 
-  func find(cell:Cell) ->Int? {
+  func find(cell:Cell) ->(Int, Int)? {
     let len = data.count
     for i in 0..<len {
       if data[i] == cell {
-        return i
+        let y = i / width
+        let x = i - y * width
+        return (x, y)
       }
     }
     return nil
