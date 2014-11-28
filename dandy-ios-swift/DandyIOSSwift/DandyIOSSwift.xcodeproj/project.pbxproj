@@ -135,10 +135,10 @@
 		364B66301A2792CD00E61D7A /* DandyIOSSwift */ = {
 			isa = PBXGroup;
 			children = (
-				364B668E1A279F2900E61D7A /* Level.swift */,
 				364B66551A279ED100E61D7A /* assets */,
 				364B66331A2792CD00E61D7A /* AppDelegate.swift */,
 				364B66351A2792CD00E61D7A /* GameViewController.swift */,
+				364B668E1A279F2900E61D7A /* Level.swift */,
 				364B66371A2792CD00E61D7A /* Shaders.metal */,
 				364B66391A2792CD00E61D7A /* Main.storyboard */,
 				364B663C1A2792CD00E61D7A /* Images.xcassets */,
