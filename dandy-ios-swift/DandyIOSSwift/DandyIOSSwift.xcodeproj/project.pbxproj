@@ -41,6 +41,7 @@
 		364B668B1A279ED100E61D7A /* y.bin in Resources */ = {isa = PBXBuildFile; fileRef = 364B666F1A279ED100E61D7A /* y.bin */; };
 		364B668C1A279ED100E61D7A /* z.bin in Resources */ = {isa = PBXBuildFile; fileRef = 364B66701A279ED100E61D7A /* z.bin */; };
 		364B668D1A279ED100E61D7A /* dandy.png in Resources */ = {isa = PBXBuildFile; fileRef = 364B66721A279ED100E61D7A /* dandy.png */; };
+		364B668F1A279F2900E61D7A /* Level.swift in Sources */ = {isa = PBXBuildFile; fileRef = 364B668E1A279F2900E61D7A /* Level.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -92,6 +93,7 @@
 		364B666F1A279ED100E61D7A /* y.bin */ = {isa = PBXFileReference; lastKnownFileType = archive.macbinary; path = y.bin; sourceTree = "<group>"; };
 		364B66701A279ED100E61D7A /* z.bin */ = {isa = PBXFileReference; lastKnownFileType = archive.macbinary; path = z.bin; sourceTree = "<group>"; };
 		364B66721A279ED100E61D7A /* dandy.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = dandy.png; sourceTree = "<group>"; };
+		364B668E1A279F2900E61D7A /* Level.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Level.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -133,6 +135,7 @@
 		364B66301A2792CD00E61D7A /* DandyIOSSwift */ = {
 			isa = PBXGroup;
 			children = (
+				364B668E1A279F2900E61D7A /* Level.swift */,
 				364B66551A279ED100E61D7A /* assets */,
 				364B66331A2792CD00E61D7A /* AppDelegate.swift */,
 				364B66351A2792CD00E61D7A /* GameViewController.swift */,
@@ -349,6 +352,7 @@
 			files = (
 				364B66381A2792CD00E61D7A /* Shaders.metal in Sources */,
 				364B66361A2792CD00E61D7A /* GameViewController.swift in Sources */,
+				364B668F1A279F2900E61D7A /* Level.swift in Sources */,
 				364B66341A2792CD00E61D7A /* AppDelegate.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
