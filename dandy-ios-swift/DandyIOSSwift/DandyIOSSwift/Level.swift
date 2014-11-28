@@ -35,14 +35,14 @@ class Level {
       for var x = 0; x < width; x += 2 {
         let d = b[0]
         b++
-        self.data[i++] = byteToCell(d)
-        self.data[i++] = byteToCell(d >> 4)
+        self.data[i++] = byteToCell(d & Byte(0xf))
+        self.data[i++] = byteToCell((d >> 4) & Byte(0xf))
       }
     }
   }
 
   func byteToCell(d : Byte) -> Cell {
-    if let c = Cell(rawValue:d & Byte(0xf)) {
+    if let c = Cell(rawValue:d) {
       return c
     }
     return Cell.Space
