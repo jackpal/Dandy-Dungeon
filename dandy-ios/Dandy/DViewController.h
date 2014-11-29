@@ -8,6 +8,7 @@
 
 #import <UIKit/UIKit.h>
 #import <GLKit/GLKit.h>
+#include <OpenGLES/ES2/glext.h>
 
 @interface DViewController : GLKViewController
 
