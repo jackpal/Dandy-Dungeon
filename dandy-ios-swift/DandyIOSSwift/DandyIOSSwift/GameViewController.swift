@@ -28,19 +28,19 @@ let vertexData:[Float] =
     0.25, -0.25, 0.0, 1.0
 ]
 
-let vertexColorData:[Float] =
+let vertexUVData:[Float] =
 [
-    0.0, 0.0, 1.0, 1.0,
-    0.0, 0.0, 1.0, 1.0,
-    0.0, 0.0, 1.0, 1.0,
+    0.0, 0.0,
+    0.0, 1.0,
+    1.0, 0.0,
     
-    0.0, 0.0, 1.0, 1.0,
-    0.0, 0.0, 1.0, 1.0,
-    0.0, 0.0, 1.0, 1.0,
+    1.0, 0.0,
+    0.0, 1.0,
+    1.0, 1.0,
     
-    0.0, 0.0, 1.0, 1.0,
-    0.0, 1.0, 0.0, 1.0,
-    1.0, 0.0, 0.0, 1.0
+    0.0, 0.0,
+    0.0, 1.0,
+    1.0, 0.0
 ]
 
 class GameViewController: UIViewController {
@@ -52,7 +52,7 @@ class GameViewController: UIViewController {
     var timer: CADisplayLink! = nil
     var pipelineState: MTLRenderPipelineState! = nil
     var vertexBuffer: MTLBuffer! = nil
-    var vertexColorBuffer: MTLBuffer! = nil
+    var vertexUVBuffer: MTLBuffer! = nil
     
     let inflightSemaphore = dispatch_semaphore_create(MaxBuffers)
     var bufferIndex = 0
@@ -98,9 +98,9 @@ class GameViewController: UIViewController {
         vertexBuffer = device.newBufferWithLength(ConstantBufferSize, options: nil)
         vertexBuffer.label = "vertices"
         
-        let vertexColorSize = vertexData.count * sizeofValue(vertexColorData[0])
-        vertexColorBuffer = device.newBufferWithBytes(vertexColorData, length: vertexColorSize, options: nil)
-        vertexColorBuffer.label = "colors"
+        let vertexUVSize = vertexData.count * sizeofValue(vertexUVData[0])
+        vertexUVBuffer = device.newBufferWithBytes(vertexUVData, length: vertexUVSize, options: nil)
+        vertexUVBuffer.label = "uvs"
         
         timer = CADisplayLink(target: self, selector: Selector("renderLoop"))
         timer.addToRunLoop(NSRunLoop.mainRunLoop(), forMode: NSDefaultRunLoopMode)
@@ -164,7 +164,7 @@ class GameViewController: UIViewController {
         renderEncoder.pushDebugGroup("draw morphing triangle")
         renderEncoder.setRenderPipelineState(pipelineState)
         renderEncoder.setVertexBuffer(vertexBuffer, offset: 256*bufferIndex, atIndex: 0)
-        renderEncoder.setVertexBuffer(vertexColorBuffer, offset:0 , atIndex: 1)
+        renderEncoder.setVertexBuffer(vertexUVBuffer, offset:0 , atIndex: 1)
         renderEncoder.drawPrimitives(.Triangle, vertexStart: 0, vertexCount: 9, instanceCount: 1)
         
         renderEncoder.popDebugGroup()

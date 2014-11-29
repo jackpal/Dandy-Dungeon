@@ -1,11 +1,3 @@
-//
-//  Shaders.metal
-//  MetalSwift
-//
-//  Created by Seth Sowerby on 8/14/14.
-//  Copyright (c) 2014 Seth Sowerby. All rights reserved.
-//
-
 #include <metal_stdlib>
 
 using namespace metal;
@@ -13,22 +5,22 @@ using namespace metal;
 struct VertexInOut
 {
     float4  position [[position]];
-    float4  color;
+    float2  uv [[user(texturecoord)]];
 };
 
 vertex VertexInOut passThroughVertex(uint vid [[ vertex_id ]],
                                      constant packed_float4* position  [[ buffer(0) ]],
-                                     constant packed_float4* color    [[ buffer(1) ]])
+                                     constant packed_float2* uv    [[ buffer(1) ]])
 {
     VertexInOut outVertex;
     
     outVertex.position = position[vid];
-    outVertex.color    = color[vid];
+    outVertex.uv    = uv[vid];
     
     return outVertex;
 };
 
 fragment half4 passThroughFragment(VertexInOut inFrag [[stage_in]])
 {
-    return half4(inFrag.color);
+  return half4(inFrag.uv.x,inFrag.uv.y,0,1); // inFrag.uv);
 };
