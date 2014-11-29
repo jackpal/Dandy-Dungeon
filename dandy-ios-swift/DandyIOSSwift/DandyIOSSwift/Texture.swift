@@ -10,8 +10,9 @@ import Metal
 import UIKit
 
 class Texture {
-  var texture: MTLTexture?
-  var target: MTLTextureType?
+  var label: String
+  var texture: MTLTexture!
+  var target: MTLTextureType!
   var width: UInt = 0
   var height: UInt = 0
   var path: String
@@ -19,6 +20,7 @@ class Texture {
   var mipMapped: Bool = false
 
   init?(name: String, ext: String) {
+    label = name
     if let p = NSBundle.mainBundle().pathForResource(name, ofType:ext) {
       path = p
     } else {
@@ -55,6 +57,7 @@ class Texture {
           MTLPixelFormat.RGBA8Unorm, width: Int(width), height: Int(height), mipmapped: mipMapped)
         target = texDesc.textureType
         if let texture = device.newTextureWithDescriptor(texDesc) {
+          texture.label = label
           let pixels = CGBitmapContextGetData(context)
           let region = MTLRegionMake2D(0, 0, Int(width), Int(height))
           let bytesPerImage = Int(height * bytesPerRow)
