@@ -53,6 +53,7 @@ class GameViewController: UIViewController {
   var pipelineState: MTLRenderPipelineState! = nil
   var vertexBuffer: MTLBuffer! = nil
   var vertexUVBuffer: MTLBuffer! = nil
+  var texture: Texture! = nil
 
   let inflightSemaphore = dispatch_semaphore_create(MaxBuffers)
   var bufferIndex = 0
@@ -80,7 +81,7 @@ class GameViewController: UIViewController {
     commandQueue.label = "main command queue"
 
     let defaultLibrary = device.newDefaultLibrary()
-    let fragmentProgram = defaultLibrary?.newFunctionWithName("passThroughFragment")
+    let fragmentProgram = defaultLibrary?.newFunctionWithName("texturedQuadFragment")
     let vertexProgram = defaultLibrary?.newFunctionWithName("passThroughVertex")
 
     let pipelineStateDescriptor = MTLRenderPipelineDescriptor()
@@ -101,6 +102,11 @@ class GameViewController: UIViewController {
     let vertexUVSize = vertexData.count * sizeofValue(vertexUVData[0])
     vertexUVBuffer = device.newBufferWithBytes(vertexUVData, length: vertexUVSize, options: nil)
     vertexUVBuffer.label = "uvs"
+
+    texture = Texture(name:"dandy", ext:"png")
+    if texture == nil || !texture.bind(device) {
+      assert(false)
+    }
 
     timer = CADisplayLink(target: self, selector: Selector("renderLoop"))
     timer.addToRunLoop(NSRunLoop.mainRunLoop(), forMode: NSDefaultRunLoopMode)
@@ -165,6 +171,7 @@ class GameViewController: UIViewController {
     renderEncoder.setRenderPipelineState(pipelineState)
     renderEncoder.setVertexBuffer(vertexBuffer, offset: 256*bufferIndex, atIndex: 0)
     renderEncoder.setVertexBuffer(vertexUVBuffer, offset:0 , atIndex: 1)
+    renderEncoder.setFragmentTexture(texture.texture, atIndex:0)
     renderEncoder.drawPrimitives(.Triangle, vertexStart: 0, vertexCount: 9, instanceCount: 1)
 
     renderEncoder.popDebugGroup()

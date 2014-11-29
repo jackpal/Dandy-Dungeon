@@ -57,6 +57,7 @@ class Texture {
           MTLPixelFormat.RGBA8Unorm, width: Int(width), height: Int(height), mipmapped: mipMapped)
         target = texDesc.textureType
         if let texture = device.newTextureWithDescriptor(texDesc) {
+          self.texture = texture
           texture.label = label
           let pixels = CGBitmapContextGetData(context)
           let region = MTLRegionMake2D(0, 0, Int(width), Int(height))

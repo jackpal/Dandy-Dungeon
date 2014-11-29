@@ -20,7 +20,11 @@ vertex VertexInOut passThroughVertex(uint vid [[ vertex_id ]],
     return outVertex;
 };
 
-fragment half4 passThroughFragment(VertexInOut inFrag [[stage_in]])
+fragment half4 texturedQuadFragment(VertexInOut     inFrag    [[ stage_in ]],
+                                    texture2d<half>  tex2D     [[ texture(0) ]])
 {
-  return half4(inFrag.uv.x,inFrag.uv.y,0,1); // inFrag.uv);
-};
+  constexpr sampler quad_sampler;
+  half4 color = tex2D.sample(quad_sampler, inFrag.uv);
+
+  return color;
+}
