@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		364225C91A2A2B8400E329C4 /* Texture.swift in Sources */ = {isa = PBXBuildFile; fileRef = 364225C81A2A2B8400E329C4 /* Texture.swift */; };
 		364B66341A2792CD00E61D7A /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 364B66331A2792CD00E61D7A /* AppDelegate.swift */; };
 		364B66361A2792CD00E61D7A /* GameViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 364B66351A2792CD00E61D7A /* GameViewController.swift */; };
 		364B66381A2792CD00E61D7A /* Shaders.metal in Sources */ = {isa = PBXBuildFile; fileRef = 364B66371A2792CD00E61D7A /* Shaders.metal */; };
@@ -55,6 +56,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		364225C81A2A2B8400E329C4 /* Texture.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Texture.swift; sourceTree = "<group>"; };
 		364B662E1A2792CD00E61D7A /* DandyIOSSwift.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = DandyIOSSwift.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		364B66321A2792CD00E61D7A /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		364B66331A2792CD00E61D7A /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
@@ -144,6 +146,7 @@
 				364B663C1A2792CD00E61D7A /* Images.xcassets */,
 				364B663E1A2792CD00E61D7A /* LaunchScreen.xib */,
 				364B66311A2792CD00E61D7A /* Supporting Files */,
+				364225C81A2A2B8400E329C4 /* Texture.swift */,
 			);
 			path = DandyIOSSwift;
 			sourceTree = "<group>";
@@ -351,6 +354,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				364B66381A2792CD00E61D7A /* Shaders.metal in Sources */,
+				364225C91A2A2B8400E329C4 /* Texture.swift in Sources */,
 				364B66361A2792CD00E61D7A /* GameViewController.swift in Sources */,
 				364B668F1A279F2900E61D7A /* Level.swift in Sources */,
 				364B66341A2792CD00E61D7A /* AppDelegate.swift in Sources */,
@@ -547,6 +551,7 @@
 				364B66511A2792CD00E61D7A /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 		364B66521A2792CD00E61D7A /* Build configuration list for PBXNativeTarget "DandyIOSSwiftTests" */ = {
 			isa = XCConfigurationList;
@@ -555,6 +560,7 @@
 				364B66541A2792CD00E61D7A /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
 	};
