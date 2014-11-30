@@ -13,34 +13,10 @@ import QuartzCore
 let MaxBuffers = 3
 let ConstantBufferSize = 1024*1024
 
-let vertexData:[Float] =
+let vertexTileData:[CUnsignedChar] =
 [
-  -1.0, -1.0, 0.0, 1.0,
-  -1.0,  1.0, 0.0, 1.0,
-  1.0, -1.0, 0.0, 1.0,
-
-  1.0, -1.0, 0.0, 1.0,
-  -1.0,  1.0, 0.0, 1.0,
-  1.0,  1.0, 0.0, 1.0,
-
-  -0.0, 0.25, 0.0, 1.0,
-  -0.25, -0.25, 0.0, 1.0,
-  0.25, -0.25, 0.0, 1.0
-]
-
-let vertexUVData:[Float] =
-[
-  0.0, 0.0,
-  0.0, 1.0,
-  1.0, 0.0,
-
-  1.0, 0.0,
-  0.0, 1.0,
-  1.0, 1.0,
-
-  0.0, 0.0,
-  0.0, 1.0,
-  1.0, 0.0
+  0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
+  16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31
 ]
 
 class GameViewController: UIViewController {
@@ -52,8 +28,8 @@ class GameViewController: UIViewController {
   var timer: CADisplayLink! = nil
   var pipelineState: MTLRenderPipelineState! = nil
   var vertexBuffer: MTLBuffer! = nil
-  var vertexUVBuffer: MTLBuffer! = nil
-  var texture: Texture! = nil
+  var vertexUniformsBuffer: MTLBuffer! = nil
+  var texture: Texture3D! = nil
 
   let inflightSemaphore = dispatch_semaphore_create(MaxBuffers)
   var bufferIndex = 0
@@ -81,8 +57,8 @@ class GameViewController: UIViewController {
     commandQueue.label = "main command queue"
 
     let defaultLibrary = device.newDefaultLibrary()
-    let fragmentProgram = defaultLibrary?.newFunctionWithName("texturedQuadFragment")
-    let vertexProgram = defaultLibrary?.newFunctionWithName("passThroughVertex")
+    let fragmentProgram = defaultLibrary?.newFunctionWithName("tileFragment")
+    let vertexProgram = defaultLibrary?.newFunctionWithName("tileVertex")
 
     let pipelineStateDescriptor = MTLRenderPipelineDescriptor()
     pipelineStateDescriptor.vertexFunction = vertexProgram
@@ -99,11 +75,11 @@ class GameViewController: UIViewController {
     vertexBuffer = device.newBufferWithLength(ConstantBufferSize, options: nil)
     vertexBuffer.label = "vertices"
 
-    let vertexUVSize = vertexData.count * sizeofValue(vertexUVData[0])
-    vertexUVBuffer = device.newBufferWithBytes(vertexUVData, length: vertexUVSize, options: nil)
-    vertexUVBuffer.label = "uvs"
+    let vertexUniformsLength = 3 * sizeof(TileUniforms)
+    vertexUniformsBuffer = device.newBufferWithLength(vertexUniformsLength, options: nil)
+    vertexUniformsBuffer.label = "uniforms"
 
-    texture = Texture(name:"dandy", ext:"png")
+    texture = Texture3D(name:"dandy", ext:"png", depth:32)
     if texture == nil || !texture.bind(device) {
       assert(false)
     }
@@ -167,12 +143,12 @@ class GameViewController: UIViewController {
     let renderEncoder = commandBuffer.renderCommandEncoderWithDescriptor(renderPassDescriptor)!
     renderEncoder.label = "render encoder"
 
-    renderEncoder.pushDebugGroup("draw morphing triangle")
+    renderEncoder.pushDebugGroup("draw tiles")
     renderEncoder.setRenderPipelineState(pipelineState)
     renderEncoder.setVertexBuffer(vertexBuffer, offset: 256*bufferIndex, atIndex: 0)
-    renderEncoder.setVertexBuffer(vertexUVBuffer, offset:0 , atIndex: 1)
+    renderEncoder.setVertexBuffer(vertexUniformsBuffer, offset:sizeof(TileUniforms) * bufferIndex , atIndex: 1)
     renderEncoder.setFragmentTexture(texture.texture, atIndex:0)
-    renderEncoder.drawPrimitives(.Triangle, vertexStart: 0, vertexCount: 9, instanceCount: 1)
+    renderEncoder.drawPrimitives(.Point, vertexStart: 0, vertexCount: 32, instanceCount: 1)
 
     renderEncoder.popDebugGroup()
     renderEncoder.endEncoding()
@@ -195,36 +171,22 @@ class GameViewController: UIViewController {
 
   func update() {
 
-    // vData is pointer to the MTLBuffer's Float data contents
+    // vData is pointer to the tile buffer
     let pData = vertexBuffer.contents()
-    let vData = UnsafeMutablePointer<Float>(pData + 256*bufferIndex)
+    let vData = UnsafeMutablePointer<CUnsignedChar>(pData + 256*bufferIndex)
 
-    // reset the vertices to default before adding animated offsets
-    vData.initializeFrom(vertexData)
+    // Write tile data.
+    vData.initializeFrom(vertexTileData)
 
-    // Animate triangle offsets
-    let lastTriVertex = 24
-    let vertexSize = 4
-    for j in 0..<MaxBuffers {
-      // update the animation offsets
-      xOffset[j] += xDelta[j]
+    // Write uniforms.
+    let uData = vertexUniformsBuffer.contents()
+    let vuData = UnsafeMutablePointer<TileUniforms>(pData) + bufferIndex
 
-      if(xOffset[j] >= 1.0 || xOffset[j] <= -1.0) {
-        xDelta[j] = -xDelta[j]
-        xOffset[j] += xDelta[j]
-      }
-
-      yOffset[j] += yDelta[j]
-
-      if(yOffset[j] >= 1.0 || yOffset[j] <= -1.0) {
-        yDelta[j] = -yDelta[j]
-        yOffset[j] += yDelta[j]
-      }
-
-      // Update last triangle position with updated animated offsets
-      let pos = lastTriVertex + j*vertexSize
-      vData[pos] = xOffset[j]
-      vData[pos+1] = yOffset[j]
-    }
+    vuData[0].offsetX = 0.0
+    vuData[0].offsetY = 0.0
+    vuData[0].tileSizeX = 32
+    vuData[0].tileSizeY = 32
+    vuData[0].tileStride = 16
+    vuData[0].tileWScale = 1.0 / 32.0
   }
 }

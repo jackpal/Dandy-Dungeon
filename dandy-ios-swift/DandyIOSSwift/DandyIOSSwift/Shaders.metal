@@ -3,12 +3,10 @@
 using namespace metal;
 
 struct TileUniforms {
-  float2 offset;
-  float2 tileSize; // Size of a particular tile
-  float2 tileUVSize; // size in (u,v) of a tile
-  uint tileStride;
-  uint atlasStride;
-  uchar2 indexToXY[6];
+  float2 offset; // Offset of tile map in screen pixels.
+  float2 tileSize; // Size of a tile in screen pixels
+  float tileWScale; // 1 / numberOfTiles in texture
+  uint tileStride; // Tiles per horizontal line
 };
 
 struct TileVertexIn
@@ -16,67 +14,44 @@ struct TileVertexIn
   uchar atlasIndex;
 };
 
-struct TileVertexInOut
+struct TileVertexOut
 {
-    float4  position [[position]];
-    half2  uv [[user(texturecoord)]];
+  float4 position [[position]];
+  float size [[point_size]];
+  float textureW [[user(textureW)]];
 };
 
 // This specialized shader takes a list of tiles and a vertex index and
-// generates a mesh.
-//
-//  [0] ---- [1][4]
-//   |        //|
-//   |       // |
-//   |      //  |
-//   |     //   |
-//   |    //    |
-//   |   //     |
-//   |  //      |
-//   | //       |
-//   |//        |
-// [2][3] ---- [5]
+// generates a set of tiled points.
 
-vertex TileVertexInOut tileVertex(uint vid [[ vertex_id ]],
+vertex TileVertexOut tileVertex(uint vid [[ vertex_id ]],
                                   constant uchar* pAtlasIndex  [[ buffer(0) ]],
                                   constant TileUniforms& uniforms [[ buffer(1) ]])
 {
-  TileVertexInOut outVertex;
+  TileVertexOut outVertex;
 
   float2 offset = uniforms.offset;
-  uint tileStride = uniforms.tileStride;
-  uint atlasStride = uniforms.atlasStride;
   float2 tileSize = uniforms.tileSize;
-  float2 tileUVSize = uniforms.tileUVSize;
+  float tileWScale = uniforms.tileWScale;
+  uint tileStride = uniforms.tileStride;
 
-  uint tileID = vid / 6;
-  uint vertIndex = vid - 6 * tileID;
+  uint tileY = vid / tileStride;
+  uint tileX = vid - tileY * tileStride;
 
-  uchar2 indexToXY = uniforms.indexToXY[vertIndex];
-
-  uint tileY = tileID / tileStride;
-  uint tileX = tileID - tileY * tileStride;
-
-  uchar atlasIndex = pAtlasIndex[tileID];
-  uchar atlasY = atlasIndex / atlasStride;
-  uchar atlasX = atlasIndex - atlasY * atlasStride;
-
-  uchar2 xy = indexToXY[vertIndex];
-
-  outVertex.position = float4(offset.x + (tileX + xy.x) * tileSize.x,
-                              offset.y + (tileY + xy.y) * tileSize.y,
+  outVertex.position = float4(offset.x + tileX * tileSize.x,
+                              offset.y + tileY * tileSize.y,
                               0, 1);
-  outVertex.uv = half2((atlasX + xy.x) * tileUVSize.x,
-                       (atlasY + xy.y) * tileUVSize.y);
-    
+  outVertex.size = tileSize.x;
+  outVertex.textureW = pAtlasIndex[vid] * tileWScale;
   return outVertex;
 };
 
-fragment half4 texturedQuadFragment(TileVertexInOut     inFrag    [[ stage_in ]],
-                                    texture2d<half>     tex2D    [[ texture(0) ]])
+fragment half4 tileFragment(TileVertexOut input [[stage_in]],
+                                    float2 uv [[point_coord]],
+                                    texture3d<half>     tex3D    [[ texture(0) ]])
 {
   constexpr sampler quad_sampler;
-  half4 color = tex2D.sample(quad_sampler, float2(inFrag.uv));
+  half4 color = tex3D.sample(quad_sampler, float3(uv.x, uv.y, input.textureW));
 
   return color;
 }

@@ -45,6 +45,7 @@
 		364B668F1A279F2900E61D7A /* Level.swift in Sources */ = {isa = PBXBuildFile; fileRef = 364B668E1A279F2900E61D7A /* Level.swift */; };
 		36ACA7611A2A4FB5001E819B /* Atlas.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36ACA7601A2A4FB5001E819B /* Atlas.swift */; };
 		36ACA7631A2A53CD001E819B /* TileMesh.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36ACA7621A2A53CD001E819B /* TileMesh.swift */; };
+		36ACA7681A2AA055001E819B /* Texture3D.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36ACA7671A2AA055001E819B /* Texture3D.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -100,6 +101,7 @@
 		364B668E1A279F2900E61D7A /* Level.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Level.swift; sourceTree = "<group>"; };
 		36ACA7601A2A4FB5001E819B /* Atlas.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Atlas.swift; sourceTree = "<group>"; };
 		36ACA7621A2A53CD001E819B /* TileMesh.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TileMesh.swift; sourceTree = "<group>"; };
+		36ACA7671A2AA055001E819B /* Texture3D.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Texture3D.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -232,6 +234,7 @@
 		36ACA75F1A2A4F8C001E819B /* Renderer */ = {
 			isa = PBXGroup;
 			children = (
+				36ACA7671A2AA055001E819B /* Texture3D.swift */,
 				36ACA7601A2A4FB5001E819B /* Atlas.swift */,
 				364B66371A2792CD00E61D7A /* Shaders.metal */,
 				364225C81A2A2B8400E329C4 /* Texture.swift */,
@@ -369,6 +372,7 @@
 			files = (
 				364B66381A2792CD00E61D7A /* Shaders.metal in Sources */,
 				36ACA7631A2A53CD001E819B /* TileMesh.swift in Sources */,
+				36ACA7681A2AA055001E819B /* Texture3D.swift in Sources */,
 				36ACA7611A2A4FB5001E819B /* Atlas.swift in Sources */,
 				364225C91A2A2B8400E329C4 /* Texture.swift in Sources */,
 				364B66361A2792CD00E61D7A /* GameViewController.swift in Sources */,
