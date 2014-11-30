@@ -193,14 +193,14 @@ class GameViewController: UIViewController {
     let pixelsX = viewPixelsX / Float32(viewTilesX)
     let pixelsY = viewPixelsY / Float32(viewTilesY)
     let pixelSize = max(pixelsX, pixelsY)
-    let tx = pixelSize / viewPixelsX
-    let ty = pixelSize / viewPixelsY
+    let tx = 2.0 * pixelSize / viewPixelsX
+    let ty = 2.0 * pixelSize / viewPixelsY
 
     vuData[0].offsetX = -Float32(viewTilesX) * 0.5 * tx
-    vuData[0].offsetY = Float32(viewTilesY) * 0.5 * ty
+    vuData[0].offsetY = (Float32(viewTilesY) * 0.5 - 0.5) * ty
     vuData[0].tileSizeX = tx
     vuData[0].tileSizeY = -ty
-    vuData[0].pointSize = pixelSize * 0.5
+    vuData[0].pointSize = pixelSize
     vuData[0].tileStride = 20
     vuData[0].tileWScale = 1.0 / 32.0
   }
