@@ -44,6 +44,9 @@ class GameViewController: UIViewController {
   let inflightSemaphore = dispatch_semaphore_create(MaxBuffers)
   var bufferIndex = 0
 
+  let dungeon : Dungeon = Dungeon()
+  var level: Level!
+
   override func viewDidLoad() {
     super.viewDidLoad()
 
@@ -91,6 +94,8 @@ class GameViewController: UIViewController {
     if texture == nil || !texture.bind(device) {
       assert(false)
     }
+
+    level = dungeon.loadLevel(0)
 
     timer = CADisplayLink(target: self, selector: Selector("renderLoop"))
     timer.addToRunLoop(NSRunLoop.mainRunLoop(), forMode: NSDefaultRunLoopMode)
@@ -194,8 +199,11 @@ class GameViewController: UIViewController {
     let vData = UnsafeMutablePointer<CUnsignedChar>(pData + kTileBufferSize*bufferIndex)
 
     // Write tile data.
-    for i in 0..<10*20 {
-      vData[i] = CUnsignedChar(i & 31)
+    var i = 0
+    for y in 0..<10 {
+      for x in 0..<20 {
+        vData[i++] = CUnsignedChar(level[x,y].rawValue)
+      }
     }
   }
 

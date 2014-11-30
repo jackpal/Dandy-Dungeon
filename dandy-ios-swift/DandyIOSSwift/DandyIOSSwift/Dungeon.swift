@@ -7,6 +7,8 @@ class Dungeon {
 
   var levelData: NSData!
 
+  init() {}
+
   func loadLevel(levelIndex: Int) -> Level {
     if levelData == nil {
       if let path = NSBundle.mainBundle().pathForResource("dungeon", ofType:"levelData") {

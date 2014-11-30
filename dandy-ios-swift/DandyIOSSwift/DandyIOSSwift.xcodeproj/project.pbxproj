@@ -22,6 +22,7 @@
 		36ACA7681A2AA055001E819B /* Texture3D.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36ACA7671A2AA055001E819B /* Texture3D.swift */; };
 		36ACA76A1A2BB784001E819B /* Game.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36ACA7691A2BB784001E819B /* Game.swift */; };
 		36ACA76C1A2BBA15001E819B /* Dungeon.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36ACA76B1A2BBA15001E819B /* Dungeon.swift */; };
+		36ACA76E1A2BBFA8001E819B /* dungeon.levelData in Resources */ = {isa = PBXBuildFile; fileRef = 36ACA76D1A2BBFA8001E819B /* dungeon.levelData */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -54,6 +55,7 @@
 		36ACA7671A2AA055001E819B /* Texture3D.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Texture3D.swift; sourceTree = "<group>"; };
 		36ACA7691A2BB784001E819B /* Game.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Game.swift; sourceTree = "<group>"; };
 		36ACA76B1A2BBA15001E819B /* Dungeon.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Dungeon.swift; sourceTree = "<group>"; };
+		36ACA76D1A2BBFA8001E819B /* dungeon.levelData */ = {isa = PBXFileReference; lastKnownFileType = file; path = dungeon.levelData; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -138,6 +140,7 @@
 		364B66551A279ED100E61D7A /* assets */ = {
 			isa = PBXGroup;
 			children = (
+				36ACA76D1A2BBFA8001E819B /* dungeon.levelData */,
 				364B66711A279ED100E61D7A /* textures */,
 			);
 			path = assets;
@@ -245,6 +248,7 @@
 			files = (
 				364B663B1A2792CD00E61D7A /* Main.storyboard in Resources */,
 				364B668D1A279ED100E61D7A /* dandy.png in Resources */,
+				36ACA76E1A2BBFA8001E819B /* dungeon.levelData in Resources */,
 				364B66401A2792CD00E61D7A /* LaunchScreen.xib in Resources */,
 				364B663D1A2792CD00E61D7A /* Images.xcassets in Resources */,
 			);
