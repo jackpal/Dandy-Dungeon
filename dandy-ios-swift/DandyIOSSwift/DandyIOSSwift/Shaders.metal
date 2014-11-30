@@ -5,7 +5,6 @@ using namespace metal;
 struct TileUniforms {
   float2 offset; // Offset of tile map in screen pixels.
   float2 tileSize; // Size of a tile in homogenous coordinates
-  float pointSize; // Size of a tile in screen pixels.
   float tileWScale; // 1 / numberOfTiles in texture
   uint tileStride; // Tiles per horizontal line
 };

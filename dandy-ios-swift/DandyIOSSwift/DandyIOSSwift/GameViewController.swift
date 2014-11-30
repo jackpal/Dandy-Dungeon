@@ -208,7 +208,6 @@ class GameViewController: UIViewController {
     let viewPixelsY = Float32(metalLayer.drawableSize.height)
     let pixelsX = viewPixelsX / Float32(viewTilesX)
     let pixelsY = viewPixelsY / Float32(viewTilesY)
-    let pixelSize = max(pixelsX, pixelsY)
     let tx = 2.0 * pixelsX / viewPixelsX
     let ty = 2.0 * pixelsY / viewPixelsY
 
@@ -216,7 +215,6 @@ class GameViewController: UIViewController {
     vuData[0].offsetY = Float32(viewTilesY) * 0.5 * ty
     vuData[0].tileSizeX = tx
     vuData[0].tileSizeY = -ty
-    vuData[0].pointSize = pixelSize
     vuData[0].tileStride = 20
     vuData[0].tileWScale = 1.0 / 32.0
 
