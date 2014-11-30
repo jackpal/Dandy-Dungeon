@@ -12,7 +12,16 @@ import QuartzCore
 
 let MaxBuffers = 3
 let ConstantBufferSize = 1024*1024
+
+let viewTilesX = 20
+let viewTilesY = 10
+
+// Bytes for the tiles.
+let kTileBufferSize = viewTilesX * viewTilesY
+
+// Bytes for the tile uniforms
 let kTileUniformSize = 32
+
 
 class GameViewController: UIViewController {
 
@@ -134,10 +143,10 @@ class GameViewController: UIViewController {
 
     renderEncoder.pushDebugGroup("draw tiles")
     renderEncoder.setRenderPipelineState(pipelineState)
-    renderEncoder.setVertexBuffer(vertexBuffer, offset: 256*bufferIndex, atIndex: 0)
+    renderEncoder.setVertexBuffer(vertexBuffer, offset: kTileBufferSize*bufferIndex, atIndex: 0)
     renderEncoder.setVertexBuffer(vertexUniformsBuffer, offset:kTileUniformSize * bufferIndex , atIndex: 1)
     renderEncoder.setFragmentTexture(texture.texture, atIndex:0)
-    renderEncoder.drawPrimitives(.Point, vertexStart: 0, vertexCount: 32, instanceCount: 1)
+    renderEncoder.drawPrimitives(.Point, vertexStart: 0, vertexCount: kTileBufferSize, instanceCount: 1)
 
     renderEncoder.popDebugGroup()
     renderEncoder.endEncoding()
@@ -166,10 +175,10 @@ class GameViewController: UIViewController {
   func updateTiles() {
     // vData is pointer to the tile buffer
     let pData = vertexBuffer.contents()
-    let vData = UnsafeMutablePointer<CUnsignedChar>(pData + 256*bufferIndex)
+    let vData = UnsafeMutablePointer<CUnsignedChar>(pData + kTileBufferSize*bufferIndex)
 
     // Write tile data.
-    for i in 0..<32 {
+    for i in 0..<10*20 {
       vData[i] = CUnsignedChar(i & 31)
     }
   }
@@ -179,16 +188,20 @@ class GameViewController: UIViewController {
     let uData = vertexUniformsBuffer.contents()
     let vuData = UnsafeMutablePointer<TileUniforms>(uData + kTileUniformSize * bufferIndex)
 
-    let pixelSize :Float32 = 128.0
-    let tx = Float32(pixelSize) / Float32(metalLayer.drawableSize.width)
-    let ty = Float32(pixelSize) / Float32(metalLayer.drawableSize.height)
+    let viewPixelsX = Float32(metalLayer.drawableSize.width)
+    let viewPixelsY = Float32(metalLayer.drawableSize.height)
+    let pixelsX = viewPixelsX / Float32(viewTilesX)
+    let pixelsY = viewPixelsY / Float32(viewTilesY)
+    let pixelSize = max(pixelsX, pixelsY)
+    let tx = pixelSize / viewPixelsX
+    let ty = pixelSize / viewPixelsY
 
-    vuData[0].offsetX = -8 * tx
-    vuData[0].offsetY = 0.0
+    vuData[0].offsetX = -Float32(viewTilesX) * 0.5 * tx
+    vuData[0].offsetY = Float32(viewTilesY) * 0.5 * ty
     vuData[0].tileSizeX = tx
-    vuData[0].tileSizeY = ty
+    vuData[0].tileSizeY = -ty
     vuData[0].pointSize = pixelSize * 0.5
-    vuData[0].tileStride = 16
+    vuData[0].tileStride = 20
     vuData[0].tileWScale = 1.0 / 32.0
   }
 }
