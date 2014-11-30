@@ -12,12 +12,7 @@ import QuartzCore
 
 let MaxBuffers = 3
 let ConstantBufferSize = 1024*1024
-
-let vertexTileData:[CUnsignedChar] =
-[
-  0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
-  16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31
-]
+let kTileUniformSize = 32
 
 class GameViewController: UIViewController {
 
@@ -33,12 +28,6 @@ class GameViewController: UIViewController {
 
   let inflightSemaphore = dispatch_semaphore_create(MaxBuffers)
   var bufferIndex = 0
-
-  // offsets used in animation
-  var xOffset:[Float] = [ -1.0, 1.0, -1.0 ]
-  var yOffset:[Float] = [ 1.0, 0.0, -1.0 ]
-  var xDelta:[Float] = [ 0.002, -0.001, 0.003 ]
-  var yDelta:[Float] = [ 0.001,  0.002, -0.001 ]
 
   override func viewDidLoad() {
     super.viewDidLoad()
@@ -75,7 +64,7 @@ class GameViewController: UIViewController {
     vertexBuffer = device.newBufferWithLength(ConstantBufferSize, options: nil)
     vertexBuffer.label = "vertices"
 
-    let vertexUniformsLength = 3 * sizeof(TileUniforms)
+    let vertexUniformsLength = MaxBuffers * kTileUniformSize
     vertexUniformsBuffer = device.newBufferWithLength(vertexUniformsLength, options: nil)
     vertexUniformsBuffer.label = "uniforms"
 
@@ -146,7 +135,7 @@ class GameViewController: UIViewController {
     renderEncoder.pushDebugGroup("draw tiles")
     renderEncoder.setRenderPipelineState(pipelineState)
     renderEncoder.setVertexBuffer(vertexBuffer, offset: 256*bufferIndex, atIndex: 0)
-    renderEncoder.setVertexBuffer(vertexUniformsBuffer, offset:sizeof(TileUniforms) * bufferIndex , atIndex: 1)
+    renderEncoder.setVertexBuffer(vertexUniformsBuffer, offset:kTileUniformSize * bufferIndex , atIndex: 1)
     renderEncoder.setFragmentTexture(texture.texture, atIndex:0)
     renderEncoder.drawPrimitives(.Point, vertexStart: 0, vertexCount: 32, instanceCount: 1)
 
@@ -170,22 +159,35 @@ class GameViewController: UIViewController {
   }
 
   func update() {
+    updateTiles()
+    updateTileUniforms()
+  }
 
+  func updateTiles() {
     // vData is pointer to the tile buffer
     let pData = vertexBuffer.contents()
     let vData = UnsafeMutablePointer<CUnsignedChar>(pData + 256*bufferIndex)
 
     // Write tile data.
-    vData.initializeFrom(vertexTileData)
+    for i in 0..<32 {
+      vData[i] = CUnsignedChar(i & 31)
+    }
+  }
 
+  func updateTileUniforms() {
     // Write uniforms.
     let uData = vertexUniformsBuffer.contents()
-    let vuData = UnsafeMutablePointer<TileUniforms>(pData) + bufferIndex
+    let vuData = UnsafeMutablePointer<TileUniforms>(uData + kTileUniformSize * bufferIndex)
 
-    vuData[0].offsetX = 0.0
+    let pixelSize :Float32 = 128.0
+    let tx = Float32(pixelSize) / Float32(metalLayer.drawableSize.width)
+    let ty = Float32(pixelSize) / Float32(metalLayer.drawableSize.height)
+
+    vuData[0].offsetX = -8 * tx
     vuData[0].offsetY = 0.0
-    vuData[0].tileSizeX = 32
-    vuData[0].tileSizeY = 32
+    vuData[0].tileSizeX = tx
+    vuData[0].tileSizeY = ty
+    vuData[0].pointSize = pixelSize * 0.5
     vuData[0].tileStride = 16
     vuData[0].tileWScale = 1.0 / 32.0
   }

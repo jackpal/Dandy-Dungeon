@@ -4,7 +4,8 @@ using namespace metal;
 
 struct TileUniforms {
   float2 offset; // Offset of tile map in screen pixels.
-  float2 tileSize; // Size of a tile in screen pixels
+  float2 tileSize; // Size of a tile in homogenous coordinates
+  float pointSize; // Size of a tile in screen pixels.
   float tileWScale; // 1 / numberOfTiles in texture
   uint tileStride; // Tiles per horizontal line
 };
@@ -41,7 +42,7 @@ vertex TileVertexOut tileVertex(uint vid [[ vertex_id ]],
   outVertex.position = float4(offset.x + tileX * tileSize.x,
                               offset.y + tileY * tileSize.y,
                               0, 1);
-  outVertex.size = tileSize.x;
+  outVertex.size = uniforms.pointSize;
   outVertex.textureW = pAtlasIndex[vid] * tileWScale;
   return outVertex;
 };

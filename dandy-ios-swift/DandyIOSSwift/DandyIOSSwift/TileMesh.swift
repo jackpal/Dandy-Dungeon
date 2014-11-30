@@ -20,6 +20,7 @@ struct TileUniforms {
   var offsetY: Float32
   var tileSizeX: Float32
   var tileSizeY: Float32
+  var pointSize: Float32
   var tileWScale: Float32
   var tileStride: CUnsignedInt
 
@@ -28,6 +29,7 @@ struct TileUniforms {
     offsetY = 0
     tileSizeX = 0
     tileSizeY = 0
+    pointSize = 0
     tileWScale = 0
     tileStride = 0
   }
