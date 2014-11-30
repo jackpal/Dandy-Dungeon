@@ -22,6 +22,10 @@ let kTileBufferSize = viewTilesX * viewTilesY
 // Bytes for the tile uniforms
 let kTileUniformSize = 32
 
+// bytes for a single quad
+
+let kQuadBufferSize = 64
+
 
 class GameViewController: UIViewController {
 
@@ -33,6 +37,8 @@ class GameViewController: UIViewController {
   var pipelineState: MTLRenderPipelineState! = nil
   var vertexBuffer: MTLBuffer! = nil
   var vertexUniformsBuffer: MTLBuffer! = nil
+  // The vertices for a single quad.
+  var quadVertexBuffer: MTLBuffer! = nil;
   var texture: Texture3D! = nil
 
   let inflightSemaphore = dispatch_semaphore_create(MaxBuffers)
@@ -76,6 +82,10 @@ class GameViewController: UIViewController {
     let vertexUniformsLength = MaxBuffers * kTileUniformSize
     vertexUniformsBuffer = device.newBufferWithLength(vertexUniformsLength, options: nil)
     vertexUniformsBuffer.label = "uniforms"
+
+    let quadBufferLength = MaxBuffers * kQuadBufferSize
+    quadVertexBuffer = device.newBufferWithLength(quadBufferLength, options:nil)
+    quadVertexBuffer.label = "a quad"
 
     texture = Texture3D(name:"dandy", ext:"png", depth:32)
     if texture == nil || !texture.bind(device) {
@@ -143,10 +153,16 @@ class GameViewController: UIViewController {
 
     renderEncoder.pushDebugGroup("draw tiles")
     renderEncoder.setRenderPipelineState(pipelineState)
-    renderEncoder.setVertexBuffer(vertexBuffer, offset: kTileBufferSize*bufferIndex, atIndex: 0)
-    renderEncoder.setVertexBuffer(vertexUniformsBuffer, offset:kTileUniformSize * bufferIndex , atIndex: 1)
+    renderEncoder.setVertexBuffer(vertexBuffer,
+      offset: kTileBufferSize*bufferIndex, atIndex: 0)
+    renderEncoder.setVertexBuffer(vertexUniformsBuffer,
+      offset:kTileUniformSize * bufferIndex , atIndex: 1)
+    renderEncoder.setVertexBuffer(quadVertexBuffer,
+      offset:kQuadBufferSize * bufferIndex, atIndex: 2)
+
     renderEncoder.setFragmentTexture(texture.texture, atIndex:0)
-    renderEncoder.drawPrimitives(.Point, vertexStart: 0, vertexCount: kTileBufferSize, instanceCount: 1)
+    renderEncoder.drawPrimitives(.TriangleStrip, vertexStart: 0,
+      vertexCount:4, instanceCount: kTileBufferSize)
 
     renderEncoder.popDebugGroup()
     renderEncoder.endEncoding()
@@ -193,15 +209,42 @@ class GameViewController: UIViewController {
     let pixelsX = viewPixelsX / Float32(viewTilesX)
     let pixelsY = viewPixelsY / Float32(viewTilesY)
     let pixelSize = max(pixelsX, pixelsY)
-    let tx = 2.0 * pixelSize / viewPixelsX
-    let ty = 2.0 * pixelSize / viewPixelsY
+    let tx = 2.0 * pixelsX / viewPixelsX
+    let ty = 2.0 * pixelsY / viewPixelsY
 
     vuData[0].offsetX = -Float32(viewTilesX) * 0.5 * tx
-    vuData[0].offsetY = (Float32(viewTilesY) * 0.5 - 0.5) * ty
+    vuData[0].offsetY = Float32(viewTilesY) * 0.5 * ty
     vuData[0].tileSizeX = tx
     vuData[0].tileSizeY = -ty
     vuData[0].pointSize = pixelSize
     vuData[0].tileStride = 20
     vuData[0].tileWScale = 1.0 / 32.0
+
+    updateQuad(tx, ty: ty)
   }
+
+  func updateQuad(tx: Float32, ty: Float32) {
+    let pV = UnsafeMutablePointer<TileVertex>(quadVertexBuffer.contents()
+        + kQuadBufferSize * bufferIndex)
+    pV[0].x = 0
+    pV[0].y = -ty
+    pV[0].u = 0
+    pV[0].v = 1
+
+    pV[1].x = tx
+    pV[1].y = -ty
+    pV[1].u = 1
+    pV[1].v = 1
+
+    pV[2].x = 0
+    pV[2].y = 0
+    pV[2].u = 0
+    pV[2].v = 0
+
+    pV[3].x = tx
+    pV[3].y = 0
+    pV[3].u = 1
+    pV[3].v = 0
+  }
+
 }

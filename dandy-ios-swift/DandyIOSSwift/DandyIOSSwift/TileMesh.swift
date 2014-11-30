@@ -34,3 +34,10 @@ struct TileUniforms {
     tileStride = 0
   }
 }
+
+struct TileVertex {
+  var x : Float32 = 0
+  var y : Float32 = 0
+  var u : Float32 = 0
+  var v : Float32 = 0
+}

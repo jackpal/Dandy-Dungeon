@@ -10,6 +10,11 @@ struct TileUniforms {
   uint tileStride; // Tiles per horizontal line
 };
 
+struct TileVertex {
+  float2 xy;
+  float2 uv;
+};
+
 struct TileVertexIn
 {
   uchar atlasIndex;
@@ -18,16 +23,17 @@ struct TileVertexIn
 struct TileVertexOut
 {
   float4 position [[position]];
-  float size [[point_size]];
-  float textureW [[user(textureW)]];
+  float3 uvw [[user(uvw)]];
 };
 
 // This specialized shader takes a list of tiles and a vertex index and
 // generates a set of tiled points.
 
 vertex TileVertexOut tileVertex(uint vid [[ vertex_id ]],
-                                  constant uchar* pAtlasIndex  [[ buffer(0) ]],
-                                  constant TileUniforms& uniforms [[ buffer(1) ]])
+                                uint iid [[ instance_id ]],
+                                constant uchar* pAtlasIndex  [[ buffer(0) ]],
+                                constant TileUniforms& uniforms [[ buffer(1) ]],
+                                constant TileVertex* pQuad [[ buffer(2) ]])
 {
   TileVertexOut outVertex;
 
@@ -36,23 +42,23 @@ vertex TileVertexOut tileVertex(uint vid [[ vertex_id ]],
   float tileWScale = uniforms.tileWScale;
   uint tileStride = uniforms.tileStride;
 
-  uint tileY = vid / tileStride;
-  uint tileX = vid - tileY * tileStride;
+  TileVertex quad = pQuad[vid];
 
-  outVertex.position = float4(offset.x + tileX * tileSize.x,
-                              offset.y + tileY * tileSize.y,
+  uint tileY = iid / tileStride;
+  uint tileX = iid - tileY * tileStride;
+
+  outVertex.position = float4(offset.x + tileX * tileSize.x + quad.xy.x,
+                              offset.y + tileY * tileSize.y + quad.xy.y,
                               0, 1);
-  outVertex.size = uniforms.pointSize;
-  outVertex.textureW = pAtlasIndex[vid] * tileWScale;
+  outVertex.uvw = float3(quad.uv.x, quad.uv.y, pAtlasIndex[iid] * tileWScale);
   return outVertex;
 };
 
 fragment half4 tileFragment(TileVertexOut input [[stage_in]],
-                                    float2 uv [[point_coord]],
                                     texture3d<half>     tex3D    [[ texture(0) ]])
 {
   constexpr sampler quad_sampler;
-  half4 color = tex3D.sample(quad_sampler, float3(uv.x, uv.y, input.textureW));
+  half4 color = tex3D.sample(quad_sampler, input.uvw);
 
   return color;
 }
