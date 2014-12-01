@@ -52,6 +52,20 @@ enum Cell : Byte {
   func description() -> String {
     return cellSymbols[Int(self.rawValue)]
   }
+
+  func isEnemy() -> Bool {
+    let rv = self.rawValue
+    let m0 = Monster0.rawValue
+    let g2 = Generator2.rawValue
+    return rv >= m0 && rv <= g2
+  }
+
+  func isPlayer() -> Bool {
+    let rv = self.rawValue
+    let p0 = Player0.rawValue
+    let p3 = Player3.rawValue
+    return rv >= p0 && rv <= p3
+  }
 }
 
 class Level {
@@ -110,6 +124,23 @@ class Level {
         }
       }
     }
+  }
+
+  // Returns a tupple for the active region for a given x, y
+  func getActive(x: Float32, y: Float32, xView: Int, yView: Int) ->
+      (x1 : Int, y1: Int, x2: Int, y2: Int) {
+        let xa = getActiveAxis(x, uView: xView, uMax: width)
+        let ya = getActiveAxis(x, uView: xView, uMax: width)
+        return (xa.u1, ya.u1, xa.u2, ya.u2)
+  }
+
+  func getActiveAxis(u: Float32, uView: Int, uMax: Int) -> (u1: Int, u2: Int) {
+    var x = u - Float32(uView) * 0.5
+    x = max(x, 0.0)
+    x = min(x, Float32(uMax - uView))
+    let start = Int(x)
+    let end = min(start + uView + 1, width)
+    return (start, end)
   }
 
   func byteToCell(d : Byte) -> Cell {
