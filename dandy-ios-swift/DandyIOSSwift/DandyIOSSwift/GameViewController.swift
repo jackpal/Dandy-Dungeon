@@ -11,13 +11,12 @@ import Metal
 import QuartzCore
 
 let MaxBuffers = 3
-let ConstantBufferSize = 1024*1024
 
 let viewTilesX = 20
 let viewTilesY = 10
 
 // Bytes for the tiles.
-let kTileBufferSize = viewTilesX * viewTilesY
+let kTileBufferSize = (viewTilesX + 1) * (viewTilesY + 1)
 
 // Bytes for the tile uniforms
 let kTileUniformSize = 32
@@ -36,6 +35,8 @@ class GameViewController: UIViewController {
   var timer: CADisplayLink! = nil
   var pipelineState: MTLRenderPipelineState! = nil
   var vertexBuffer: MTLBuffer! = nil
+  var tileStride: CUnsignedInt = 0
+  var tileCount: Int = 0
   var vertexUniformsBuffer: MTLBuffer! = nil
   // The vertices for a single quad.
   var quadVertexBuffer: MTLBuffer! = nil;
@@ -78,7 +79,7 @@ class GameViewController: UIViewController {
     }
 
     // generate a large enough buffer to allow streaming vertices for 3 semaphore controlled frames
-    vertexBuffer = device.newBufferWithLength(ConstantBufferSize, options: nil)
+    vertexBuffer = device.newBufferWithLength(MaxBuffers * kTileBufferSize, options: nil)
     vertexBuffer.label = "vertices"
 
     let vertexUniformsLength = MaxBuffers * kTileUniformSize
@@ -164,7 +165,7 @@ class GameViewController: UIViewController {
 
     renderEncoder.setFragmentTexture(texture.texture, atIndex:0)
     renderEncoder.drawPrimitives(.TriangleStrip, vertexStart: 0,
-      vertexCount:4, instanceCount: kTileBufferSize)
+      vertexCount:4, instanceCount: tileCount)
 
     renderEncoder.popDebugGroup()
     renderEncoder.endEncoding()
@@ -199,6 +200,13 @@ class GameViewController: UIViewController {
     // Write tile data.
 
     let cam = world.getLevelCamera()
+    tileStride = CUnsignedInt(cam.endX - cam.startX)
+    tileCount = Int(tileStride) * (cam.endY - cam.startY)
+
+    if tileCount > kTileBufferSize {
+      assertionFailure("Too big")
+    }
+
     let level = world.map
     var i = 0
     for y in cam.startY..<cam.endY {
@@ -224,7 +232,7 @@ class GameViewController: UIViewController {
     vuData[0].offsetY = Float32(viewTilesY) * 0.5 * ty
     vuData[0].tileSizeX = tx
     vuData[0].tileSizeY = -ty
-    vuData[0].tileStride = 20
+    vuData[0].tileStride = tileStride
     vuData[0].tileWScale = 1.0 / 32.0
 
     updateQuad(tx, ty: ty)
