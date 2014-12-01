@@ -58,6 +58,25 @@ func moveCoords(x : Int, y : Int, direction: Direction) -> (x: Int, y: Int) {
 		}
 }
 
+struct LevelCamera {
+  var cogX : Float32
+  var cogY : Float32
+  var startX : Int
+  var startY : Int
+  var endX : Int
+  var endY : Int
+
+  init(cogX : Float32, cogY : Float32,
+      startX : Int, startY : Int, endX : Int, endY : Int) {
+    self.cogX = cogX
+    self.cogY = cogY
+    self.startX = startX
+    self.startY = startY
+    self.endX = endX
+    self.endY = endY
+  }
+}
+
 class Arrow {
   var alive : Bool = false
   var x : Int = 0
@@ -137,15 +156,16 @@ class World {
 
   init() {
     numPlayers = 1
-    loadLevel(0)
     for i in 0..<numPlayers {
-      player[i] = Player()
+      player.append(Player())
     }
+    loadLevel(0)
   }
 
   func loadLevel(index : Int) {
     levelIndex = index
     map = dungeon.loadLevel(index)
+    setPlayerPositions()
   }
 
   func update() {
@@ -168,16 +188,14 @@ class World {
   }
 
  func doMonsters() {
-		let (cogX, cogY) = getCOG()
-		let (startX, startY, endX, endY) =
-        map.getActive(cogX, y: cogY, xView: levelViewW, yView: levelViewH)
+		let cam = getLevelCamera()
 
 		// update in a grid pattern
 		++gridStep;
 		let gridXOffset = gridStep % 3
 		let gridYOffset = (gridStep / 3) % 3
-		for var y = startY + gridYOffset; y < endY; y += 3 {
-      for var x = startX + gridXOffset; x < endX; x += 3 {
+		for var y = cam.startY + gridYOffset; y < cam.endY; y += 3 {
+      for var x = cam.startX + gridXOffset; x < cam.endX; x += 3 {
         let d = map[x, y]
         switch d {
         case .Monster0, .Monster1, .Monster2:
@@ -189,7 +207,9 @@ class World {
             var canMove = false
             var d2 = Cell.Space
             for test in 0..<3 {
-              let newDirRaw = (dir.rawValue + kTestDelta[test]) & 7
+              // Need to calculate in Int space to avoid overflow from addition.
+              // (Is there an "unsafe addition" operator?
+              let newDirRaw = Byte((Int(dir.rawValue) + kTestDelta[test]) & 7)
               let newDir = Direction(rawValue: newDirRaw)!
               (mx, my) = moveCoords(x, y, newDir)
               d2 = map[mx, my]
@@ -297,6 +317,14 @@ class World {
     return (x: x, y: y)
   }
 
+  func getLevelCamera() -> LevelCamera {
+    let (cogX, cogY) = getCOG()
+    let (startX, startY, endX, endY) =
+        getActive(cogX, cogY, levelViewW, levelViewH, map.width, map.height)
+    return LevelCamera(cogX: cogX, cogY: cogY,
+        startX: startX, startY: startY, endX: endX, endY: endY)
+  }
+
   func changeLevel(delta : Int) {
 		let newLevel = min(26, max(0, levelIndex + delta))
 		loadLevel(newLevel)
@@ -305,8 +333,9 @@ class World {
   func setPlayerPositions() {
 		var x = 0
 		var y = 0
-		if let (x,y) = map.find(.Up) {
-      // OK
+		if let (ux,uy) = map.find(.Up) {
+      x = ux
+      y = uy
     } else {
       x = 4
       y = 4
@@ -488,13 +517,12 @@ class World {
   }
 
   func doSmartBomb() {
-    let (cogX, cogY) = getCOG()
-    let (startX, startY, endX, endY) =
-        map.getActive(cogX, y: cogY, xView: levelViewW, yView: levelViewH)
-		for y in startY..<endY {
-      for x in startX..<endX {
+    let cam = getLevelCamera()
+		for y in cam.startY..<cam.endY {
+      for x in cam.startX..<cam.endX {
         let d = map[x, y]
         if d.isEnemy() {
+          // TODO: Increase score.
           map[x, y] = .Space
         }
       }
