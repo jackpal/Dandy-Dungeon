@@ -60,6 +60,9 @@ class GameViewController: UIViewController {
     view.opaque = true
     view.backgroundColor = nil
 
+    let tapGesture = UITapGestureRecognizer(target: self, action: "handleTap:")
+    view.addGestureRecognizer(tapGesture)
+
     commandQueue = device.newCommandQueue()
     commandQueue.label = "main command queue"
 
@@ -260,6 +263,11 @@ class GameViewController: UIViewController {
     pV[3].y = 0
     pV[3].u = 1
     pV[3].v = 0
+  }
+
+  func handleTap(recognizer: UITapGestureRecognizer) {
+    let tapLocation = recognizer.locationInView(view)
+    
   }
 
 }
