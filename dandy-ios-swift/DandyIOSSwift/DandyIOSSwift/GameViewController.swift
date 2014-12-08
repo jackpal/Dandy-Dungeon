@@ -163,7 +163,8 @@ class GameViewController: UIViewController {
 
   func handleTap(recognizer: UITapGestureRecognizer) {
     let tapLocation = recognizer.locationInView(view)
-    
+    // Just for testing, cycle level
+    world.changeLevel(1)
   }
 
 }

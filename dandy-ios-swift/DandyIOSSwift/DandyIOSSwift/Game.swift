@@ -326,7 +326,7 @@ class World {
   }
 
   func changeLevel(delta : Int) {
-		let newLevel = min(26, max(0, levelIndex + delta))
+		let newLevel = min(25, max(0, levelIndex + delta))
 		loadLevel(newLevel)
   }
 
