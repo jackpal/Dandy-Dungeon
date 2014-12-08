@@ -12,20 +12,6 @@ import QuartzCore
 
 let MaxBuffers = 3
 
-let viewTilesX = 20
-let viewTilesY = 10
-
-// Bytes for the tiles.
-let kTileBufferSize = (viewTilesX + 1) * (viewTilesY + 1)
-
-// Bytes for the tile uniforms
-let kTileUniformSize = 32
-
-// bytes for a single quad
-
-let kQuadBufferSize = 64
-
-
 class GameViewController: UIViewController {
 
   let device = { MTLCreateSystemDefaultDevice() }()
@@ -33,14 +19,8 @@ class GameViewController: UIViewController {
 
   var commandQueue: MTLCommandQueue! = nil
   var timer: CADisplayLink! = nil
-  var pipelineState: MTLRenderPipelineState! = nil
-  var vertexBuffer: MTLBuffer! = nil
-  var tileStride: CUnsignedInt = 0
-  var tileCount: Int = 0
-  var vertexUniformsBuffer: MTLBuffer! = nil
-  // The vertices for a single quad.
-  var quadVertexBuffer: MTLBuffer! = nil;
-  var texture: Texture3D! = nil
+
+  var tileMeshRenderer: TileMeshRenderer! = nil
 
   let inflightSemaphore = dispatch_semaphore_create(MaxBuffers)
   var bufferIndex = 0
@@ -56,6 +36,9 @@ class GameViewController: UIViewController {
 
     self.resize()
 
+    tileMeshRenderer = TileMeshRenderer(viewTilesX: 20, viewTilesY:10)
+    tileMeshRenderer.createResources(device)
+
     view.layer.addSublayer(metalLayer)
     view.opaque = true
     view.backgroundColor = nil
@@ -65,38 +48,6 @@ class GameViewController: UIViewController {
 
     commandQueue = device.newCommandQueue()
     commandQueue.label = "main command queue"
-
-    let defaultLibrary = device.newDefaultLibrary()
-    let fragmentProgram = defaultLibrary?.newFunctionWithName("tileFragment")
-    let vertexProgram = defaultLibrary?.newFunctionWithName("tileVertex")
-
-    let pipelineStateDescriptor = MTLRenderPipelineDescriptor()
-    pipelineStateDescriptor.vertexFunction = vertexProgram
-    pipelineStateDescriptor.fragmentFunction = fragmentProgram
-    pipelineStateDescriptor.colorAttachments[0].pixelFormat = .BGRA8Unorm
-
-    var pipelineError : NSError?
-    pipelineState = device.newRenderPipelineStateWithDescriptor(pipelineStateDescriptor, error: &pipelineError)
-    if (pipelineState == nil) {
-      println("Failed to create pipeline state, error \(pipelineError)")
-    }
-
-    // generate a large enough buffer to allow streaming vertices for 3 semaphore controlled frames
-    vertexBuffer = device.newBufferWithLength(MaxBuffers * kTileBufferSize, options: nil)
-    vertexBuffer.label = "vertices"
-
-    let vertexUniformsLength = MaxBuffers * kTileUniformSize
-    vertexUniformsBuffer = device.newBufferWithLength(vertexUniformsLength, options: nil)
-    vertexUniformsBuffer.label = "uniforms"
-
-    let quadBufferLength = MaxBuffers * kQuadBufferSize
-    quadVertexBuffer = device.newBufferWithLength(quadBufferLength, options:nil)
-    quadVertexBuffer.label = "a quad"
-
-    texture = Texture3D(name:"dandy", ext:"png", depth:32)
-    if texture == nil || !texture.bind(device) {
-      assert(false)
-    }
 
     timer = CADisplayLink(target: self, selector: Selector("renderLoop"))
     timer.addToRunLoop(NSRunLoop.mainRunLoop(), forMode: NSDefaultRunLoopMode)
@@ -157,20 +108,8 @@ class GameViewController: UIViewController {
     let renderEncoder = commandBuffer.renderCommandEncoderWithDescriptor(renderPassDescriptor)!
     renderEncoder.label = "render encoder"
 
-    renderEncoder.pushDebugGroup("draw tiles")
-    renderEncoder.setRenderPipelineState(pipelineState)
-    renderEncoder.setVertexBuffer(vertexBuffer,
-      offset: kTileBufferSize*bufferIndex, atIndex: 0)
-    renderEncoder.setVertexBuffer(vertexUniformsBuffer,
-      offset:kTileUniformSize * bufferIndex , atIndex: 1)
-    renderEncoder.setVertexBuffer(quadVertexBuffer,
-      offset:kQuadBufferSize * bufferIndex, atIndex: 2)
+    tileMeshRenderer.render(renderEncoder)
 
-    renderEncoder.setFragmentTexture(texture.texture, atIndex:0)
-    renderEncoder.drawPrimitives(.TriangleStrip, vertexStart: 0,
-      vertexCount:4, instanceCount: tileCount)
-
-    renderEncoder.popDebugGroup()
     renderEncoder.endEncoding()
 
     // use completion handler to signal the semaphore when this frame is completed allowing the encoding of the next frame to proceed
@@ -195,20 +134,23 @@ class GameViewController: UIViewController {
     updateTileUniforms()
   }
 
+  func updateTileUniforms() {
+    let viewPixelsX = Float32(metalLayer.drawableSize.width)
+    let viewPixelsY = Float32(metalLayer.drawableSize.height)
+    tileMeshRenderer.updateUniforms(viewPixelsX,
+      viewPixelsY: viewPixelsY)
+  }
+
   func updateTiles() {
     // vData is pointer to the tile buffer
-    let pData = vertexBuffer.contents()
-    let vData = UnsafeMutablePointer<CUnsignedChar>(pData + kTileBufferSize*bufferIndex)
+    let vData = tileMeshRenderer.data
 
     // Write tile data.
 
     let cam = world.getLevelCamera()
-    tileStride = CUnsignedInt(cam.endX - cam.startX)
-    tileCount = Int(tileStride) * (cam.endY - cam.startY)
-
-    if tileCount > kTileBufferSize {
-      assertionFailure("Too big")
-    }
+    let tileStride = CUnsignedInt(cam.endX - cam.startX)
+    tileMeshRenderer.tileStride = tileStride
+    tileMeshRenderer.tileCount = Int(tileStride) * (cam.endY - cam.startY)
 
     let level = world.map
     var i = 0
@@ -217,52 +159,6 @@ class GameViewController: UIViewController {
         vData[i++] = CUnsignedChar(level[x,y].rawValue)
       }
     }
-  }
-
-  func updateTileUniforms() {
-    // Write uniforms.
-    let uData = vertexUniformsBuffer.contents()
-    let vuData = UnsafeMutablePointer<TileUniforms>(uData + kTileUniformSize * bufferIndex)
-
-    let viewPixelsX = Float32(metalLayer.drawableSize.width)
-    let viewPixelsY = Float32(metalLayer.drawableSize.height)
-    let pixelsX = viewPixelsX / Float32(viewTilesX)
-    let pixelsY = viewPixelsY / Float32(viewTilesY)
-    let tx = 2.0 * pixelsX / viewPixelsX
-    let ty = 2.0 * pixelsY / viewPixelsY
-
-    vuData[0].offsetX = -Float32(viewTilesX) * 0.5 * tx
-    vuData[0].offsetY = Float32(viewTilesY) * 0.5 * ty
-    vuData[0].tileSizeX = tx
-    vuData[0].tileSizeY = -ty
-    vuData[0].tileStride = tileStride
-    vuData[0].tileWScale = 1.0 / 32.0
-
-    updateQuad(tx, ty: ty)
-  }
-
-  func updateQuad(tx: Float32, ty: Float32) {
-    let pV = UnsafeMutablePointer<TileVertex>(quadVertexBuffer.contents()
-        + kQuadBufferSize * bufferIndex)
-    pV[0].x = 0
-    pV[0].y = -ty
-    pV[0].u = 0
-    pV[0].v = 1
-
-    pV[1].x = tx
-    pV[1].y = -ty
-    pV[1].u = 1
-    pV[1].v = 1
-
-    pV[2].x = 0
-    pV[2].y = 0
-    pV[2].u = 0
-    pV[2].v = 0
-
-    pV[3].x = tx
-    pV[3].y = 0
-    pV[3].u = 1
-    pV[3].v = 0
   }
 
   func handleTap(recognizer: UITapGestureRecognizer) {

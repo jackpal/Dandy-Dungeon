@@ -17,6 +17,7 @@
 		364B664C1A2792CD00E61D7A /* DandyIOSSwiftTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 364B664B1A2792CD00E61D7A /* DandyIOSSwiftTests.swift */; };
 		364B668D1A279ED100E61D7A /* dandy.png in Resources */ = {isa = PBXBuildFile; fileRef = 364B66721A279ED100E61D7A /* dandy.png */; };
 		364B668F1A279F2900E61D7A /* Level.swift in Sources */ = {isa = PBXBuildFile; fileRef = 364B668E1A279F2900E61D7A /* Level.swift */; };
+		369E99761A3532A300F3869A /* Renderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 369E99751A3532A300F3869A /* Renderer.swift */; };
 		36ACA7611A2A4FB5001E819B /* Atlas.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36ACA7601A2A4FB5001E819B /* Atlas.swift */; };
 		36ACA7631A2A53CD001E819B /* TileMesh.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36ACA7621A2A53CD001E819B /* TileMesh.swift */; };
 		36ACA7681A2AA055001E819B /* Texture3D.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36ACA7671A2AA055001E819B /* Texture3D.swift */; };
@@ -50,6 +51,7 @@
 		364B664B1A2792CD00E61D7A /* DandyIOSSwiftTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DandyIOSSwiftTests.swift; sourceTree = "<group>"; };
 		364B66721A279ED100E61D7A /* dandy.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = dandy.png; sourceTree = "<group>"; };
 		364B668E1A279F2900E61D7A /* Level.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Level.swift; sourceTree = "<group>"; };
+		369E99751A3532A300F3869A /* Renderer.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Renderer.swift; sourceTree = "<group>"; };
 		36ACA7601A2A4FB5001E819B /* Atlas.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Atlas.swift; sourceTree = "<group>"; };
 		36ACA7621A2A53CD001E819B /* TileMesh.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TileMesh.swift; sourceTree = "<group>"; };
 		36ACA7671A2AA055001E819B /* Texture3D.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Texture3D.swift; sourceTree = "<group>"; };
@@ -162,6 +164,7 @@
 				364B66371A2792CD00E61D7A /* Shaders.metal */,
 				364225C81A2A2B8400E329C4 /* Texture.swift */,
 				36ACA7621A2A53CD001E819B /* TileMesh.swift */,
+				369E99751A3532A300F3869A /* Renderer.swift */,
 			);
 			name = Renderer;
 			sourceTree = "<group>";
@@ -275,6 +278,7 @@
 				36ACA7681A2AA055001E819B /* Texture3D.swift in Sources */,
 				36ACA7611A2A4FB5001E819B /* Atlas.swift in Sources */,
 				364225C91A2A2B8400E329C4 /* Texture.swift in Sources */,
+				369E99761A3532A300F3869A /* Renderer.swift in Sources */,
 				364B66361A2792CD00E61D7A /* GameViewController.swift in Sources */,
 				364B668F1A279F2900E61D7A /* Level.swift in Sources */,
 				364B66341A2792CD00E61D7A /* AppDelegate.swift in Sources */,
