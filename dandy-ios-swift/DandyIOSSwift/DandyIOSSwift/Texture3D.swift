@@ -13,16 +13,16 @@ class Texture3D {
   var label: String
   var texture: MTLTexture!
   var target: MTLTextureType!
-  var width: UInt = 0
-  var height: UInt = 0
-  var depth: UInt
+  var width: Int = 0
+  var height: Int = 0
+  var depth: Int
   var path: String
   var flip: Bool = false
 
-  init?(name: String, ext: String, depth: UInt) {
+  init?(name: String, ext: String, depth: Int) {
     label = name
     self.depth = depth
-    if let p = NSBundle.mainBundle().pathForResource(name, ofType:ext) {
+    if let p = Bundle.main.path(forResource: name, ofType:ext) {
       path = p
     } else {
       path = ""
@@ -32,44 +32,41 @@ class Texture3D {
 
   func bind(device: MTLDevice) -> Bool {
     if let image = UIImage(contentsOfFile: path) {
-      let imageRef = image.CGImage
+      let imageRef = image.cgImage!
 
-      width = CGImageGetWidth(imageRef)
-      height = CGImageGetHeight(imageRef)
+      width = imageRef.width
+      height = imageRef.height
 
       let rgbColorSpace = CGColorSpaceCreateDeviceRGB()
-      if rgbColorSpace == nil {
-        return false
-      }
       let bytesPerRow = 4 * width
-      let bitsPerComponent :UInt = 8
+      let bitsPerComponent = 8
 
-      let bitmapInfo = CGBitmapInfo(CGImageAlphaInfo.PremultipliedLast.rawValue)
+      let bitmapInfo = CGBitmapInfo(rawValue: CGImageAlphaInfo.premultipliedLast.rawValue)
 
-      if let context = CGBitmapContextCreate(nil, width, height, bitsPerComponent, bytesPerRow, rgbColorSpace, bitmapInfo) {
-        let bounds = CGRectMake(0, 0, CGFloat(width), CGFloat(height))
-        CGContextClearRect(context, bounds)
+      if let context = CGContext(data: nil, width: width, height: height, bitsPerComponent: bitsPerComponent, bytesPerRow: bytesPerRow, space: rgbColorSpace, bitmapInfo: bitmapInfo.rawValue) {
+        let bounds = CGRect(x:0, y:0, width:width, height:height)
+        context.clear(bounds)
         if flip {
-          CGContextTranslateCTM(context, CGFloat(width), CGFloat(height))
-          CGContextScaleCTM(context, -1.0, -1.0)
+          context.translateBy(x:CGFloat(width), y:CGFloat(height))
+          context.scaleBy(x:-1.0, y:-1.0)
         }
-        CGContextDrawImage(context, bounds, imageRef)
+        context.draw(imageRef, in: bounds)
         let texDesc = MTLTextureDescriptor.init()
-        texDesc.textureType = MTLTextureType.Type3D
-        texDesc.pixelFormat = MTLPixelFormat.RGBA8Unorm
+        texDesc.textureType = MTLTextureType.type3D
+        texDesc.pixelFormat = MTLPixelFormat.rgba8Unorm
         let sliceHeight = height / depth
-        texDesc.width = Int(width)
-        texDesc.height = Int(sliceHeight)
-        texDesc.depth = Int(depth)
+        texDesc.width = width
+        texDesc.height = sliceHeight
+        texDesc.depth = depth
         
         target = texDesc.textureType
-        if let texture = device.newTextureWithDescriptor(texDesc) {
+        if let texture = device.makeTexture(descriptor: texDesc) {
           self.texture = texture
           texture.label = label
-          let pixels = CGBitmapContextGetData(context)
-          let region = MTLRegionMake3D(0, 0, 0, Int(width), Int(sliceHeight), Int(depth))
+          let pixels = context.data!
+          let region = MTLRegionMake3D(0, 0, 0, width, sliceHeight, depth)
           let bytesPerImage = Int(sliceHeight * bytesPerRow)
-          texture.replaceRegion(region,
+          texture.replace(region: region,
             mipmapLevel: 0,
             slice:0,
             withBytes: pixels,

@@ -14,7 +14,7 @@ let MaxBuffers = 3
 
 class GameViewController: UIViewController {
 
-  let device = { MTLCreateSystemDefaultDevice() }()
+  let device = { MTLCreateSystemDefaultDevice()! }()
   let metalLayer = { CAMetalLayer() }()
 
   var commandQueue: MTLCommandQueue! = nil
@@ -22,7 +22,7 @@ class GameViewController: UIViewController {
 
   var tileMeshRenderer: TileMeshRenderer! = nil
 
-  let inflightSemaphore = dispatch_semaphore_create(MaxBuffers)
+  let inflightSemaphore = DispatchSemaphore(value: MaxBuffers)
   var bufferIndex = 0
 
   let world : World = World()
@@ -31,26 +31,27 @@ class GameViewController: UIViewController {
     super.viewDidLoad()
 
     metalLayer.device = device
-    metalLayer.pixelFormat = .BGRA8Unorm
+    metalLayer.pixelFormat = .bgra8Unorm
     metalLayer.framebufferOnly = true
 
     self.resize()
 
     tileMeshRenderer = TileMeshRenderer(viewTilesX: 20, viewTilesY:10)
-    tileMeshRenderer.createResources(device)
+    tileMeshRenderer.createResources(device: device)
 
     view.layer.addSublayer(metalLayer)
-    view.opaque = true
+    view.isOpaque = true
     view.backgroundColor = nil
 
-    let tapGesture = UITapGestureRecognizer(target: self, action: "handleTap:")
+    let tapGesture = UITapGestureRecognizer(target: self,
+                                            action: #selector(GameViewController.handleTap))
     view.addGestureRecognizer(tapGesture)
 
-    commandQueue = device.newCommandQueue()
+    commandQueue = device.makeCommandQueue()
     commandQueue.label = "main command queue"
 
-    timer = CADisplayLink(target: self, selector: Selector("renderLoop"))
-    timer.addToRunLoop(NSRunLoop.mainRunLoop(), forMode: NSDefaultRunLoopMode)
+    timer = CADisplayLink(target: self, selector: #selector(GameViewController.renderLoop))
+    timer.add(to: RunLoop.main, forMode: .defaultRunLoopMode)
   }
 
   override func viewDidLayoutSubviews() {
@@ -74,7 +75,7 @@ class GameViewController: UIViewController {
     metalLayer.drawableSize = drawableSize
   }
 
-  override func prefersStatusBarHidden() -> Bool {
+  override var prefersStatusBarHidden: Bool {
     return true
   }
 
@@ -82,6 +83,7 @@ class GameViewController: UIViewController {
     timer.invalidate()
   }
 
+  @objc
   func renderLoop() {
     autoreleasepool {
       self.render()
@@ -91,24 +93,24 @@ class GameViewController: UIViewController {
   func render() {
 
     // use semaphore to encode 3 frames ahead
-    dispatch_semaphore_wait(inflightSemaphore, DISPATCH_TIME_FOREVER)
+    _ = inflightSemaphore.wait(timeout:DispatchTime.distantFuture)
 
     self.update()
 
-    let commandBuffer = commandQueue.commandBuffer()
+    let commandBuffer = commandQueue.makeCommandBuffer()!
     commandBuffer.label = "Frame command buffer"
 
-    let drawable = metalLayer.nextDrawable()
+    let drawable = metalLayer.nextDrawable()!
     let renderPassDescriptor = MTLRenderPassDescriptor()
     renderPassDescriptor.colorAttachments[0].texture = drawable.texture
-    renderPassDescriptor.colorAttachments[0].loadAction = .Clear
+    renderPassDescriptor.colorAttachments[0].loadAction = .clear
     renderPassDescriptor.colorAttachments[0].clearColor = MTLClearColor(red: 0.65, green: 0.65, blue: 0.65, alpha: 1.0)
-    renderPassDescriptor.colorAttachments[0].storeAction = .Store
+    renderPassDescriptor.colorAttachments[0].storeAction = .store
 
-    let renderEncoder = commandBuffer.renderCommandEncoderWithDescriptor(renderPassDescriptor)!
+    let renderEncoder = commandBuffer.makeRenderCommandEncoder(descriptor: renderPassDescriptor)!
     renderEncoder.label = "render encoder"
 
-    tileMeshRenderer.render(renderEncoder)
+    tileMeshRenderer.render(encoder: renderEncoder)
 
     renderEncoder.endEncoding()
 
@@ -116,7 +118,7 @@ class GameViewController: UIViewController {
     // use capture list to avoid any retain cycles if the command buffer gets retained anywhere besides this stack frame
     commandBuffer.addCompletedHandler{ [weak self] commandBuffer in
       if let strongSelf = self {
-        dispatch_semaphore_signal(strongSelf.inflightSemaphore)
+        strongSelf.inflightSemaphore.signal()
       }
       return
     }
@@ -124,7 +126,7 @@ class GameViewController: UIViewController {
     // bufferIndex matches the current semaphore controled frame index to ensure writing occurs at the correct region in the vertex buffer
     bufferIndex = (bufferIndex + 1) % MaxBuffers
 
-    commandBuffer.presentDrawable(drawable)
+    commandBuffer.present(drawable)
     commandBuffer.commit()
   }
 
@@ -137,7 +139,7 @@ class GameViewController: UIViewController {
   func updateTileUniforms() {
     let viewPixelsX = Float32(metalLayer.drawableSize.width)
     let viewPixelsY = Float32(metalLayer.drawableSize.height)
-    tileMeshRenderer.updateUniforms(viewPixelsX,
+    tileMeshRenderer.updateUniforms(viewPixelsX: viewPixelsX,
       viewPixelsY: viewPixelsY)
   }
 
@@ -152,19 +154,21 @@ class GameViewController: UIViewController {
     tileMeshRenderer.tileStride = tileStride
     tileMeshRenderer.tileCount = Int(tileStride) * (cam.endY - cam.startY)
 
-    let level = world.map
+    let level = world.map!
     var i = 0
     for y in cam.startY..<cam.endY {
       for x in cam.startX..<cam.endX {
-        vData[i++] = CUnsignedChar(level[x,y].rawValue)
+        vData[i] = CUnsignedChar(level[x,y].rawValue)
+        i += 1
       }
     }
   }
 
+  @objc
   func handleTap(recognizer: UITapGestureRecognizer) {
-    let tapLocation = recognizer.locationInView(view)
+    // let tapLocation = recognizer.location(in: view)
     // Just for testing, cycle level
-    world.changeLevel(1)
+    world.changeLevel(delta: 1)
   }
 
 }

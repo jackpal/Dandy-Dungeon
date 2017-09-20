@@ -33,7 +33,7 @@ let cellSymbols : [String] = [
   "④"
 ]
 
-enum Cell : Byte {
+enum Cell : UInt8 {
   case Space
   case Wall
   case Door
@@ -55,15 +55,15 @@ enum Cell : Byte {
 
   func isEnemy() -> Bool {
     let rv = self.rawValue
-    let m0 = Monster0.rawValue
-    let g2 = Generator2.rawValue
+    let m0 = Cell.Monster0.rawValue
+    let g2 = Cell.Generator2.rawValue
     return rv >= m0 && rv <= g2
   }
 
   func isPlayer() -> Bool {
     let rv = self.rawValue
-    let p0 = Player0.rawValue
-    let p3 = Player3.rawValue
+    let p0 = Cell.Player0.rawValue
+    let p3 = Cell.Player3.rawValue
     return rv >= p0 && rv <= p3
   }
 }
@@ -71,8 +71,8 @@ enum Cell : Byte {
 // Returns a tupple for the active region for a given x, y
 func getActive(x: Float32, y: Float32, xView: Int, yView: Int, xMax : Int, yMax: Int) ->
   (x1 : Int, y1: Int, x2: Int, y2: Int) {
-    let xa = getActiveAxis(x, xView, xMax)
-    let ya = getActiveAxis(y, yView, yMax)
+    let xa = getActiveAxis(u: x, uView: xView, uMax: xMax)
+    let ya = getActiveAxis(u: y, uView: yView, uMax: yMax)
     return (xa.u1, ya.u1, xa.u2, ya.u2)
 }
 
@@ -92,7 +92,7 @@ class Level {
   init(width: Int, height: Int) {
     self.width = width
     self.height = height
-    self.data = [Cell](count: Int(width * height), repeatedValue:Cell.Space)
+    self.data = [Cell](repeating:.Space, count:width * height)
   }
 
   func description() -> String {
@@ -106,15 +106,19 @@ class Level {
     return s
   }
 
-  func read(data:NSData) {
-    var b = UnsafePointer<Byte>(data.bytes)
-    var i = 0
-    for y in 0..<height {
-      for var x = 0; x < width; x += 2 {
-        let d = b[0]
-        b++
-        self.data[i++] = byteToCell(d & Byte(0xf))
-        self.data[i++] = byteToCell((d >> 4) & Byte(0xf))
+  func read(data:Data) {
+    data.withUnsafeBytes {(b: UnsafePointer<UInt8>)->Void in
+      var bi = 0
+      var i = 0
+      for _ in 0..<height {
+        for _ in stride(from: 0, to: width, by: 2) {
+          let d = b[bi]
+          bi += 1
+          self.data[i] = byteToCell(d: d & UInt8(0xf))
+          i += 1
+          self.data[i] = byteToCell(d: (d >> 4) & UInt8(0xf))
+          i += 1
+        }
       }
     }
   }
@@ -137,13 +141,13 @@ class Level {
       self[x, y] = Cell.Space
       for dy in max(0,y-1)...min(y+1, height-1) {
         for dx in max(0,x-1)...min(x+1, width-1) {
-          openDoor(dx, y:dy)
+          openDoor(x: dx, y:dy)
         }
       }
     }
   }
 
-  func byteToCell(d : Byte) -> Cell {
+  func byteToCell(d : UInt8) -> Cell {
     if let c = Cell(rawValue:d) {
       return c
     }
@@ -169,10 +173,10 @@ class Level {
 
   subscript(x :Int, y: Int) -> Cell {
     get {
-      return data[index(x,y:y)]
+      return data[index(x: x,y:y)]
     }
     set {
-      data[index(x,y:y)] = newValue
+      data[index(x: x,y:y)] = newValue
     }
   }
 }

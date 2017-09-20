@@ -14,7 +14,6 @@
 		364B663B1A2792CD00E61D7A /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 364B66391A2792CD00E61D7A /* Main.storyboard */; };
 		364B663D1A2792CD00E61D7A /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 364B663C1A2792CD00E61D7A /* Images.xcassets */; };
 		364B66401A2792CD00E61D7A /* LaunchScreen.xib in Resources */ = {isa = PBXBuildFile; fileRef = 364B663E1A2792CD00E61D7A /* LaunchScreen.xib */; };
-		364B664C1A2792CD00E61D7A /* DandyIOSSwiftTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 364B664B1A2792CD00E61D7A /* DandyIOSSwiftTests.swift */; };
 		364B668D1A279ED100E61D7A /* dandy.png in Resources */ = {isa = PBXBuildFile; fileRef = 364B66721A279ED100E61D7A /* dandy.png */; };
 		364B668F1A279F2900E61D7A /* Level.swift in Sources */ = {isa = PBXBuildFile; fileRef = 364B668E1A279F2900E61D7A /* Level.swift */; };
 		369E99761A3532A300F3869A /* Renderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 369E99751A3532A300F3869A /* Renderer.swift */; };
@@ -47,8 +46,6 @@
 		364B663C1A2792CD00E61D7A /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Images.xcassets; sourceTree = "<group>"; };
 		364B663F1A2792CD00E61D7A /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = Base; path = Base.lproj/LaunchScreen.xib; sourceTree = "<group>"; };
 		364B66451A2792CD00E61D7A /* DandyIOSSwiftTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = DandyIOSSwiftTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		364B664A1A2792CD00E61D7A /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		364B664B1A2792CD00E61D7A /* DandyIOSSwiftTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DandyIOSSwiftTests.swift; sourceTree = "<group>"; };
 		364B66721A279ED100E61D7A /* dandy.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = dandy.png; sourceTree = "<group>"; };
 		364B668E1A279F2900E61D7A /* Level.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Level.swift; sourceTree = "<group>"; };
 		369E99751A3532A300F3869A /* Renderer.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Renderer.swift; sourceTree = "<group>"; };
@@ -82,7 +79,6 @@
 			isa = PBXGroup;
 			children = (
 				364B66301A2792CD00E61D7A /* DandyIOSSwift */,
-				364B66481A2792CD00E61D7A /* DandyIOSSwiftTests */,
 				364B662F1A2792CD00E61D7A /* Products */,
 			);
 			sourceTree = "<group>";
@@ -118,23 +114,6 @@
 			isa = PBXGroup;
 			children = (
 				364B66321A2792CD00E61D7A /* Info.plist */,
-			);
-			name = "Supporting Files";
-			sourceTree = "<group>";
-		};
-		364B66481A2792CD00E61D7A /* DandyIOSSwiftTests */ = {
-			isa = PBXGroup;
-			children = (
-				364B664B1A2792CD00E61D7A /* DandyIOSSwiftTests.swift */,
-				364B66491A2792CD00E61D7A /* Supporting Files */,
-			);
-			path = DandyIOSSwiftTests;
-			sourceTree = "<group>";
-		};
-		364B66491A2792CD00E61D7A /* Supporting Files */ = {
-			isa = PBXGroup;
-			children = (
-				364B664A1A2792CD00E61D7A /* Info.plist */,
 			);
 			name = "Supporting Files";
 			sourceTree = "<group>";
@@ -213,11 +192,12 @@
 		364B66261A2792CD00E61D7A /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
-				LastUpgradeCheck = 0620;
+				LastUpgradeCheck = 0900;
 				ORGANIZATIONNAME = JacksHacks;
 				TargetAttributes = {
 					364B662D1A2792CD00E61D7A = {
 						CreatedOnToolsVersion = 6.2;
+						DevelopmentTeam = 9485HHLYPW;
 					};
 					364B66441A2792CD00E61D7A = {
 						CreatedOnToolsVersion = 6.2;
@@ -289,7 +269,6 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				364B664C1A2792CD00E61D7A /* DandyIOSSwiftTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -331,20 +310,30 @@
 				CLANG_CXX_LIBRARY = "libc++";
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
 				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
 				CLANG_WARN_CONSTANT_CONVERSION = YES;
 				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
 				CLANG_WARN_EMPTY_BODY = YES;
 				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
 				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
 				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
 				COPY_PHASE_STRIP = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu99;
 				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_OPTIMIZATION_LEVEL = 0;
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"DEBUG=1",
@@ -374,13 +363,21 @@
 				CLANG_CXX_LIBRARY = "libc++";
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
 				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
 				CLANG_WARN_CONSTANT_CONVERSION = YES;
 				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
 				CLANG_WARN_EMPTY_BODY = YES;
 				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
 				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
 				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
@@ -388,6 +385,7 @@
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
 				GCC_WARN_UNDECLARED_SELECTOR = YES;
@@ -397,6 +395,7 @@
 				IPHONEOS_DEPLOYMENT_TARGET = 8.2;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				SDKROOT = iphoneos;
+				SWIFT_OPTIMIZATION_LEVEL = "-Owholemodule";
 				TARGETED_DEVICE_FAMILY = "1,2";
 				VALIDATE_PRODUCT = YES;
 			};
@@ -406,10 +405,13 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				DEVELOPMENT_TEAM = 9485HHLYPW;
 				INFOPLIST_FILE = DandyIOSSwift/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
+				PRODUCT_BUNDLE_IDENTIFIER = "JacksHacks.$(PRODUCT_NAME:rfc1034identifier)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				TARGETED_DEVICE_FAMILY = 2;
+				SWIFT_VERSION = 4.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Debug;
 		};
@@ -417,10 +419,13 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				DEVELOPMENT_TEAM = 9485HHLYPW;
 				INFOPLIST_FILE = DandyIOSSwift/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
+				PRODUCT_BUNDLE_IDENTIFIER = "JacksHacks.$(PRODUCT_NAME:rfc1034identifier)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				TARGETED_DEVICE_FAMILY = 2;
+				SWIFT_VERSION = 4.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Release;
 		};
@@ -438,6 +443,7 @@
 				);
 				INFOPLIST_FILE = DandyIOSSwiftTests/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
+				PRODUCT_BUNDLE_IDENTIFIER = "JacksHacks.$(PRODUCT_NAME:rfc1034identifier)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/DandyIOSSwift.app/DandyIOSSwift";
 			};
@@ -453,6 +459,7 @@
 				);
 				INFOPLIST_FILE = DandyIOSSwiftTests/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
+				PRODUCT_BUNDLE_IDENTIFIER = "JacksHacks.$(PRODUCT_NAME:rfc1034identifier)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/DandyIOSSwift.app/DandyIOSSwift";
 			};

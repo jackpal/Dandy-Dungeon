@@ -8,7 +8,7 @@
 
 import Foundation
 
-enum Direction : Byte {
+enum Direction : UInt8 {
   case Up
   case UpRight
   case Right
@@ -127,10 +127,10 @@ class Player {
   }
 
   func eatFood() {
-		if food > 0 && health < HealthMax {
-      --food
+    if food > 0 && health < HealthMax {
+      food -= 1
       health = HealthMax
-		}
+    }
   }
 }
 
@@ -156,51 +156,49 @@ class World {
 
   init() {
     numPlayers = 1
-    for i in 0..<numPlayers {
+    for _ in 0..<numPlayers {
       player.append(Player())
     }
-    loadLevel(0)
+    loadLevel(index: 0)
   }
 
   func loadLevel(index : Int) {
     levelIndex = index
-    map = dungeon.loadLevel(index)
+    map = dungeon.loadLevel(levelIndex: index)
     setPlayerPositions()
   }
 
   func update() {
-		// time = DateTime.Now;
-
-		for i in 0..<numPlayers {
-      doArrowMove(player[i], isFirstMove: false)
-		}
-
-		doMonsters()
+	// time = DateTime.Now;
+    for i in 0..<numPlayers {
+      doArrowMove(p: player[i], isFirstMove: false)
+    }
+    doMonsters()
   }
 
   func isGameOver() -> Bool {
-		for i in 0..<numPlayers {
+    for i in 0..<numPlayers {
       if player[i].isAlive() {
         return false
       }
-		}
-		return true
+	}
+	return true
   }
 
- func doMonsters() {
-		let cam = getLevelCamera()
+  func doMonsters() {
+    let cam = getLevelCamera()
 
-		// update in a grid pattern
-		++gridStep;
-		let gridXOffset = gridStep % 3
-		let gridYOffset = (gridStep / 3) % 3
-		for var y = cam.startY + gridYOffset; y < cam.endY; y += 3 {
-      for var x = cam.startX + gridXOffset; x < cam.endX; x += 3 {
+    // update in a grid pattern
+    gridStep += 1;
+    let gridXOffset = gridStep % 3
+    let gridYOffset = (gridStep / 3) % 3
+    for y in stride(from:cam.startY + gridYOffset, to:cam.endY, by:3) {
+      for x in stride(from:cam.startX + gridXOffset, to:cam.endX, by:3) {
         let d = map[x, y]
         switch d {
         case .Monster0, .Monster1, .Monster2:
           // Move towards nearest player
-          let dir = getDirectionOfNearestPlayer(x, y:y)
+          let dir = getDirectionOfNearestPlayer(x: x, y:y)
           if dir != .None {
             var mx = 0
             var my = 0
@@ -209,9 +207,9 @@ class World {
             for test in 0..<3 {
               // Need to calculate in Int space to avoid overflow from addition.
               // (Is there an "unsafe addition" operator?
-              let newDirRaw = Byte((Int(dir.rawValue) + kTestDelta[test]) & 7)
+              let newDirRaw = UInt8((Int(dir.rawValue) + kTestDelta[test]) & 7)
               let newDir = Direction(rawValue: newDirRaw)!
-              (mx, my) = moveCoords(x, y, newDir)
+              (mx, my) = moveCoords(x: x, y: y, direction: newDir)
               d2 = map[mx, my]
               if d2 == .Space || d2.isPlayer() {
                 canMove = true
@@ -221,7 +219,7 @@ class World {
             if canMove {
               map[x, y] = .Space
               if d2.isPlayer() {
-                let p = player[d2.rawValue - Cell.Player0.rawValue]
+                let p = player[Int(d2.rawValue - Cell.Player0.rawValue)]
                 let monsterHit = Int(d.rawValue - Cell.Monster0.rawValue + 1)
                 if p.health > monsterHit {
                   p.health = p.health - monsterHit
@@ -229,7 +227,7 @@ class World {
                   p.health = 0
                   var remains = Cell.Space
                   if p.keys > 0 {
-                    --p.keys
+                    p.keys -= 1
                     remains = .Key
                   }
                   map[p.x, p.y] = remains
@@ -242,8 +240,8 @@ class World {
         case .Generator0, .Generator1, .Generator2:
           // Random generator
           if arc4random_uniform(10) < 3 {
-            let (gx, gy) = moveCoords(x, y,
-                Direction(rawValue: Byte(arc4random_uniform(4) * 2))!)
+            let (gx, gy) = moveCoords(x: x, y: y,
+                                      direction: Direction(rawValue: UInt8(arc4random_uniform(4) * 2))!)
             if map[gx,gy] == .Space {
               map[gx, gy] = Cell(rawValue:Cell.Monster0.rawValue
                   + (d.rawValue - Cell.Generator0.rawValue))!
@@ -251,7 +249,7 @@ class World {
           }
         default:
           // Swift requires non-empty default case.
-          let do_nothing = true
+          _ = true
         }
       }
 		}
@@ -307,7 +305,7 @@ class World {
       if pP.isVisible() {
         x += Float32(pP.x)
         y += Float32(pP.y)
-        ++liveCount
+        liveCount += 1
       }
     }
     if liveCount > 0 {
@@ -320,33 +318,34 @@ class World {
   func getLevelCamera() -> LevelCamera {
     let (cogX, cogY) = getCOG()
     let (startX, startY, endX, endY) =
-        getActive(cogX, cogY, levelViewW, levelViewH, map.width, map.height)
+      getActive(x: cogX, y: cogY, xView: levelViewW, yView: levelViewH,
+                xMax: map.width, yMax: map.height)
     return LevelCamera(cogX: cogX, cogY: cogY,
         startX: startX, startY: startY, endX: endX, endY: endY)
   }
 
   func changeLevel(delta : Int) {
-		let newLevel = min(25, max(0, levelIndex + delta))
-		loadLevel(newLevel)
+    let newLevel = min(25, max(0, levelIndex + delta))
+    loadLevel(index: newLevel)
   }
 
   func setPlayerPositions() {
-		var x = 0
-		var y = 0
-		if let (ux,uy) = map.find(.Up) {
+    var x = 0
+    var y = 0
+    if let (ux,uy) = map.find(cell: .Up) {
       x = ux
       y = uy
     } else {
       x = 4
       y = 4
-		}
-		for i in 0..<numPlayers {
-      var p = player[i]
+    }
+    for i in 0..<numPlayers {
+      let p = player[i]
       if p.isAlive() {
-        let (px, py) = moveCoords(x, y, Direction(rawValue: Byte(i * 2))!)
-        placeInWorld(i, x: px, y: py)
+        let (px, py) = moveCoords(x: x, y: y, direction: Direction(rawValue: UInt8(i * 2))!)
+        placeInWorld(index: i, x: px, y: py)
       }
-		}
+    }
   }
 
   func placeInWorld(index: Int, x : Int, y : Int) {
@@ -354,8 +353,8 @@ class World {
 		// Debug.MyAssert(p.IsAlive());
 		p.x = x
 		p.y = y
-    p.dir = Direction(rawValue: Byte(index * 2))!
-		map[p.x, p.y] = Cell(rawValue: Cell.Player0.rawValue + index)!
+    p.dir = Direction(rawValue: UInt8(index * 2))!
+		map[p.x, p.y] = Cell(rawValue: Cell.Player0.rawValue + UInt8(index))!
 		p.state = PlayerState.Normal
 		p.arrow.alive = false;
   }
@@ -368,7 +367,7 @@ class World {
         let delta = time - p.lastMoveTime
         if p.isVisible() && delta >= kTicksPerMove {
           p.lastMoveTime = time
-          let (x, y) = moveCoords(p.x, p.y, dir)
+          let (x, y) = moveCoords(x: p.x, y: p.y, direction: dir)
           let d = map[x,y]
           var bMove = false
           switch d  {
@@ -376,34 +375,34 @@ class World {
             bMove = true
           case .Door:
             if p.keys > 0 {
-              --p.keys
-              map.openDoor(x, y: y)
+              p.keys -= 1
+              map.openDoor(x: x, y: y)
               bMove = true
             }
           case .Key:
-            ++p.keys
+            p.keys += 1
             bMove = true
           case .Food:
-            ++p.food
+            p.food += 1
             bMove = true
           case .Money:
             p.score += 10
             bMove = true
           case .Bomb:
-            ++p.bombs
+            p.bombs += 1
             bMove = true
           case .Down:
             p.state = .InWarp
             map[p.x, p.y] = .Space
             if isPartyInWarp() {
-              changeLevel(1)
+              changeLevel(delta: 1)
             }
           default:
-            let dummy = true
+            _ = true
           }
           if bMove {
             map[p.x, p.y] = .Space
-            map[x, y] = Cell(rawValue: Byte(Cell.Player0.rawValue + stick))!
+            map[x, y] = Cell(rawValue:Cell.Player0.rawValue + UInt8(stick))!
           }
           p.x = x
           p.y = y
@@ -448,7 +447,7 @@ class World {
         p.arrow.x = p.x;
         p.arrow.y = p.y;
         p.arrow.dir = p.dir;
-        doArrowMove(p, isFirstMove: true)
+        doArrowMove(p: p, isFirstMove: true)
       }
     }
   }
@@ -462,9 +461,9 @@ class World {
 		if !isFirstMove {
       map[x, y] = .Space
     }
-		(x, y) = moveCoords(x, y, p.arrow.dir)
+    (x, y) = moveCoords(x: x, y: y, direction: p.arrow.dir)
 		let d = map[x,y]
-		if p.arrow.canHit(d) {
+    if p.arrow.canHit(c: d) {
       switch d {
       case .Bomb:
         doSmartBomb()
@@ -478,7 +477,7 @@ class World {
           if !p2.isAlive() {
             p2.health = HealthMax
             p2.state = .Normal
-            placeInWorld(i, x: x, y: y)
+            placeInWorld(index: i, x: x, y: y)
             foundPlayer = true
             break
           }
@@ -487,10 +486,10 @@ class World {
           map[x, y] = .Monster2
         }
       default:
-        let dummy = true
+        _ = true
       }
       p.arrow.alive = false
-		} else if p.arrow.canGo(d) {
+    } else if p.arrow.canGo(c: d) {
       p.arrow.x = x
       p.arrow.y = y
 
@@ -508,7 +507,7 @@ class World {
 		if index < numPlayers {
       let p = player[index]
       if p.bombs > 0 {
-        --p.bombs
+        p.bombs -= 1
         doSmartBomb()
       }
 		} else {

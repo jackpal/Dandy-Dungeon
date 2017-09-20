@@ -68,41 +68,38 @@ class TileMeshRenderer: Renderer {
   init(viewTilesX: Int, viewTilesY: Int) {
     self.viewTilesX = viewTilesX
     self.viewTilesY = viewTilesY
-    kTileBufferSize = (viewTilesX + 1) * (viewTilesY + 1)
+    // kTileBufferSize must be a multiple of 4
+    kTileBufferSize = ((viewTilesX + 1) * (viewTilesY + 1) + 3) & ~3
   }
 
   func createResources(device: MTLDevice) {
     // generate a large enough buffer to allow streaming vertices for 3 semaphore controlled frames
-    vertexBuffer = device.newBufferWithLength(MaxBuffers * kTileBufferSize, options: nil)
+    vertexBuffer = device.makeBuffer(length: MaxBuffers * kTileBufferSize)
     vertexBuffer.label = "vertices"
 
     let vertexUniformsLength = MaxBuffers * kTileUniformSize
-    vertexUniformsBuffer = device.newBufferWithLength(vertexUniformsLength, options: nil)
+    vertexUniformsBuffer = device.makeBuffer(length: vertexUniformsLength)
     vertexUniformsBuffer.label = "uniforms"
 
     let quadBufferLength = MaxBuffers * kQuadBufferSize
-    quadVertexBuffer = device.newBufferWithLength(quadBufferLength, options:nil)
+    quadVertexBuffer = device.makeBuffer(length: quadBufferLength)
     quadVertexBuffer.label = "a quad"
 
     texture = Texture3D(name:"dandy", ext:"png", depth:32)
-    if texture == nil || !texture.bind(device) {
+    if texture == nil || !texture.bind(device: device) {
       assert(false)
     }
 
-    let defaultLibrary = device.newDefaultLibrary()
-    let fragmentProgram = defaultLibrary?.newFunctionWithName("tileFragment")
-    let vertexProgram = defaultLibrary?.newFunctionWithName("tileVertex")
+    let defaultLibrary = device.makeDefaultLibrary()
+    let fragmentProgram = defaultLibrary?.makeFunction(name: "tileFragment")
+    let vertexProgram = defaultLibrary?.makeFunction(name: "tileVertex")
 
     let pipelineStateDescriptor = MTLRenderPipelineDescriptor()
     pipelineStateDescriptor.vertexFunction = vertexProgram
     pipelineStateDescriptor.fragmentFunction = fragmentProgram
-    pipelineStateDescriptor.colorAttachments[0].pixelFormat = .BGRA8Unorm
+    pipelineStateDescriptor.colorAttachments[0].pixelFormat = .bgra8Unorm
 
-    var pipelineError : NSError?
-    pipelineState = device.newRenderPipelineStateWithDescriptor(pipelineStateDescriptor, error: &pipelineError)
-    if (pipelineState == nil) {
-      println("Failed to create pipeline state, error \(pipelineError)")
-    }
+    pipelineState = try! device.makeRenderPipelineState(descriptor:pipelineStateDescriptor)
   }
 
   // Returns an unsafe mutable buffer pointer to the current tile data.
@@ -111,7 +108,7 @@ class TileMeshRenderer: Renderer {
     get {
       let pData = vertexBuffer.contents() + kTileBufferSize*bufferIndex
       return UnsafeMutableBufferPointer<CUnsignedChar>(
-        start: UnsafeMutablePointer<CUnsignedChar>(pData),
+        start: pData.assumingMemoryBound(to: CUnsignedChar.self),
         count:kTileBufferSize)
     }
   }
@@ -139,7 +136,7 @@ class TileMeshRenderer: Renderer {
   func updateUniforms(viewPixelsX: Float32, viewPixelsY: Float32) {
     // Write uniforms.
     let uData = vertexUniformsBuffer.contents()
-    let vuData = UnsafeMutablePointer<TileUniforms>(uData + kTileUniformSize * bufferIndex)
+    let vuData = (uData + kTileUniformSize * bufferIndex).assumingMemoryBound(to:TileUniforms.self)
 
     let pixelsX = viewPixelsX / Float32(viewTilesX)
     let pixelsY = viewPixelsY / Float32(viewTilesY)
@@ -153,12 +150,12 @@ class TileMeshRenderer: Renderer {
     vuData[0].tileStride = CUnsignedInt(tileStride)
     vuData[0].tileWScale = 1.0 / 32.0
 
-    updateQuad(tx, ty: ty)
+    updateQuad(tx: tx, ty: ty)
   }
 
   func updateQuad(tx: Float32, ty: Float32) {
-    let pV = UnsafeMutablePointer<TileVertex>(quadVertexBuffer.contents()
-      + kQuadBufferSize * bufferIndex)
+    let pV = (quadVertexBuffer.contents() + kQuadBufferSize * bufferIndex)
+        .assumingMemoryBound(to: TileVertex.self)
     pV[0].x = 0
     pV[0].y = -ty
     pV[0].u = 0
@@ -184,14 +181,14 @@ class TileMeshRenderer: Renderer {
     encoder.pushDebugGroup("draw tiles")
     encoder.setRenderPipelineState(pipelineState)
     encoder.setVertexBuffer(vertexBuffer,
-      offset: kTileBufferSize*bufferIndex, atIndex: 0)
+                            offset:kTileBufferSize*bufferIndex, index: 0)
     encoder.setVertexBuffer(vertexUniformsBuffer,
-      offset:kTileUniformSize * bufferIndex , atIndex: 1)
+                            offset:kTileUniformSize * bufferIndex , index: 1)
     encoder.setVertexBuffer(quadVertexBuffer,
-      offset:kQuadBufferSize * bufferIndex, atIndex: 2)
+                            offset:kQuadBufferSize * bufferIndex, index: 2)
 
-    encoder.setFragmentTexture(texture.texture, atIndex:0)
-    encoder.drawPrimitives(.TriangleStrip, vertexStart: 0,
+    encoder.setFragmentTexture(texture.texture, index:0)
+    encoder.drawPrimitives(type: .triangleStrip, vertexStart: 0,
       vertexCount:4, instanceCount: tileCount)
 
     encoder.popDebugGroup()
