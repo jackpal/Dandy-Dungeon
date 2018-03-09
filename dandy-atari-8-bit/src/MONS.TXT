@@ -1,0 +1,270 @@
+
+00010 ;MONSTER CODE
+00020 D.X      .BS 1       ;BASE
+00030 D.Y      .BS 1       ;BASE
+00040 D.IX     .BS 1
+00050 D.IY     .BS 1
+00060 D.AX     .BS 1
+00070 D.AY     .BS 1
+00080 D.C      .BS 1
+00090 D.NX     .BS 1
+00100 D.NY     .BS 1
+00110 D.COUNT  .BS 1
+00120 D.WAIT   .BS 1
+00130 D.STICK  .BS 1
+00140 D.MAXX   .EQ 21
+00150 D.MAXY   .EQ 11
+00160 D.INIT   LDA #3
+00170          STA D.COUNT
+00180          LDA #1
+00190          STA D.WAIT
+00200 ;SET UP MONSTER SPEED
+00210 ;ACCORDING TO DIFF.TYPE
+00220          LDX DIFF.TYPE
+00230          LDA DELAY.TAB,X
+00240          STA DELAY
+00250          RTS
+00260 DELAY    .BS 1
+00270 DELAY.TAB    .HS 0D080502
+00280 ;MOVE ALL DE MONSTERS
+00290 D.TICK   DEC D.WAIT
+00300          BEQ .90
+00310          RTS
+00320 .90      LDA DELAY
+00330          STA D.WAIT
+00340          INC D.COUNT
+00350          LDA D.COUNT
+00360          AND #3
+00370          STA D.COUNT
+00380          BNE .1
+00390          LDA UP.COORD
+00400          LSR
+00410          STA D.Y
+00420          LDA LF.COORD
+00430          LSR
+00440          STA D.X
+00450 .1       LDA D.COUNT
+00460          LSR
+00470          STA D.IY
+00480 ;-OUTER LOOP-
+00490 D.LOOP.Y LDA D.COUNT
+00500          AND #1
+00510          STA D.IX
+00520          LDA D.Y
+00530          CLC
+00540          ADC D.IY
+00550          STA D.AY
+00560 D.LOOP.X LDA D.X
+00570          CLC
+00580          ADC D.IX
+00590          STA D.AX
+00600 ;CHECK IF MONSTER THERE
+00610          LDX D.AX
+00620          LDY D.AY
+00630          JSR DUNGEON.WHATS.AT
+00640          CMP #9
+00650          BCC .1
+00660          CMP #12
+00670          BCC .2
+00680          BEQ .1
+00690          CMP #16
+00700          BCS .1
+00710 ;SPAWNER
+00720          JSR SPAWNER
+00730 .1       JMP D.LOOP.Q
+00740 ;YEP, IT'S A MONSTER
+00750 ; SEE WHO TO KILL
+00760 .2       STA D.C
+00770          LDY #4 ;NONE
+00780          LDA #200
+00790          STA AH
+00800          LDX G.N.P
+00810          DEX
+00820 .20      JSR CHECK.PLAYER
+00830          BCC .25 ;DEAD
+00840          LDA P.X.H,X
+00850          CMP D.AX
+00860          BCC .21
+00870          SEC
+00880          SBC D.AX
+00890          JMP .22
+00900 .21      LDA D.AX
+00910          SEC
+00920          SBC P.X.H,X
+00930 .22      STA AL
+00940          LDA P.Y.H,X
+00950          CMP D.AY
+00960          BCC .23
+00970          SEC
+00980          SBC D.AY
+00990          JMP .24
+01000 .23      LDA D.AY
+01010          SEC
+01020          SBC P.Y.H,X
+01030 .24      CLC
+01040          ADC AL
+01050          CMP AH
+01060          BCS .25
+01070 ;FOUND NEARER PLAYER
+01080          STA AH
+01090          TXA
+01100          TAY
+01110 .25      DEX
+01120          BPL .20
+01130 ;FOUND NEAREST PLAYER
+01140          TYA
+01150          CMP #4
+01160          BCC .30
+01170 ;NO PLAYERS ALIVE
+01180          JMP D.LOOP.Q
+01190 ;FIGURE OUT WHERE TO GO
+01200 .30      TAX
+01210          LDA D.AX
+01220          LDY #$C
+01230          CMP P.X.H,X
+01240          BEQ .31
+01250          BCS .32
+01260          LDY #4
+01270          JMP .31
+01280 .32      LDY #8
+01290 .31      STY D.STICK
+01300          LDA D.AY
+01310          LDY #3
+01320          CMP P.Y.H,X
+01330          BEQ .41
+01340          BCS .42
+01350          LDY #1
+01360          JMP .41
+01370 .42      LDY #2
+01380 .41      TYA
+01390          ORA D.STICK
+01400          TAY
+01410          LDA STICK.DIR,Y
+01420          STA D.STICK
+01430 ;NOW TRY ALL THREE DIRECTIONS
+01440          JSR TRY.MOVE
+01450          BCS D.LOOP.Q
+01460          LDA D.STICK
+01470          CLC
+01480          ADC #1
+01490          AND #7
+01500          JSR TRY.MOVE
+01510          BCS D.LOOP.Q
+01520          LDA D.STICK
+01530          SEC
+01540          SBC #1
+01550          AND #7
+01560          JSR TRY.MOVE
+01570 ;NEXT IX
+01580 D.LOOP.Q LDX D.IX
+01590          INX
+01600          INX
+01610          CPX #D.MAXX
+01620          BCS .1
+01630          STX D.IX
+01640          JMP D.LOOP.X
+01650 .1       LDX D.IY
+01660          INX
+01670          INX
+01680          CPX #D.MAXY
+01690          BCS .2
+01700          STX D.IY
+01710          JMP D.LOOP.Y
+01720 .2       RTS
+01730 ;CHECK MOVE (A=POSIBLE DIREC)
+01740 TRY.MOVE TAY
+01750          LDA D.AX
+01760          CLC
+01770          ADC M.DX,Y
+01780          STA D.NX
+01790          LDA D.AY
+01800          CLC
+01810          ADC M.DY,Y
+01820          STA D.NY
+01830          LDX D.NX
+01840          LDY D.NY
+01850          JSR DUNGEON.WHATS.AT
+01860          CMP #0  ;SPACE?
+01870          BEQ .50
+01880          CMP #20 ;ARROW?
+01890          BCC .4
+01900 ;        LDA DIFF.TYPE
+01910 ;        CMP #3
+01920 ;        BCS .49 ;GO AROUND
+01930          JMP .48 ;HALT
+01940 ;HIT A PLAYER?
+01950 .4       CMP #16
+01960          BCC .49
+01970          CMP #20
+01980          BCS .49
+01990 ;HIT A PLAYER!
+02000          SEC
+02010          SBC #16
+02020          TAX
+02030          LDA D.C
+02040          SEC
+02050          SBC #9
+02060          TAY
+02070          LDA #Z.MONSTER.BITE
+02080          JSR S.EFFECT
+02090 .46      DEC HEALTH,X
+02100          BNE .45
+02110          JSR KILL.PLAYER
+02120          JMP .47
+02130 .45      DEY
+02140          BPL .46
+02150 .47      LDX D.AX
+02160          LDY D.AY
+02170          LDA #0
+02180          JSR DUNGEON.PLOT
+02190          JMP .99 ;GOOD MOVE
+02200 ;MOVEMENT BLOCKED
+02210 .49      CLC
+02220          RTS
+02230 ;MOVEMENT CANCLED
+02240 .48      SEC
+02250          RTS
+02260 ;MOVE TO NEW POS
+02270 .50      LDX D.AX
+02280          LDY D.AY
+02290          LDA #0
+02300          JSR DUNGEON.PLOT
+02310          LDX D.NX
+02320          LDY D.NY
+02330          LDA D.C
+02340          JSR DUNGEON.PLOT
+02350 ;GOOD MOVE
+02360 .99      SEC
+02370          RTS
+02380 ;PROCESS A SPAWNER
+02390 ;D.AX, D.AY, A==13,14,15
+02400 SPAWN.C  .BS 1
+02410 SPAWNER  CLC
+02420          ADC #9-13
+02430          STA SPAWN.C
+02440          LDA RANDOM
+02450          AND #3
+02460          TAX
+02470          LDA DISK.Y,X
+02480          CLC
+02490          ADC D.AY
+02500          STA AH
+02510          TAY
+02520          LDA DISK.X,X
+02530          CLC
+02540          ADC D.AX
+02550          STA AL
+02560          TAX
+02570          JSR DUNGEON.WHATS.AT
+02580          CMP #0
+02590          BNE .1
+02600          LDX AL
+02610          LDY AH
+02620          LDA SPAWN.C
+02630          JSR DUNGEON.PLOT
+02640          LDA RANDOM
+02650          AND #3
+02660          CLC
+02670          ADC #Z.SPAWNING.1
+02680          JSR S.EFFECT
+02690 .1       RTS

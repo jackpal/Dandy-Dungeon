@@ -1,0 +1,186 @@
+
+00010 ;SETUP GAME
+00020 ;SET UP INITIAL CONFIGURATION
+00030 ;GAME 1 EASY
+00040 KEY.IOCB .EQ $70
+00050 KEYBOARD .AS "K:"
+00060          .DA #EOL
+00070 START    JSR TITLE
+00080          LDA #0
+00090          STA GAME.TYPE
+00100          LDA #1
+00110          STA DIFF.TYPE
+00120          LDX #KEY.IOCB
+00130          LDA #OPEN
+00140          STA ICCOM,X
+00150          LDA #KEYBOARD
+00160          STA ICBAL,X
+00170          LDA /KEYBOARD
+00180          STA ICBAH,X
+00190          LDA #4
+00200          STA ICAX1,X
+00210          JSR CIOV
+00220 RESTART  LDA #1
+00230          STA E.LEVEL
+00240          JSR DUNGEON.INIT
+00250          LDA #0
+00260          STA G.N.P
+00270          JSR SCORE.INIT
+00280 NEW.LEV  LDA E.LEVEL
+00290          LDX #0 ;NEW
+00300          LDY #0 ;GOING DOWN
+00310          JSR DUNGEON.SWAP.IN
+00320          STX C.X.H
+00330          STY C.Y.H
+00340          LDA #0
+00350          STA C.X.L
+00360          STA C.Y.L
+00370          JSR DUNGEON.SHOW
+00380 ;LOAD IN DIRECTIONS
+00390          LDX #160
+00400 .1       LDA DIRECTIONS-1,X
+00410          STA PLAY.PIC-1,X
+00420          DEX
+00430          BNE .1
+00440 ;WAIT FOR BUTTON PRESS
+00450 WAIT     JSR MODE.SHOW
+00460 ;WAIT FOR BUTTON PRESS
+00470 .3       LDA CONSOL
+00480          AND #7
+00490          CMP #7
+00500          BNE .40
+00510          JSR GET.CHAR
+00520          BCS .3
+00530 ;LEVEL SHIFT
+00540          CMP #'A
+00550          BCC .3
+00560          CMP #'Z+1
+00570          BCS .3
+00580 ;NEW START LEVEL -- READ IT IN
+00590          SEC
+00600          SBC #64
+00610          STA E.LEVEL
+00620          JMP NEW.LEV
+00630 ;
+00640 ;
+00650 ;SAVE PRESS, DEBOUNCE
+00660 .40      LDA CONSOL
+00670          PHA
+00680 .4       LDA CONSOL
+00690          AND #7
+00700          CMP #7
+00710          BNE .4
+00720          LDA JIFFY
+00730          CLC
+00740          ADC #10
+00750 .5       CMP JIFFY
+00760          BNE .5
+00770          PLA
+00780 ;DISPATCH
+00790 ;ALSO, LUSER'S ALIVE SO CANCLE
+00800 ;ATRACT MODE
+00810          LDX #0
+00820          STX ATRACT
+00830          CMP #3
+00840          BNE .61
+00850          LDX DIFF.TYPE
+00860          INX
+00870          CPX #4
+00880          BCC .62
+00890          LDX #0
+00900 .62      STX DIFF.TYPE
+00910          JMP WAIT
+00920 .61      CMP #5
+00930          BNE .63
+00940 ;SELECT GAME TYPE
+00950 ;LUSERS GET 0..4
+00960 ;TESTERS GET 0..6.
+00970          INC GAME.TYPE
+00980          LDX #4
+00990          LDA TESTING
+01000          BEQ .69
+01010          LDX #6
+01020 .69      CPX GAME.TYPE
+01030          BCS .68
+01040          LDX #0
+01050          STX GAME.TYPE
+01060 .68      JMP WAIT
+01070 .63      CMP #6
+01080          BEQ START.SOMETHING
+01090          JMP WAIT ;BOGUS BUTTON
+01100 START.SOMETHING
+01110          JSR DUNGEON.QUIT
+01120          LDA GAME.TYPE
+01130          CMP #6
+01140          BNE .1
+01150 ;EXIT TO SYSTEM
+01160          LDX #KEY.IOCB
+01170          LDA #CLOSE
+01180          STA ICCOM,X
+01190          JSR CIOV
+01200          LDA TESTING
+01210          BEQ .2
+01220          RTS
+01230 .2       JMP (DOSVEC)
+01240 .1       CMP #4
+01250          BEQ .3
+01260          BCS .4
+01270 ;START A -GAME-
+01280          CLC
+01290          ADC #1
+01300          STA G.N.P
+01310          JMP GAME
+01320 ;START AN -EDIT-
+01330 .3       LDA #0
+01340          STA G.N.P
+01350          JMP EDIT
+01360 ;SAVE THE OBJECT CODE
+01370 ; (MY, AREN'T WE LAZY!)
+01380 .4       JMP MAKE.LOAD.FILE
+01390 ;TABLES, ETC.
+01400 GAME.TYPE    .BS 1
+01410 DIFF.TYPE    .BS 1
+01420 G.N.P    .BS 1
+01430 GAME.TYPE.OFF
+01440          .DA #0,#14,#28,#42,#56,#70,#84
+01450 GAME.TYPE.TAB
+01460 ;             12345678901234
+01470          .AT "One Player    "
+01480          .AT "Two Players   "
+01490          .AT "Three Players "
+01500          .AT "Four Players  "
+01510          .AT "Dungeon Editor"
+01520          .AT "Make Load File"
+01530          .AT "Exit to System"
+01540 DIFF.TYPE.OFF
+01550          .DA #0,#7,#14,#21
+01560 DIFF.TYPE.TAB
+01570          .AT "TrivialEasy   Hard   Deadly "
+01580 DIRECTIONS
+01590          .AT "  Letter A-Z starts game at that level  "
+01600          .AT "   OPTION changes degree of difficulty  "
+01610          .AT "   SELECT changes number of players     "
+01620          .AT "   START  begins game                   "
+01630 ;SHOW MODE
+01640 MODE.SHOW
+01650          LDX GAME.TYPE
+01660          LDA GAME.TYPE.OFF,X
+01670          TAX
+01680          LDY #0
+01690 .1       LDA GAME.TYPE.TAB,X
+01700          STA MODE.LABEL,Y
+01710          INX
+01720          INY
+01730          CPY GAME.TYPE.OFF+1
+01740          BCC .1
+01750          LDX DIFF.TYPE
+01760          LDA DIFF.TYPE.OFF,X
+01770          TAX
+01780          LDY #0
+01790 .2       LDA DIFF.TYPE.TAB,X
+01800          STA DIFF.LABEL,Y
+01810          INX
+01820          INY
+01830          CPY #7
+01840          BCC .2
+01850          RTS

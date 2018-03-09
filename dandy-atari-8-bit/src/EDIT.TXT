@@ -1,0 +1,292 @@
+
+00010 ;EDITOR MODULE
+00020 EDIT.X   .BS 1
+00030 EDIT.Y   .BS 1
+00040 E.LEVEL  .BS 1
+00050 E.CHAR   .BS 1
+00060 EDIT
+00070          JSR DUNGEON.INIT
+00080          LDA #0
+00090          STA G.N.P
+00100          JSR SCORE.INIT
+00110          LDX #160
+00120 .1       LDA ED.INST-1,X
+00130          STA PLAY.PIC-1,X
+00140          DEX
+00150          BNE .1
+00160 ;INFORM DUNGEON.SWAP.IN IT'S A
+00170 ;BOGUS SWAP IN (CRUDE)
+00180          LDA #$FF
+00190          STA BOGUS.SWAP.IN
+00200          LDA E.LEVEL
+00210          LDX #0 ;NEW
+00220          LDY #0 ;GOING DOWN
+00230          JSR DUNGEON.SWAP.IN
+00240          LDA #0
+00250          STA C.X.L
+00260          STX C.X.H
+00270          STA C.Y.L
+00280          STY C.Y.H
+00290 ;SET UP CHAR TO PLOT
+00300 E.C.P    LDA #0
+00310          STA E.CHAR
+00320 ;
+00330 EDIT.LOOP
+00340          JSR DUNGEON.SHOW
+00350 ;WAIT FOR A TICK
+00360          LDA RTCLOK+2
+00370 .2       CMP RTCLOK+2
+00380          BEQ .2
+00390 ;GET STICK
+00400          LDA STICK0
+00410          ASL
+00420          TAY
+00430          CLC
+00440          LDA C.X.L
+00450          ADC P.X.TAB,Y
+00460          STA C.X.L
+00470          LDA C.X.H
+00480          ADC P.X.TAB+1,Y
+00490          STA C.X.H
+00500          CLC
+00510          LDA C.Y.L
+00520          ADC P.Y.TAB,Y
+00530          STA C.Y.L
+00540          LDA C.Y.H
+00550          ADC P.Y.TAB+1,Y
+00560          STA C.Y.H
+00570 CLIP
+00580          LDA C.Y.H
+00590          CMP #29
+00600          BCS .2
+00610          CMP #1
+00620          BCS .1
+00630          LDA #1
+00640          JMP .1
+00650 .2       LDA #28
+00660 .1       STA C.Y.H
+00670          LDA C.X.H
+00680          CMP #58
+00690          BCS .4
+00700          CMP #1
+00710          BCS .3
+00720          LDA #1
+00730          JMP .3
+00740 .4       LDA #58
+00750 .3       STA C.X.H
+00760 ;TWIDDLE TO MAKE CURSOR
+00770          LDA C.X.H
+00780          STA EDIT.X
+00790          LDA C.Y.H
+00800          STA EDIT.Y
+00810 ;set cursor position
+00820          LDX #E.X.C-PLAY.PIC
+00830          LDA EDIT.X
+00840          JSR TYPE.NUMBER
+00850          LDX #E.Y.C-PLAY.PIC
+00860          LDA #29
+00870          SEC
+00880          SBC EDIT.Y
+00890          JSR TYPE.NUMBER
+00900 ;SAVE OLD CHAR
+00910          LDX EDIT.X
+00920          LDY EDIT.Y
+00930          JSR DUNGEON.WHATS.AT
+00940          PHA
+00950          TAX
+00960          LDA TRANS.INT,X
+00970          STA E.O.C
+00980 ;SHOW CURSOR
+00990          LDX EDIT.X
+01000          LDY EDIT.Y
+01010          LDA #16
+01020          JSR DUNGEON.PLOT
+01030          LDA RTCLOK+2
+01040 .5       CMP RTCLOK+2
+01050          BEQ .5
+01060          PLA
+01070 ;IF TRIGGER, PLOT E.CHAR
+01080 ;ELSE RESTORE OLD CHAR
+01090          LDX STRIG0
+01100          BNE .6
+01110          LDA E.CHAR
+01120 .6       LDX EDIT.X
+01130          LDY EDIT.Y
+01140          JSR DUNGEON.PLOT
+01150 ;CHECK KEYBOARD
+01160          JSR GET.CHAR
+01170          BCC PARSE.CHAR
+01180 ;CHECK BREAK KEY
+01190          JSR CHECK.BREAK
+01200 ;CHECK CONSOL KEYS
+01210          LDA CONSOL
+01220          CMP #7
+01230          BEQ .7
+01240          JMP EDIT.QUIT
+01250 .7       JMP EDIT.LOOP
+01260 PARSE.CHAR
+01270          CMP #'-     ;UP
+01280          BNE .2
+01290          LDX E.LEVEL
+01300          CPX #2
+01310          BCC .16
+01320          DEX
+01330 .16      STX E.LEVEL
+01340          TXA
+01350          CLC
+01360          ADC #$20
+01370          STA LEVEL.LABEL
+01380          JMP EDIT.LOOP
+01390 .2       CMP #'=     ;DOWN
+01400          BNE .3
+01410          LDY #0
+01420          LDX E.LEVEL
+01430          CPX #26
+01440          BCS .16
+01450          INX
+01460          JMP .16
+01470 .3       CMP #'R
+01480          BNE .4
+01490 ;READ IN LEVEL
+01500 .31      LDY #0
+01510          LDX E.LEVEL
+01520          TXA
+01530          LDX #0
+01540          JSR DUNGEON.SWAP.IN
+01550          STX C.X.H
+01560          STY C.Y.H
+01570          JMP EDIT.LOOP
+01580 .4       CMP #'W
+01590          BNE .5
+01600 ;WRITE THIS LEVEL
+01610          LDX #0      ;NEW(!)
+01620          LDA E.LEVEL
+01630          JSR DUNGEON.SWAP.OUT
+01640 ;AND READ IT ('CAUSE WRITE IS
+01650 ;DESTRUCTIVE)
+01660          JMP .31
+01670 .5       CMP #'Q
+01680          BNE E2INT
+01690 ;QUIT OUT OF EDITOR
+01700 EDIT.QUIT
+01710          JSR DUNGEON.QUIT
+01720          JMP RESTART
+01730 ;TRANSLATE TO INTERNAL CODE
+01740 E2INT    LDX #HIGH.TRANS
+01750 .71      CMP TRANS.EXT,X
+01760          BEQ .72
+01770          DEX
+01780          BPL .71
+01790          LDX #0
+01800 .72      STX E.CHAR
+01810          LDA TRANS.INT,X
+01820          STA E.C.C
+01830 ;
+01840 .9       JMP EDIT.LOOP
+01850 P.X.TAB  .DA 0,0,0,0,0   ;0-4
+01860          .DA 64,64,64,0  ;5-8
+01870          .DA -64,-64,-64 ;9-11
+01880          .DA 0,0,0,0     ;12-15
+01890 P.Y.TAB  .DA 0,0,0,0,0   ;0-4
+01900          .DA 64,-64,0,0  ;5-8
+01910          .DA 64,-64,0    ;9-11
+01920          .DA 0,64,-64,0  ;12-15
+01930 DEFAULT.DUNGEON
+01940          LDA #29 ;FOR Y=29 TO 0
+01950          STA AH
+01960 .81      LDA #59 ;FOR X=59 TO 0
+01970          STA AL
+01980 .82      LDA #0
+01990          LDX AL
+02000          LDY AH
+02010          JSR DUNGEON.PLOT
+02020          DEC AL  ;NEXT X
+02030          BPL .82
+02040          DEC AH  ;NEXY Y
+02050          BPL .81
+02060 ;PUT IN LEFT AND RIGHT WALLS
+02070          LDA #29 ;FOR Y=29 TO 0
+02080          STA AH
+02090 .83      LDA #1
+02100          LDY AH
+02110          LDX #0
+02120          JSR DUNGEON.PLOT
+02130          LDA #1
+02140          LDY AH
+02150          LDX #59
+02160          JSR DUNGEON.PLOT
+02170          DEC AH  ;NEXT Y
+02180          BPL .83
+02190 ;AND TOP AND BOTTOM
+02200          LDA #59 ;FOR X=59 TO 0
+02210          STA AL
+02220 .84      LDA #1
+02230          LDX AL
+02240          LDY #0
+02250          JSR DUNGEON.PLOT
+02260          LDA #1
+02270          LDX AL
+02280          LDY #29
+02290          JSR DUNGEON.PLOT
+02300          DEC AL  ;NEXT X
+02310          BPL .84
+02320 ;AND UP
+02330          LDA #3
+02340          LDX #5
+02350          LDY #5
+02360          JSR DUNGEON.PLOT
+02370 ;AND DOWN
+02380          LDA #4
+02390          LDX #8
+02400          LDY #5
+02410          JSR DUNGEON.PLOT
+02420          RTS
+02430 ;TABLE OF CHARS TO TRANSLATE
+02440 ;NUMERICAL ORDER
+02450 TRANS.EXT
+02460          .AS " *OUDK+$S123HABC"
+02470 HIGH.TRANS .EQ *-TRANS.EXT-1
+02480 ED.INST
+02490          .AT '  Type "'
+02500 TRANS.INT
+02510          .AT " *oudk+$s123habc"
+02520          .AT '" to draw item  '
+02530          .AT '    "-" up level    '
+02540          .AT '"=" down level      '
+02550          .AT '    "R" read level  '
+02560          .AT '"W" write level     '
+02570          .AT '    "Q" quit editor '
+02580          .AT ' ('
+02590 E.X.C    .EQ PLAY.PIC+*-ED.INST
+02600          .AT 'xx,'
+02610 E.Y.C    .EQ PLAY.PIC+*-ED.INST
+02620          .AT 'yy)="'
+02630 E.O.C    .EQ PLAY.PIC+*-ED.INST
+02640          .AT 'c"<--"'
+02650 E.C.C    .EQ PLAY.PIC+*-ED.INST
+02660          .AT ' "   '
+02670 ;PUT (A) -> PLAY.PIC[X,X+1]
+02680 ;DECIMAL
+02690 TYPE.NUMBER
+02700          CMP #10
+02710          BCC .1
+02720          LDY #0
+02730 .2       SEC
+02740          SBC #10
+02750          INY
+02760          CMP #10
+02770          BCS .2
+02780          PHA
+02790          TYA
+02800          CLC
+02810          ADC #$10 ;TO INTERNAL
+02820          STA PLAY.PIC,X
+02830          JMP .3
+02840 .1       PHA
+02850          LDA #0
+02860          STA PLAY.PIC,X
+02870 .3       PLA
+02880          CLC
+02890          ADC #$10
+02900          STA PLAY.PIC+1,X
+02910          RTS

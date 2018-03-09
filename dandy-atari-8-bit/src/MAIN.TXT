@@ -1,0 +1,37 @@
+
+00010          .LI OFF
+00020 ;MAIN MODULE FOR DANDY
+00030 ;(C)1983 JOHN HOWARD PALEVICH
+00040 BASE     .EQ $3000
+00050 BOC      .EQ BASE+$2800
+00060 AL       .EQ $F0
+00070 AH       .EQ $F1
+00080 BL       .EQ $F2
+00090 BH       .EQ $F3
+00100 DL       .EQ $F4
+00110 DH       .EQ $F5
+00120          .IN "D:SYSTEXT"
+00130 ;        .OR BOC-3
+00140 ;        .TF "X:"
+00150 ;        JMP START
+00160          .OR BOC
+00170 CHAR.SET .EQ *
+00180          .IN "D:CHARSET"
+00190          .IN "D:DUNGEON"
+00200          .IN "D:EDIT"
+00210          .IN "D:GAME"
+00220          .IN "D:DINIT"
+00230          .IN "D:DSWAP"
+00240          .IN "D:DSHOW"
+00250          .IN "D:MONS"
+00260          .IN "D:VBI"
+00270          .IN "D:SOUND"
+00280          .IN "D:EFFECTS"
+00290          .IN "D:SCORE"
+00300          .IN "D:HAND"
+00310          .IN "D:MIS"
+00320          .IN "D:SETUP"
+00330          .IN "D:TITLE"
+00340 TESTING  .HS FF
+00350 EOC      .EQ *-1
+00360          .IN "D:MAKELF"

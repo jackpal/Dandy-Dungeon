@@ -1,0 +1,195 @@
+
+00010 ;DUNGEON SHOW MODULE
+00020 ;TIMES 120 -- X=X COORD
+00030 ;             Y=Y COORD
+00040 ;RETURNS [YX] = ADDRESS
+00050 T.120    TXA
+00060          CLC
+00070          ADC T.120.L,Y
+00080          TAX
+00090          LDA #0
+00100          ADC T.120.H,Y
+00110          TAY
+00120          RTS
+00130 ;DOUBLE X & Y W/O MESSING A
+00140 TIMES.TWO
+00150          PHA
+00160          TXA
+00170          ASL
+00180          TAX
+00190          TYA
+00200          ASL
+00210          TAY
+00220          PLA
+00230          RTS
+00240 ;DUNGEON SHOW
+00250 ; [X,Y] - "CENTER COORD"
+00260 ; RETURN UP.COORD, DN.COORD
+00270 ;        LF.COORD, RT.COORD
+00280 DUNGEON.SHOW
+00290 ; CHECK BOUNDS
+00300          LDA #1
+00310          STA DIRTY.COORD
+00320          LDA C.X.L
+00330          AND #$7F
+00340          LSR
+00350          LSR
+00360          LSR
+00370          LSR
+00380          LSR
+00390          STA H.COORD
+00400          LDA C.Y.L
+00410          AND #$7F
+00420          LSR
+00430          LSR
+00440          LSR
+00450          LSR
+00460          STA V.COORD
+00470 ;X (IN CHARS) TO X, Y TO Y
+00480          LDA C.X.L
+00490          ASL
+00500          LDA C.X.H
+00510          ROL
+00520          TAX
+00530          LDA C.Y.L
+00540          ASL
+00550          LDA C.Y.H
+00560          ROL
+00570          TAY
+00580          CPX #20
+00590          BCS .1
+00600          LDX #20
+00610          LDA #0
+00620          STA H.COORD
+00630 .1       CPY #10
+00640          BCS .2
+00650          LDY #10
+00660          LDA #0
+00670          STA V.COORD
+00680 .2       CPX #100
+00690          BCC .3
+00700          LDX #99
+00710          LDA #3
+00720          STA H.COORD
+00730 .3       CPY #50
+00740          BCC .4
+00750          LDY #49
+00760          LDA #7
+00770          STA V.COORD
+00780 .4       TXA
+00790          SEC
+00800          SBC #20
+00810          STA LF.COORD
+00820          CLC
+00830          ADC #39
+00840          STA RT.COORD
+00850          TYA
+00860          SEC
+00870          SBC #10
+00880          STA UP.COORD
+00890          CLC
+00900          ADC #19
+00910          STA DN.COORD
+00920          LDA #3
+00930          SEC
+00940          SBC H.COORD
+00950          STA H.COORD
+00960          LDA #0
+00970          STA DIRTY.COORD
+00980 ;CHECK DUNGEON.VIEW
+00990          LDA DUNGEON.VIEW
+01000          BNE .99
+01010 ;O.K. WAIT A JIFFY AND UN-BLANK
+01020 ;THE SCREEN
+01030          LDA JIFFY
+01040 .98      CMP JIFFY
+01050          BEQ .98
+01060          LDA #$22
+01070          STA SDMCTL
+01080          STA DMACTL
+01090          LDA #$FF
+01100          STA DUNGEON.VIEW
+01110 .99      RTS
+01120 UP.COORD .BS 1
+01130 LF.COORD .BS 1
+01140 RT.COORD .BS 1
+01150 DN.COORD .BS 1
+01160 DIRTY.COORD .BS 1
+01170 H.COORD  .BS 1
+01180 V.COORD  .BS 1
+01190 C.X.L    .BS 1
+01200 C.X.H    .BS 1
+01210 C.Y.L    .BS 1
+01220 C.Y.H    .BS 1
+01230 ;WHATS.AT [X,Y]
+01240 ; RETURN 0-11 (CHAR CODE)
+01250 DUNGEON.WHATS.AT
+01260          JSR TIMES.TWO
+01270          JSR D.S.SAVE
+01280          JSR T.120
+01290          STX AL
+01300          STY AH
+01310          LDY #0
+01320          LDA (AL),Y
+01330          LSR
+01340          LSR
+01350          JMP D.S.RESTORE
+01360 ;PLOT  [X,Y] <-- A
+01370 D.P.Y    .BS 1
+01380 D.P.X    .BS 1
+01390 DUNGEON.PLOT
+01400          JSR TIMES.TWO
+01410          JSR D.S.SAVE
+01420          STY D.P.Y
+01430          STX D.P.X
+01440          PHA
+01450          JSR T.120
+01460          STX AL
+01470          STY AH
+01480          PLA
+01490          ASL
+01500          ASL
+01510          LDY #0
+01520          STA (AL),Y
+01530          CLC
+01540          ADC #2
+01550          INY
+01560          STA (AL),Y
+01570          LDY D.P.Y
+01580          LDX D.P.X
+01590          INY         ;2ND ROW
+01600          PHA
+01610          JSR T.120
+01620          STX AL
+01630          STY AH
+01640          PLA
+01650          LDY #0
+01660          SEC
+01670          SBC #1
+01680          STA (AL),Y
+01690          INY
+01700          CLC
+01710          ADC #2
+01720          STA (AL),Y
+01730          JMP D.S.RESTORE
+01740 ;DELETE [X,Y] <- 0
+01750 DUNGEON.DELETE
+01760          LDA #0
+01770          JMP DUNGEON.PLOT
+01780 ;SAVE AL, AH
+01790 D.S.SPACE    .BS 2
+01800 D.S.SAVE PHA
+01810          LDA AL
+01820          STA D.S.SPACE
+01830          LDA AH
+01840          STA D.S.SPACE+1
+01850          PLA
+01860          RTS
+01870 D.S.RESTORE
+01880          PHA
+01890          LDA D.S.SPACE
+01900          STA AL
+01910          LDA D.S.SPACE+1
+01920          STA AH
+01930          PLA
+01940          RTS

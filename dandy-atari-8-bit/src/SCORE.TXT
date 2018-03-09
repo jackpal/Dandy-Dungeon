@@ -1,0 +1,226 @@
+
+00010 ;SCORE MODULE
+00020 SC.A     .BS 6
+00030 SC.SLOP  .BS 1
+00040 RES.LIST .BS 5
+00050 SCORE.INIT
+00060          LDA #$10
+00070          LDX #5
+00080 .1       STA P.SCORE,X
+00090          STA P.SCORE+40,X
+00100          STA P.SCORE+80,X
+00110          STA P.SCORE+120,X
+00120          DEX
+00130          BPL .1
+00140 ;NO DEAD YET
+00150          LDX #4
+00160          LDA #$FF
+00170 .9       STA RES.LIST,X
+00180          DEX
+00190          BPL .9
+00200 ;REMOVE SCORE LINES OF NON-
+00210 ;PLAYERS
+00220          LDX G.N.P
+00230          CPX #4
+00240          BCS .3 ;ERASE NONE
+00250          LDA SC.REM.T,X
+00260          TAX
+00270          LDA #0
+00280 .2       CPX #160
+00290          BEQ .3
+00300          STA PLAY.PIC,X
+00310          INX
+00320          JMP .2
+00330 .3       RTS
+00340 SC.REM.T .DA #0,#40,#80,#120
+00350 SC.OFF   .DA #5,#45,#85,#125
+00360 ;INCREMENT SCORE
+00370 ; A == 0-255, SCORE INCREMENT
+00380 ; X == PLAYER TO INC
+00390 SCORE.INC
+00400          PHA
+00410          LDA SC.OFF,X
+00420          TAX
+00430 ;CONVERT TO A 3 CHAR #
+00440          LDA #0
+00450          LDY #5
+00460 .55      STA SC.A,Y
+00470          DEY
+00480          BPL .55
+00490          PLA
+00500 .1       CMP #100
+00510          BCC .2
+00520          INC SC.A+3
+00530          SEC
+00540          SBC #100
+00550          JMP .1
+00560 .2       CMP #10
+00570          BCC .3
+00580          INC SC.A+4
+00590          SEC
+00600          SBC #10
+00610          JMP .2
+00620 .3       STA SC.A+5
+00630 ;ADD TO SCORE
+00640          LDA #0
+00650          STA SC.SLOP
+00660          LDY #5
+00670 .4       LDA SC.A,Y
+00680          CLC
+00690          ADC SC.SLOP
+00700          ADC P.SCORE,X
+00710          PHA
+00720          CMP #$1A
+00730          BCC .41
+00740          PLA
+00750          SEC
+00760          SBC #10
+00770          PHA
+00780          LDA #1
+00790          JMP .42
+00800 .41      LDA #0
+00810 .42      STA SC.SLOP
+00820          PLA
+00830          STA P.SCORE,X
+00840          DEX
+00850          DEY
+00860          BPL .4
+00870          RTS
+00880 ;PUT MESSAGE ON SCREEN
+00890 SC.MSG   .AT "Food:# Bombs:# Keys:#"
+00900          .AT "<<Player's in Limbo>>"
+00910          .AT "--Player-is-in-Warp--"
+00920 SC.MS.OF .DA #20,#41,#62
+00930 SC.MS.X  .BS 1
+00940 SCORE.MSG
+00950          STX SC.MS.X
+00960          TAY
+00970          LDA SC.MS.OF,Y
+00980          TAY
+00990          LDA #20
+01000          STA SC.SLOP
+01010          LDA SCORE.OFF,X
+01020          CLC
+01030          ADC #20
+01040          TAX
+01050 .1       LDA SC.MSG,Y
+01060          STA P.HAND,X
+01070          DEX
+01080          DEY
+01090          DEC SC.SLOP
+01100          BPL .1
+01110          LDX SC.MS.X
+01120          RTS
+01130 ;KILL A PLAYER
+01140 KILL.PLAYER
+01150          LDA #0
+01160          STA HEALTH,X
+01170          TXA
+01180          PHA
+01190          LDA #1
+01200          JSR SCORE.MSG
+01210          PLA
+01220          PHA
+01230          LDX #3
+01240 .9       LDA RES.LIST,X
+01250          STA RES.LIST+1,X
+01260          DEX
+01270          BPL .9
+01280          PLA
+01290          STA RES.LIST
+01300          TAX
+01310          LDA P.Y.H,X
+01320          TAY
+01330          LDA P.X.H,X
+01340          TAX
+01350          LDA #0
+01360          JSR DUNGEON.PLOT
+01370          LDA #Z.DEAD.PLAYER
+01380          JSR S.EFFECT
+01390 ;RIGHT! -- CHECK IF WE OUGHT
+01400 ;TO WARP NOW BY SEEING IF ALL
+01410 ;LIVE PLAYERS ARE IN WARP.
+01420          LDX G.N.P
+01430          LDY #0 ;NO LIFE YET
+01440 .90      DEX
+01450          BMI .91
+01460          LDA HEALTH,X
+01470          BEQ .90
+01480          LDY #1 ;SEEN LIFE
+01490          LDA P.IN.WARP,X
+01500          BNE .90
+01510 ;SOMEONE ALIVE AND ON LEVEL
+01520          RTS
+01530 ;DID WE SEE ANYBODY LEFT ALIVE?
+01540 .91      CPY #0
+01550          BEQ .92 ;ALL DEAD
+01560 ;PEOPLE IN WARP, SO START IT
+01570          LDA #40
+01580          STA WARP.TIMER
+01590 .92      RTS
+01600 ;RESERECT OLDEST DEAD PLAYER
+01610 R.O.X    .BS 1
+01620 R.O.Y    .BS 1
+01630 RESERECT.OLD
+01640          STX R.O.X
+01650          STY R.O.Y
+01660          LDX #3
+01670 .1       LDA RES.LIST,X
+01680          CMP #$FF
+01690          BNE .2
+01700          DEX
+01710          BPL .1
+01720 ;NO DEAD
+01730          LDX R.O.X
+01740          LDY R.O.Y
+01750          SEC
+01760          RTS
+01770 ;FOUND DEAD
+01780 .2       TAY
+01790          LDA #$FF
+01800          STA RES.LIST,X
+01810          TYA
+01820          PHA
+01830          TAX
+01840          LDA R.O.X
+01850          STA P.X.H,X
+01860          LDA R.O.Y
+01870          STA P.Y.H,X
+01880          LDA #5
+01890          STA HEALTH,X
+01900          LDA #0
+01910          JSR SCORE.MSG
+01920 ;UPDATE INVENTORY
+01930          JSR INVENTORY
+01940          PLA
+01950          LDX R.O.X
+01960          LDY R.O.Y
+01970          CLC
+01980          RTS
+01990 ;CHECK BREAK KEY FLAG -- IF SET
+02000 ; AND IF TESTING, THEN CLEAR IT
+02010 ; AND BRK (TO DEBUGGER).
+02020 CHECK.BREAK
+02030          LDA #$80
+02040          CMP BRKKEY
+02050          BNE .1
+02060          RTS
+02070 .1       STA BRKKEY
+02080          LDA TESTING
+02090          BEQ .2
+02100          BRK
+02110 .2       RTS
+02120 ;DISPLAY INVENTORY FOR PLAYER X
+02130 INVENTORY
+02140          LDA SCORE.OFF,X
+02150          TAY
+02160          LDA N.FOOD,X
+02170          ORA #$10
+02180          STA P.HAND+5,Y
+02190          LDA N.BOMBS,X
+02200          ORA #$10
+02210          STA P.HAND+13,Y
+02220          LDA N.KEYS,X
+02230          ORA #$10
+02240          STA P.HAND+20,Y
+02250          RTS

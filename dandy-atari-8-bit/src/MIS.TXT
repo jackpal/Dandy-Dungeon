@@ -1,0 +1,234 @@
+
+00010 ;MIS - MISSILE HANDLER
+00020 MIS.BASE .EQ 20 ; TO 27
+00030 M.DX     .HS 0001010100FFFFFF
+00040 M.DY     .HS FFFF0001010100FF
+00050 MX       .BS 4
+00060 MY       .BS 4
+00070 M.ON     .BS 4
+00080 M.DIR    .BS 4
+00090 M.INIT   LDX G.N.P
+00100          DEX
+00110          LDA #0
+00120 .1       STA M.ON,X
+00130          DEX
+00140          BPL .1
+00150          RTS
+00160 M.CLEAN.UP
+00170          LDX G.N.P
+00180          DEX
+00190          STX P
+00200 .1       LDX P
+00210          LDA M.ON,X
+00220          BEQ .2
+00230          LDA MY,X
+00240          TAY
+00250          LDA MX,X
+00260          TAX
+00270          LDA #0
+00280          JSR DUNGEON.PLOT
+00290 .2       DEC P
+00300          BPL .1
+00310          RTS
+00320 M.TICK   LDX G.N.P
+00330          STX P
+00340 M.LOOP   DEC P
+00350          BPL .1
+00360          RTS
+00370 .1       LDX P
+00380          LDA M.ON,X
+00390          BEQ .2
+00400          JMP M.FLY
+00410 .2       JSR CHECK.PLAYER
+00420          BCC M.LOOP
+00430          LDA STRIG0,X
+00440          BEQ .3
+00450 ;NO TRIG DOWN -- PUNT
+00460 .20      JMP M.LOOP
+00490 .3       LDA STICK0,X
+00500          CMP #15
+00510          BEQ .20
+00520          TAY
+00530          LDA STICK.DIR,Y
+00540          STA M.DIR,X
+00550          TAY
+00560 ;FIRING NOW
+00570          LDA #1
+00580          STA M.ON,X
+00590          LDA #Z.SHOOT
+00600          JSR S.EFFECT
+00610          LDA P.X.H,X
+00620          CLC
+00630          ADC M.DX,Y
+00640          STA MX,X
+00650          LDA P.Y.H,X
+00660          CLC
+00670          ADC M.DY,Y
+00680          STA MY,X
+00690          JMP M.CHECK
+00700 M.FLY    LDA RTCLOK+2
+00710          AND #$3
+00720          BEQ .1
+00730          JMP M.LOOP
+00740 .1       LDA MY,X
+00750          TAY
+00760          LDA MX,X
+00770          TAX
+00780          LDA #0
+00790          JSR DUNGEON.PLOT
+00800          LDX P
+00810          LDA M.DIR,X
+00820          TAY
+00830          LDA MX,X
+00840          CLC
+00850          ADC M.DX,Y
+00860          STA MX,X
+00870          LDA MY,X
+00880          CLC
+00890          ADC M.DY,Y
+00900          STA MY,X
+00910 M.CHECK  LDA MY,X
+00920          ASL
+00930          CMP UP.COORD
+00940          BCC .1
+00950          CMP DN.COORD
+00960          BEQ .2
+00970          BCS .1
+00980 .2       LDA MX,X
+00990          ASL
+01000          CMP LF.COORD
+01010          BCC .1
+01020          CMP RT.COORD
+01030          BEQ M.ON.SCR
+01040          BCS .1
+01050          JMP M.ON.SCR
+01060 .1       LDA #0
+01070          STA M.ON,X
+01080          JMP M.LOOP
+01090 M.ON.SCR LDA MY,X
+01100          TAY
+01110          LDA MX,X
+01120          TAX
+01130          JSR DUNGEON.WHATS.AT
+01140          CMP #0
+01150          BNE M.QUIT
+01160          LDX P
+01170          LDA M.DIR,X
+01180          CLC
+01190          ADC #MIS.BASE
+01200          PHA
+01210          LDA MY,X
+01220          TAY
+01230          LDA MX,X
+01240          TAX
+01250          PLA
+01260          JSR DUNGEON.PLOT
+01270          JMP M.LOOP
+01280 ;MISSILE HIT SOMETHING
+01290 M.QUIT   PHA
+01300          LDA #0
+01310          LDX P
+01320          STA M.ON,X
+01330          PLA
+01340          CMP #8
+01350          BCC .1
+01360          CMP #20
+01370          BCC .2
+01380 .1       JMP M.LOOP ;WALLS
+01390 .2       PHA
+01400          SEC
+01410          SBC #8
+01420          ASL
+01430          TAY
+01440          LDA M.H.TAB,Y
+01450          STA AL
+01460          LDA M.H.TAB+1,Y
+01470          STA AH
+01480          PLA
+01490          JMP (AL)
+01500 M.H.TAB  .DA M.SMART.BOMB ;8
+01510          .DA M.MONSTER    ;9
+01520          .DA M.MONSTER    ;10
+01530          .DA M.MONSTER    ;11
+01540          .DA M.HEART.GOLD ;12
+01550          .DA M.SPAWNER    ;13
+01560          .DA M.SPAWNER    ;14
+01570          .DA M.SPAWNER    ;15
+01580          .DA M.PLAYER     ;16
+01590          .DA M.PLAYER     ;17
+01600          .DA M.PLAYER     ;18
+01610          .DA M.PLAYER     ;19
+01620 M.SMART.BOMB
+01630          LDX P ;ERASE ENTRY
+01640          LDA MY,X
+01650          TAY
+01660          LDA MX,X
+01670          TAX
+01680          LDA #0
+01690          JSR DUNGEON.PLOT
+01700          LDX P
+01710          JSR EXPLODE
+01720 .11      JMP M.LOOP
+01730 M.MONSTER
+01740          PHA
+01750          LDA #10
+01760          LDX P
+01770          JSR SCORE.INC
+01780          LDX P
+01790          LDA MY,X
+01800          TAY
+01810          LDA MX,X
+01820          TAX
+01830          PLA
+01840          PHA
+01850          CLC
+01860          ADC #Z.HIT.MONSTER.1-9
+01870          JSR S.EFFECT
+01880          PLA
+01890          CMP #10
+01900          BCS .21
+01910          LDA #0
+01920          JMP .22
+01930 .21      SEC
+01940          SBC #1
+01950 .22      JSR DUNGEON.PLOT
+01960          JMP M.LOOP
+01970 .3       CMP #16
+01980 M.PLAYER
+01990          LDA #Z.HIT.PLAYER
+02000          JSR S.EFFECT
+02010          JMP M.LOOP
+02020 M.SPAWNER
+02030          PHA
+02040          LDX P
+02050          LDA MY,X
+02060          TAY
+02070          LDA MX,X
+02080          TAX
+02090          PLA
+02100          SEC
+02110          SBC #1
+02120          CMP #13
+02130          BCS .1
+02140          LDA #0
+02150 .1       JSR DUNGEON.PLOT
+02160          LDA #200
+02170          LDX P
+02180          JSR SCORE.INC
+02190          JMP M.LOOP
+02200 M.HEART.GOLD
+02210          LDX P
+02220          LDA MY,X
+02230          TAY
+02240          LDA MX,X
+02250          TAX
+02260          JSR RESERECT.OLD
+02270          BCC .1
+02280          LDA #11 ;Monster (ha!)
+02290          JMP .2
+02300 .1       CLC
+02310          ADC #16
+02320 .2       JSR DUNGEON.PLOT
+02330          LDA #Z.WARP.IN
+02340          JSR S.EFFECT
+02350          JMP M.LOOP
