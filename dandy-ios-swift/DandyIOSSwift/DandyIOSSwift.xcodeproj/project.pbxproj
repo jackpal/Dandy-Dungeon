@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		047BD0772198B8BB0048B962 /* GameControllerController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 047BD0762198B8BB0048B962 /* GameControllerController.swift */; };
 		364225C91A2A2B8400E329C4 /* Texture.swift in Sources */ = {isa = PBXBuildFile; fileRef = 364225C81A2A2B8400E329C4 /* Texture.swift */; };
 		364B66341A2792CD00E61D7A /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 364B66331A2792CD00E61D7A /* AppDelegate.swift */; };
 		364B66361A2792CD00E61D7A /* GameViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 364B66351A2792CD00E61D7A /* GameViewController.swift */; };
@@ -36,6 +37,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		047BD0762198B8BB0048B962 /* GameControllerController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameControllerController.swift; sourceTree = "<group>"; };
 		364225C81A2A2B8400E329C4 /* Texture.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Texture.swift; sourceTree = "<group>"; };
 		364B662E1A2792CD00E61D7A /* DandyIOSSwift.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = DandyIOSSwift.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		364B66321A2792CD00E61D7A /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -106,6 +108,7 @@
 				364B66311A2792CD00E61D7A /* Supporting Files */,
 				36ACA7691A2BB784001E819B /* Game.swift */,
 				36ACA76B1A2BBA15001E819B /* Dungeon.swift */,
+				047BD0762198B8BB0048B962 /* GameControllerController.swift */,
 			);
 			path = DandyIOSSwift;
 			sourceTree = "<group>";
@@ -192,7 +195,7 @@
 		364B66261A2792CD00E61D7A /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
-				LastUpgradeCheck = 0900;
+				LastUpgradeCheck = 1010;
 				ORGANIZATIONNAME = JacksHacks;
 				TargetAttributes = {
 					364B662D1A2792CD00E61D7A = {
@@ -259,6 +262,7 @@
 				36ACA7681A2AA055001E819B /* Texture3D.swift in Sources */,
 				36ACA7611A2A4FB5001E819B /* Atlas.swift in Sources */,
 				364225C91A2A2B8400E329C4 /* Texture.swift in Sources */,
+				047BD0772198B8BB0048B962 /* GameControllerController.swift in Sources */,
 				369E99761A3532A300F3869A /* Renderer.swift in Sources */,
 				364B66361A2792CD00E61D7A /* GameViewController.swift in Sources */,
 				364B668F1A279F2900E61D7A /* Level.swift in Sources */,
@@ -315,12 +319,14 @@
 				CLANG_WARN_BOOL_CONVERSION = YES;
 				CLANG_WARN_COMMA = YES;
 				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
 				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
 				CLANG_WARN_EMPTY_BODY = YES;
 				CLANG_WARN_ENUM_CONVERSION = YES;
 				CLANG_WARN_INFINITE_RECURSION = YES;
 				CLANG_WARN_INT_CONVERSION = YES;
 				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
 				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
 				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
 				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
@@ -347,7 +353,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 8.2;
+				IPHONEOS_DEPLOYMENT_TARGET = 12.1;
 				MTL_ENABLE_DEBUG_INFO = YES;
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = iphoneos;
@@ -368,12 +374,14 @@
 				CLANG_WARN_BOOL_CONVERSION = YES;
 				CLANG_WARN_COMMA = YES;
 				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
 				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
 				CLANG_WARN_EMPTY_BODY = YES;
 				CLANG_WARN_ENUM_CONVERSION = YES;
 				CLANG_WARN_INFINITE_RECURSION = YES;
 				CLANG_WARN_INT_CONVERSION = YES;
 				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
 				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
 				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
 				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
@@ -393,7 +401,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 8.2;
+				IPHONEOS_DEPLOYMENT_TARGET = 12.1;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				SDKROOT = iphoneos;
 				SWIFT_OPTIMIZATION_LEVEL = "-Owholemodule";
