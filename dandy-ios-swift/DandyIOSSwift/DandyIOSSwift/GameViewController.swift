@@ -51,7 +51,7 @@ class GameViewController: UIViewController {
     commandQueue.label = "main command queue"
 
     timer = CADisplayLink(target: self, selector: #selector(GameViewController.renderLoop))
-    timer.add(to: RunLoop.main, forMode: .defaultRunLoopMode)
+    timer.add(to: RunLoop.main, forMode: RunLoop.Mode.default)
   }
 
   override func viewDidLayoutSubviews() {

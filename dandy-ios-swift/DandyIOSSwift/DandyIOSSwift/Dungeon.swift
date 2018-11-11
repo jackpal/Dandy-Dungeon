@@ -20,7 +20,7 @@ class Dungeon {
     let levelStart = levelIndex * levelSize
     let levelEnd = levelStart + levelSize
     let subRange = levelStart..<levelEnd
-    level.read(data:levelData.subdata(in: Range(subRange)))
+    level.read(data:levelData.subdata(in: subRange))
     return level
   }
 }
