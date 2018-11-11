@@ -29,6 +29,8 @@ class GameViewController: UIViewController {
 
   let gameControllerController = GameControllerController()
 
+  override var prefersHomeIndicatorAutoHidden: Bool { get {return true} }
+
   override func viewDidLoad() {
     super.viewDidLoad()
 
