@@ -27,6 +27,8 @@ class GameViewController: UIViewController {
 
   let world : World = World()
 
+  let gameControllerController = GameControllerController()
+
   override func viewDidLoad() {
     super.viewDidLoad()
 
