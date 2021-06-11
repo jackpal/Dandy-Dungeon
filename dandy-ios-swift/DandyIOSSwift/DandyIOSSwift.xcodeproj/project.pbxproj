@@ -201,7 +201,7 @@
 					364B662D1A2792CD00E61D7A = {
 						CreatedOnToolsVersion = 6.2;
 						DevelopmentTeam = 9485HHLYPW;
-						LastSwiftMigration = 1010;
+						LastSwiftMigration = 1300;
 					};
 					364B66441A2792CD00E61D7A = {
 						CreatedOnToolsVersion = 6.2;
@@ -425,7 +425,7 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = "JacksHacks.$(PRODUCT_NAME:rfc1034identifier)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				SWIFT_VERSION = 4.2;
+				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Debug;
@@ -443,7 +443,7 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = "JacksHacks.$(PRODUCT_NAME:rfc1034identifier)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				SWIFT_VERSION = 4.2;
+				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Release;
