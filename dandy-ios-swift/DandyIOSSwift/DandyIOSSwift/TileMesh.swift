@@ -40,20 +40,32 @@ struct TileVertex {
   var v : Float32 = 0
 }
 
+extension BinaryInteger {
+  func alignUp(_ alignment:Self) -> Self {
+    ((self + alignment - 1) / alignment) * alignment
+  }
+}
 
 class TileMeshRenderer: Renderer {
   var viewTilesX :Int
   var viewTilesY :Int
 
+#if os(macOS) || targetEnvironment(simulator)
+  let vertexBufferOffsetAlignment = 256
+#else
+  // Really just sizeof(type), but 16 works for all types.
+  let vertexBufferOffsetAlignment = 16
+#endif
+
   // Bytes for the tiles.
-  var kTileBufferSize :Int
+  let kTileBufferSize: Int
 
   // Bytes for the tile uniforms
-  let kTileUniformSize = 32
+  let kTileUniformSize: Int
 
   // bytes for a single quad
 
-  let kQuadBufferSize = 64
+  let kQuadBufferSize: Int
 
   var vertexBuffer: MTLBuffer! = nil
   var _tileStride: CUnsignedInt = 0
@@ -68,8 +80,9 @@ class TileMeshRenderer: Renderer {
   init(viewTilesX: Int, viewTilesY: Int) {
     self.viewTilesX = viewTilesX
     self.viewTilesY = viewTilesY
-    // kTileBufferSize must be a multiple of 4
-    kTileBufferSize = ((viewTilesX + 1) * (viewTilesY + 1) + 3) & ~3
+    kTileBufferSize = ((viewTilesX + 1) * (viewTilesY + 1)).alignUp(vertexBufferOffsetAlignment)
+    kTileUniformSize = 32.alignUp(vertexBufferOffsetAlignment)
+    kQuadBufferSize = 64.alignUp(vertexBufferOffsetAlignment)
   }
 
   func createResources(device: MTLDevice) {
