@@ -15,6 +15,7 @@ protocol GameControllerDelegate {
   func move(player: Int, dir: Direction)
   func fire(player: Int)
   func eatFood(player: Int)
+  func menu(player: Int)
 }
 
 class GameControllerController: NSObject {
@@ -72,7 +73,8 @@ class GameControllerController: NSObject {
       let virtualConfiguration = GCVirtualControllerConfiguration()
       virtualConfiguration.elements = [GCInputDirectionalDpad,
                                        GCInputButtonA,
-                                       GCInputButtonB]
+                                       GCInputButtonB,
+                                       GCInputButtonMenu]
       virtualController = GCVirtualController(configuration: virtualConfiguration)
       
       // Connect to the virtual controller if no physical controllers are available.
@@ -100,7 +102,27 @@ class GameControllerController: NSObject {
       guard let strongController = weakController else {
         return
       }
-      strongController.controllerEatFood(pressed)
+      if pressed {
+        strongController.controllerAttack()
+      }
+    }
+    keyboard.keyboardInput?.button(forKeyCode: .keyF)?.valueChangedHandler = {
+      (_ button: GCDeviceButtonInput, _ value: Float, _ pressed: Bool) -> Void in
+      guard let strongController = weakController else {
+        return
+      }
+      if pressed {
+        strongController.controllerEatFood()
+      }
+    }
+    keyboard.keyboardInput?.button(forKeyCode: .escape)?.valueChangedHandler = {
+      (_ button: GCDeviceButtonInput, _ value: Float, _ pressed: Bool) -> Void in
+      guard let strongController = weakController else {
+        return
+      }
+      if pressed {
+        strongController.controllerMenu()
+      }
     }
   }
   
@@ -184,40 +206,51 @@ class GameControllerController: NSObject {
   
   func registerGameController(_ gameController: GCController) {
     
-    var buttonA: GCControllerButtonInput?
-    var buttonB: GCControllerButtonInput?
-    var rightTrigger: GCControllerButtonInput?
+    var buttonFire: GCControllerButtonInput?
+    var buttonEatFood: GCControllerButtonInput?
+    var buttonMenu: GCControllerButtonInput?
     
     weak var weakController = self
     gamePadCurrent = gameController
     
     if let gamepad = gameController.extendedGamepad {
       self.gamePadLeft = gamepad.dpad
-      buttonA = gamepad.buttonA
-      buttonB = gamepad.buttonB
-      rightTrigger = gamepad.rightTrigger
+      buttonFire = gamepad.buttonA
+      buttonEatFood = gamepad.buttonB
+      buttonMenu = gamepad.buttonMenu
     } else if let gamepad = gameController.microGamepad {
       self.gamePadLeft = gamepad.dpad
-      buttonA = gamepad.buttonA
-      buttonB = gamepad.buttonX
+      buttonFire = gamepad.buttonA
+      buttonEatFood = gamepad.buttonX
+      buttonMenu = gamepad.buttonMenu
     }
     
-    buttonA?.valueChangedHandler = {(_ button: GCControllerButtonInput, _ value: Float, _ pressed: Bool) -> Void in
+    buttonFire?.valueChangedHandler = {(_ button: GCControllerButtonInput, _ value: Float, _ pressed: Bool) -> Void in
       guard let strongController = weakController else {
         return
       }
-      strongController.controllerEatFood(pressed)
+      if pressed {
+        strongController.controllerAttack()
+      }
     }
     
-    buttonB?.valueChangedHandler = {(_ button: GCControllerButtonInput, _ value: Float, _ pressed: Bool) -> Void in
+    buttonEatFood?.valueChangedHandler = {(_ button: GCControllerButtonInput, _ value: Float, _ pressed: Bool) -> Void in
       guard let strongController = weakController else {
         return
       }
-      strongController.controllerAttack()
+      if pressed {
+        strongController.controllerEatFood()
+      }
     }
     
-    rightTrigger?.pressedChangedHandler = buttonB?.valueChangedHandler
-  }
+    buttonMenu?.valueChangedHandler = {(_ button: GCControllerButtonInput, _ value: Float, _ pressed: Bool) -> Void in
+      guard let strongController = weakController else {
+        return
+      }
+      if pressed {
+        strongController.controllerMenu()
+      }
+    }  }
   
   func unregisterGameController() {
     gamePadLeft = nil
@@ -258,16 +291,16 @@ class GameControllerController: NSObject {
   
   // MARK: - Controlling the Character
   
-  func controllerEatFood(_ controllerActivated: Bool) {
-    if controllerActivated, let delegate = delegate {
-      delegate.eatFood(player: 0)
-    }
+  func controllerEatFood() {
+    delegate?.eatFood(player: 0)
   }
   
   func controllerAttack() {
-    if let delegate = delegate {
-      delegate.fire(player: 0)
-    }
+    delegate?.fire(player: 0)
+  }
+  
+  func controllerMenu() {
+    delegate?.menu(player: 0)
   }
   
 }

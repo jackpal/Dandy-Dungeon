@@ -192,5 +192,9 @@ class GameViewController: UIViewController, GameControllerDelegate {
   func eatFood(player: Int) {
     world.eatFood(index: player)
   }
+  
+  func menu(player: Int) {
+    world.changeLevel(delta: 1)
+  }
 
 }
