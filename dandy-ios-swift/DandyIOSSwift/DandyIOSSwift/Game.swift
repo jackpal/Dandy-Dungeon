@@ -104,7 +104,6 @@ struct LevelCamera {
 class Arrow {
   enum State {
     case none
-    case triggered
     case inFlight
   }
   var state : State = .none
@@ -146,6 +145,7 @@ class Player {
   var state : PlayerState = .Normal
   var lastMoveTime : Int = 0
   var dir : Direction = .None
+  var firing: Bool = false
   var arrow : Arrow = Arrow()
   
   init() {}
@@ -369,6 +369,7 @@ class World {
     p.x = x
     p.y = y
     p.dir = Direction(rawValue: UInt8(index * 2))!
+    p.firing = false
     map[p.x, p.y] = Cell(rawValue: Cell.Player0.rawValue + UInt8(index))!
     p.state = .Normal
     p.arrow.state = .none;
@@ -454,27 +455,32 @@ class World {
     }
   }
   
-  func fire(index: Int) {
+  func fire(index: Int, pressed: Bool) {
     if index < numPlayers {
       let p = player[index]
-      if !p.arrow.alive {
-        p.arrow.state = .triggered
-        p.arrow.x = p.x;
-        p.arrow.y = p.y;
-        p.arrow.dir = p.dir;
+      if p.isAlive() {
+        p.firing = pressed
       }
     }
   }
-  
+
   func doArrowMove(p: Player) {
+    var justFired = false
+    if p.firing && !p.arrow.alive {
+      justFired = true
+      p.arrow.state = .inFlight
+      p.arrow.x = p.x;
+      p.arrow.y = p.y;
+      p.arrow.dir = p.dir;
+    }
+    
+    guard p.arrow.alive else {
+      return
+    }
+
     var x = p.arrow.x
     var y = p.arrow.y
-    switch p.arrow.state {
-    case .none:
-      return
-    case .triggered:
-      p.arrow.state = .inFlight
-    case .inFlight:
+    if !justFired {
       map[x, y] = .Space
     }
     (x, y) = moveCoords(x: x, y: y, direction: p.arrow.dir)

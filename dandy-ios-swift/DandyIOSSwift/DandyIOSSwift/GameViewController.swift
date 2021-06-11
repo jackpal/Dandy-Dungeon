@@ -185,8 +185,8 @@ class GameViewController: UIViewController, GameControllerDelegate {
     world.move(stick: player, dir: dir)
   }
   
-  func fire(player: Int) {
-    world.fire(index: player)
+  func fire(player: Int, pressed: Bool) {
+    world.fire(index: player, pressed: pressed)
   }
   
   func eatFood(player: Int) {

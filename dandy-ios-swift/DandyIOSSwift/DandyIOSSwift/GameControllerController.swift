@@ -12,9 +12,13 @@ import UIKit
 import simd
 
 protocol GameControllerDelegate {
+  // Called once per pollTime.
   func move(player: Int, dir: Direction)
-  func fire(player: Int)
+  // Called When state changes.
+  func fire(player: Int, pressed: Bool)
+  // Event
   func eatFood(player: Int)
+  // Event
   func menu(player: Int)
 }
 
@@ -104,9 +108,7 @@ class GameControllerController: NSObject {
       guard let strongController = weakController else {
         return
       }
-      if pressed {
-        strongController.controllerAttack()
-      }
+      strongController.controllerAttack(pressed: pressed)
     }
     keyboard.keyboardInput?.button(forKeyCode: .keyF)?.valueChangedHandler = {
       (_ button: GCDeviceButtonInput, _ value: Float, _ pressed: Bool) -> Void in
@@ -170,7 +172,7 @@ class GameControllerController: NSObject {
           return
         }
         
-        strongController.controllerAttack()
+        strongController.controllerAttack(pressed: pressed)
       }
     }
   }
@@ -232,9 +234,7 @@ class GameControllerController: NSObject {
       guard let strongController = weakController else {
         return
       }
-      if pressed {
-        strongController.controllerAttack()
-      }
+      strongController.controllerAttack(pressed: pressed)
     }
     
     buttonEatFood?.valueChangedHandler = {(_ button: GCControllerButtonInput, _ value: Float, _ pressed: Bool) -> Void in
@@ -298,8 +298,8 @@ class GameControllerController: NSObject {
     delegate?.eatFood(player: 0)
   }
   
-  func controllerAttack() {
-    delegate?.fire(player: 0)
+  func controllerAttack(pressed: Bool) {
+    delegate?.fire(player: 0, pressed: pressed)
   }
   
   func controllerMenu() {
