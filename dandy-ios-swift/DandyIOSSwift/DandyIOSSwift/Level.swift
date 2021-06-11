@@ -107,7 +107,10 @@ class Level {
   }
 
   func read(data:Data) {
-    data.withUnsafeBytes {(b: UnsafePointer<UInt8>)->Void in
+    guard data.count >= (height * width / 2) else {
+      return
+    }
+    data.withUnsafeBytes {b in
       var bi = 0
       var i = 0
       for _ in 0..<height {
