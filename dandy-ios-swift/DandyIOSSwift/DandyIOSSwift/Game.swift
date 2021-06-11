@@ -44,23 +44,23 @@ let kDirTable: [Direction] = [
 extension Direction {
   static func direction<X : Numeric & Comparable>(deltaX dx:X, deltaY dy: X) -> Direction {
     var bitField = 0
-
+    
     if dy > X.zero {
       bitField |= 8
     } else if dy < 0 {
       bitField |= 4
     }
-
+    
     if dx > 0 {
       bitField |= 2
     } else if dx < 0 {
       bitField |= 1
     }
-
+    
     //     7 0 1
     //     6 + 2
     //     5 4 3
-
+    
     return kDirTable[bitField]
   }
 }
@@ -70,16 +70,16 @@ let kOffsets: [(x:Int, y:Int)] = [
   (0,-1), (1,-1), (1,0), (1,1), (0,1), (-1,1), (-1,0), (-1,-1)]
 
 func moveCoords(x : Int, y : Int, direction: Direction) -> (x: Int, y: Int) {
-		if direction != .None {
-      // Up is zero, clockwise
-      let offset = kOffsets[Int(direction.rawValue)]
-      let x2 = x + offset.x
-      let y2 = y + offset.y
-      return (x2, y2)
-    } else {
-      // Debug.MyDebugBreak();
-      return (x, y)
-		}
+  if direction != .None {
+    // Up is zero, clockwise
+    let offset = kOffsets[Int(direction.rawValue)]
+    let x2 = x + offset.x
+    let y2 = y + offset.y
+    return (x2, y2)
+  } else {
+    // Debug.MyDebugBreak();
+    return (x, y)
+  }
 }
 
 struct LevelCamera {
@@ -89,9 +89,9 @@ struct LevelCamera {
   var startY : Int
   var endX : Int
   var endY : Int
-
+  
   init(cogX : Float32, cogY : Float32,
-      startX : Int, startY : Int, endX : Int, endY : Int) {
+       startX : Int, startY : Int, endX : Int, endY : Int) {
     self.cogX = cogX
     self.cogY = cogY
     self.startX = startX
@@ -102,20 +102,28 @@ struct LevelCamera {
 }
 
 class Arrow {
-  var alive : Bool = false
+  enum State {
+    case none
+    case triggered
+    case inFlight
+  }
+  var state : State = .none
+  var alive : Bool {
+    state != .none
+  }
   var x : Int = 0
   var y : Int = 0
   var dir : Direction = .None
-
+  
   func canGo(c: Cell) -> Bool
   {
-		return c == .Space
+    return c == .Space
   }
-
+  
   func canHit(c: Cell) -> Bool
   {
-		return c.rawValue >= Cell.Bomb.rawValue
-      && c.rawValue <= Cell.Generator2.rawValue
+    return c.rawValue >= Cell.Bomb.rawValue
+    && c.rawValue <= Cell.Generator2.rawValue
   }
 }
 
@@ -139,17 +147,17 @@ class Player {
   var lastMoveTime : Int = 0
   var dir : Direction = .None
   var arrow : Arrow = Arrow()
-
+  
   init() {}
-
+  
   func isAlive() -> Bool {
-		return health > 0
+    return health > 0
   }
-
+  
   func isVisible() -> Bool {
-		return health > 0 && state == .Normal;
+    return health > 0 && state == .Normal;
   }
-
+  
   func eatFood() {
     if food > 0 && health < HealthMax {
       food -= 1
@@ -175,9 +183,9 @@ class World {
   var numPlayers : Int = 0 // Current number of players
   // Frame count, starts at 0
   var time: Int = 0
-
+  
   var gridStep : Int = 0
-
+  
   init() {
     numPlayers = 1
     for _ in 0..<numPlayers {
@@ -185,34 +193,34 @@ class World {
     }
     loadLevel(index: 0)
   }
-
+  
   func loadLevel(index : Int) {
     levelIndex = index
     map = dungeon.loadLevel(levelIndex: index)
     setPlayerPositions()
   }
-
+  
   func update() {
     time += 1
-	// time = DateTime.Now;
+    // time = DateTime.Now;
     for i in 0..<numPlayers {
-      doArrowMove(p: player[i], isFirstMove: false)
+      doArrowMove(p: player[i])
     }
     doMonsters()
   }
-
+  
   func isGameOver() -> Bool {
     for i in 0..<numPlayers {
       if player[i].isAlive() {
         return false
       }
-	}
-	return true
+    }
+    return true
   }
-
+  
   func doMonsters() {
     let cam = getLevelCamera()
-
+    
     // update in a grid pattern
     gridStep += 1;
     let gridXOffset = gridStep % 3
@@ -269,7 +277,7 @@ class World {
                                       direction: Direction(rawValue: UInt8(arc4random_uniform(4) * 2))!)
             if map[gx,gy] == .Space {
               map[gx, gy] = Cell(rawValue:Cell.Monster0.rawValue
-                  + (d.rawValue - Cell.Generator0.rawValue))!
+                                 + (d.rawValue - Cell.Generator0.rawValue))!
             }
           }
         default:
@@ -277,14 +285,14 @@ class World {
           _ = true
         }
       }
-		}
+    }
   }
-
+  
   func getDirectionOfNearestPlayer(x : Int, y : Int) -> Direction {
-		var bestX = 0
-		var bestY = 0
-		var bestDistance = 10000
-		for i in 0..<numPlayers {
+    var bestX = 0
+    var bestY = 0
+    var bestDistance = 10000
+    for i in 0..<numPlayers {
       let pP = player[i]
       if pP.isVisible() {
         let distance = abs(pP.x - x) + abs(pP.y - y)
@@ -302,10 +310,10 @@ class World {
     let dy = bestY - y
     return Direction.direction(deltaX: dx, deltaY: dy)
   }
-
+  
   func getCOG() -> (x: Float32, y: Float32) {
     var x : Float32 = 0.0
-		var y : Float32 = 0.0
+    var y : Float32 = 0.0
     var liveCount : Int = 0
     for i in 0..<numPlayers {
       let pP = player[i]
@@ -321,21 +329,21 @@ class World {
     }
     return (x: x, y: y)
   }
-
+  
   func getLevelCamera() -> LevelCamera {
     let (cogX, cogY) = getCOG()
     let (startX, startY, endX, endY) =
-      getActive(x: cogX, y: cogY, xView: levelViewW, yView: levelViewH,
-                xMax: map.width, yMax: map.height)
+    getActive(x: cogX, y: cogY, xView: levelViewW, yView: levelViewH,
+              xMax: map.width, yMax: map.height)
     return LevelCamera(cogX: cogX, cogY: cogY,
-        startX: startX, startY: startY, endX: endX, endY: endY)
+                       startX: startX, startY: startY, endX: endX, endY: endY)
   }
-
+  
   func changeLevel(delta : Int) {
     let newLevel = min(25, max(0, levelIndex + delta))
     loadLevel(index: newLevel)
   }
-
+  
   func setPlayerPositions() {
     var x = 0
     var y = 0
@@ -354,20 +362,20 @@ class World {
       }
     }
   }
-
+  
   func placeInWorld(index: Int, x : Int, y : Int) {
-		let p = player[index]
-		// Debug.MyAssert(p.IsAlive());
-		p.x = x
-		p.y = y
+    let p = player[index]
+    // Debug.MyAssert(p.IsAlive());
+    p.x = x
+    p.y = y
     p.dir = Direction(rawValue: UInt8(index * 2))!
-		map[p.x, p.y] = Cell(rawValue: Cell.Player0.rawValue + UInt8(index))!
-		p.state = PlayerState.Normal
-		p.arrow.alive = false;
+    map[p.x, p.y] = Cell(rawValue: Cell.Player0.rawValue + UInt8(index))!
+    p.state = .Normal
+    p.arrow.state = .none;
   }
-
+  
   func move(stick: Int, dir: Direction) {
-		if stick < 4 && dir != .None {
+    if stick < 4 && dir != .None {
       if stick < numPlayers {
         let p = player[stick]
         p.dir = dir
@@ -417,12 +425,12 @@ class World {
       }
     }
   }
-
+  
   func isPartyInWarp() -> Bool {
-		// At least one player in warp, and no players visible
-		var atLeastOneWarp = false
-		var atLeastOneVisible = false
-		for i in 0..<numPlayers {
+    // At least one player in warp, and no players visible
+    var atLeastOneWarp = false
+    var atLeastOneVisible = false
+    for i in 0..<numPlayers {
       if player[i].isVisible() {
         atLeastOneVisible = true
         break
@@ -430,46 +438,47 @@ class World {
       if player[i].isAlive() && player[i].state == .InWarp {
         atLeastOneWarp = true
       }
-		}
-		if atLeastOneWarp && !atLeastOneVisible {
+    }
+    if atLeastOneWarp && !atLeastOneVisible {
       return true
-		}
-		return false
+    }
+    return false
   }
-
+  
   func eatFood(index: Int)  {
-		if index < numPlayers {
+    if index < numPlayers {
       let p = player[index]
       if p.isVisible() {
         p.eatFood()
       }
-		}
+    }
   }
-
+  
   func fire(index: Int) {
     if index < numPlayers {
       let p = player[index]
       if !p.arrow.alive {
-        p.arrow.alive = true;
+        p.arrow.state = .triggered
         p.arrow.x = p.x;
         p.arrow.y = p.y;
         p.arrow.dir = p.dir;
-        doArrowMove(p: p, isFirstMove: true)
       }
     }
   }
-
-  func doArrowMove(p: Player, isFirstMove: Bool) {
-    if !p.arrow.alive {
+  
+  func doArrowMove(p: Player) {
+    var x = p.arrow.x
+    var y = p.arrow.y
+    switch p.arrow.state {
+    case .none:
       return
-		}
-		var x = p.arrow.x
-		var y = p.arrow.y
-		if !isFirstMove {
+    case .triggered:
+      p.arrow.state = .inFlight
+    case .inFlight:
       map[x, y] = .Space
     }
     (x, y) = moveCoords(x: x, y: y, direction: p.arrow.dir)
-		let d = map[x,y]
+    let d = map[x,y]
     if p.arrow.canHit(c: d) {
       switch d {
       case .Bomb:
@@ -495,36 +504,36 @@ class World {
       default:
         _ = true
       }
-      p.arrow.alive = false
+      p.arrow.state = .none
     } else if p.arrow.canGo(c: d) {
       p.arrow.x = x
       p.arrow.y = y
-
+      
       // Convert Direction to Cell arrow order. (Cell order is based on the
       // order in the dandy.png texture. Maybe we should reorder Cell and
       // the texture to match Direction
       let rotatedDir = (p.arrow.dir.rawValue + 3) & 7;
       map[x, y] = Cell(rawValue: Cell.Arrow0.rawValue + rotatedDir)!
     } else {
-      p.arrow.alive = false;
-		}
+      p.arrow.state = .none
+    }
   }
-
+  
   func useSmartBomb(index: Int) {
-		if index < numPlayers {
+    if index < numPlayers {
       let p = player[index]
       if p.bombs > 0 {
         p.bombs -= 1
         doSmartBomb()
       }
-		} else {
+    } else {
       // Debug.MyDebugBreak();
-		}
+    }
   }
-
+  
   func doSmartBomb() {
     let cam = getLevelCamera()
-		for y in cam.startY..<cam.endY {
+    for y in cam.startY..<cam.endY {
       for x in cam.startX..<cam.endX {
         let d = map[x, y]
         if d.isEnemy() {
@@ -532,6 +541,6 @@ class World {
           map[x, y] = .Space
         }
       }
-		}
+    }
   }
 }
