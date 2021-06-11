@@ -41,6 +41,30 @@ let kDirTable: [Direction] = [
   .None, // 1111
 ]
 
+extension Direction {
+  static func direction<X : Numeric & Comparable>(deltaX dx:X, deltaY dy: X) -> Direction {
+    var bitField = 0
+
+    if dy > X.zero {
+      bitField |= 8
+    } else if dy < 0 {
+      bitField |= 4
+    }
+
+    if dx > 0 {
+      bitField |= 2
+    } else if dx < 0 {
+      bitField |= 1
+    }
+
+    //     7 0 1
+    //     6 + 2
+    //     5 4 3
+
+    return kDirTable[bitField]
+  }
+}
+
 // Direction to X,Y offsets
 let kOffsets: [(x:Int, y:Int)] = [
   (0,-1), (1,-1), (1,0), (1,1), (0,1), (-1,1), (-1,0), (-1,-1)]
@@ -169,6 +193,7 @@ class World {
   }
 
   func update() {
+    time += 1
 	// time = DateTime.Now;
     for i in 0..<numPlayers {
       doArrowMove(p: player[i], isFirstMove: false)
@@ -275,25 +300,7 @@ class World {
     }
     let dx = bestX - x
     let dy = bestY - y
-		var bitField = 0
-
-    if dy > 0 {
-      bitField |= 8
-    } else if dy < 0 {
-      bitField |= 4
-    }
-
-    if dx > 0 {
-      bitField |= 2
-    } else if dx < 0 {
-      bitField |= 1
-    }
-
-		//     7 0 1
-		//     6 + 2
-		//     5 4 3
-
-    return kDirTable[bitField]
+    return Direction.direction(deltaX: dx, deltaY: dy)
   }
 
   func getCOG() -> (x: Float32, y: Float32) {
@@ -398,14 +405,14 @@ class World {
               changeLevel(delta: 1)
             }
           default:
-            _ = true
+            bMove = false
           }
           if bMove {
             map[p.x, p.y] = .Space
             map[x, y] = Cell(rawValue:Cell.Player0.rawValue + UInt8(stick))!
+            p.x = x
+            p.y = y
           }
-          p.x = x
-          p.y = y
         }
       }
     }

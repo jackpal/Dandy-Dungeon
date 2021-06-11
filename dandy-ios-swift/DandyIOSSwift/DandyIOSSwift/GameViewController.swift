@@ -6,13 +6,14 @@
 //  Copyright (c) 2014 JacksHacks. All rights reserved.
 //
 
-import UIKit
 import Metal
 import QuartzCore
+import UIKit
+
 
 let MaxBuffers = 3
 
-class GameViewController: UIViewController {
+class GameViewController: UIViewController, GameControllerDelegate {
 
   let device = { MTLCreateSystemDefaultDevice()! }()
   let metalLayer = { CAMetalLayer() }()
@@ -47,15 +48,17 @@ class GameViewController: UIViewController {
     view.isOpaque = true
     view.backgroundColor = nil
 
-    let tapGesture = UITapGestureRecognizer(target: self,
-                                            action: #selector(GameViewController.handleTap))
-    view.addGestureRecognizer(tapGesture)
+//    let tapGesture = UITapGestureRecognizer(target: self,
+//                                            action: #selector(GameViewController.handleTap))
+//    view.addGestureRecognizer(tapGesture)
 
     commandQueue = device.makeCommandQueue()
     commandQueue.label = "main command queue"
 
     timer = CADisplayLink(target: self, selector: #selector(GameViewController.renderLoop))
     timer.add(to: RunLoop.main, forMode: RunLoop.Mode.default)
+    
+    gameControllerController.delegate = self
   }
 
   override func viewDidLayoutSubviews() {
@@ -135,6 +138,7 @@ class GameViewController: UIViewController {
   }
 
   func update() {
+    gameControllerController.pollInput()
     world.update()
     updateTiles()
     updateTileUniforms()
@@ -168,11 +172,25 @@ class GameViewController: UIViewController {
     }
   }
 
-  @objc
-  func handleTap(recognizer: UITapGestureRecognizer) {
-    // let tapLocation = recognizer.location(in: view)
-    // Just for testing, cycle level
-    world.changeLevel(delta: 1)
+//  @objc
+//  func handleTap(recognizer: UITapGestureRecognizer) {
+//    // let tapLocation = recognizer.location(in: view)
+//    // Just for testing, cycle level
+//    world.changeLevel(delta: 1)
+//  }
+  
+  // MARK: - GameControllerDelegate
+  
+  func move(player: Int, dir: Direction) {
+    world.move(stick: player, dir: dir)
+  }
+  
+  func fire(player: Int) {
+    world.fire(index: player)
+  }
+  
+  func eatFood(player: Int) {
+    world.eatFood(index: player)
   }
 
 }

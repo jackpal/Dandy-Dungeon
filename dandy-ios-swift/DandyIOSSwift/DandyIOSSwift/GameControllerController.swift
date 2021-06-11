@@ -9,40 +9,265 @@
 import GameController
 import UIKit
 
-class GameControllerController: NSObject {
+import simd
 
-  public private(set) var hasMiFiControllers : Bool {
-    didSet {
-      if oldValue != hasMiFiControllers {
-          UIApplication.shared.isIdleTimerDisabled = hasMiFiControllers
+protocol GameControllerDelegate {
+  func move(player: Int, dir: Direction)
+  func fire(player: Int)
+  func eatFood(player: Int)
+}
+
+class GameControllerController: NSObject {
+  
+  var delegate: GameControllerDelegate?
+  
+  // Gamepad
+  private var gamePadCurrent: GCController?
+  private var gamePadLeft: GCControllerDirectionPad?
+  
+  // Virtual Onscreen Controller
+#if os( iOS )
+  private var _virtualController: Any?
+  @available(iOS 15.0, *)
+  public var virtualController: GCVirtualController? {
+    get { return self._virtualController as? GCVirtualController }
+    set { self._virtualController = newValue }
+  }
+#endif
+  
+  var delta: CGPoint = CGPoint.zero
+  var keyboard: GCKeyboard? = nil
+  
+  // See https://developer.apple.com/documentation/gamecontroller/supporting_game_controllers
+  
+  override init() {
+    super.init()
+    setupGameController()
+  }
+  
+  private func setupGameController() {
+    if #available(iOS 14.0, OSX 10.16, *) {
+      NotificationCenter.default.addObserver(self, selector: #selector(self.handleMouseDidConnect),
+                                             name: NSNotification.Name.GCMouseDidBecomeCurrent, object: nil)
+      NotificationCenter.default.addObserver(self, selector: #selector(self.handleMouseDidDisconnect),
+                                             name: NSNotification.Name.GCMouseDidStopBeingCurrent, object: nil)
+      if let mouse = GCMouse.mice().first {
+        registerMouse(mouse)
+      }
+    }
+    
+    NotificationCenter.default.addObserver(self, selector: #selector(self.handleKeyboardDidConnect),
+                                           name: NSNotification.Name.GCKeyboardDidConnect, object: nil)
+    
+    NotificationCenter.default.addObserver(
+      self, selector: #selector(self.handleControllerDidConnect),
+      name: NSNotification.Name.GCControllerDidBecomeCurrent, object: nil)
+    
+    NotificationCenter.default.addObserver(
+      self, selector: #selector(self.handleControllerDidDisconnect),
+      name: NSNotification.Name.GCControllerDidStopBeingCurrent, object: nil)
+    
+#if os( iOS )
+    if #available(iOS 15.0, *) {
+      let virtualConfiguration = GCVirtualControllerConfiguration()
+      virtualConfiguration.elements = [GCInputDirectionalDpad,
+                                       GCInputButtonA,
+                                       GCInputButtonB]
+      virtualController = GCVirtualController(configuration: virtualConfiguration)
+      
+      // Connect to the virtual controller if no physical controllers are available.
+      if GCController.controllers().isEmpty {
+        virtualController?.connect()
+      }
+    }
+#endif
+    
+    guard let controller = GCController.controllers().first else {
+      return
+    }
+    registerGameController(controller)
+  }
+  
+  @objc
+  func handleKeyboardDidConnect(_ notification: Notification) {
+    guard let keyboard = notification.object as? GCKeyboard else {
+      return
+    }
+    weak var weakController = self
+    
+    keyboard.keyboardInput?.button(forKeyCode: .spacebar)?.valueChangedHandler = {
+      (_ button: GCDeviceButtonInput, _ value: Float, _ pressed: Bool) -> Void in
+      guard let strongController = weakController else {
+        return
+      }
+      strongController.controllerEatFood(pressed)
+    }
+  }
+  
+  @objc
+  func handleMouseDidConnect(_ notification: Notification) {
+    if #available(iOS 14.0, OSX 10.16, *) {
+      guard let mouse = notification.object as? GCMouse else {
+        return
+      }
+      
+      unregisterMouse()
+      registerMouse(mouse)
+      
+    }
+  }
+  
+  @objc
+  func handleMouseDidDisconnect(_ notification: Notification) {
+    unregisterMouse()
+  }
+  
+  func unregisterMouse() {
+    delta = CGPoint.zero
+  }
+  
+  func registerMouse(_ mouseDevice: GCMouse) {
+    if #available(iOS 14.0, OSX 10.16, *) {
+      guard let mouseInput = mouseDevice.mouseInput else {
+        return
+      }
+      
+      weak var weakController = self
+      mouseInput.mouseMovedHandler = {(_ mouse: GCMouseInput, _ deltaX: Float, _ deltaY: Float) -> Void in
+        guard let strongController = weakController else {
+          return
+        }
+        strongController.delta = CGPoint(x: CGFloat(deltaX), y: CGFloat(deltaY))
+      }
+      
+      mouseInput.leftButton.valueChangedHandler = {
+        (_ button: GCControllerButtonInput, _ value: Float, _ pressed: Bool) -> Void in
+        guard let strongController = weakController else {
+          return
+        }
+        
+        strongController.controllerAttack()
       }
     }
   }
-
-  override init() {
-    hasMiFiControllers = false
-    super.init()
-  NotificationCenter.default.addObserver(self, selector: #selector(controllerDidConnect(notification:)), name: .GCControllerDidConnect, object: nil)
-  NotificationCenter.default.addObserver(self, selector: #selector(controllerDidDisconnect(notification:)), name: .GCControllerDidDisconnect, object: nil)
-
-    GCController.startWirelessControllerDiscovery {
-      NSLog("Finished searching for wireless controllers")
+  
+  @objc
+  func handleControllerDidConnect(_ notification: Notification) {
+    guard let gameController = notification.object as? GCController else {
+      return
     }
-
-    updateActiveControllers()
+    unregisterGameController()
+    
+#if os( iOS )
+    if #available(iOS 15.0, *) {
+      if gameController != virtualController?.controller {
+        virtualController?.disconnect()
+      }
+    }
+#endif
+    
+    registerGameController(gameController)
   }
-
+  
   @objc
-  private func controllerDidConnect(notification:Notification) {
-    self.updateActiveControllers()
+  func handleControllerDidDisconnect(_ notification: Notification) {
+    unregisterGameController()
+    
+#if os( iOS )
+    if #available(iOS 15.0, *) {
+      if GCController.controllers().isEmpty {
+        virtualController?.connect()
+      }
+    }
+#endif
   }
-
-  @objc
-  private func controllerDidDisconnect(notification:Notification) {
-    self.updateActiveControllers()
+  
+  func registerGameController(_ gameController: GCController) {
+    
+    var buttonA: GCControllerButtonInput?
+    var buttonB: GCControllerButtonInput?
+    var rightTrigger: GCControllerButtonInput?
+    
+    weak var weakController = self
+    gamePadCurrent = gameController
+    
+    if let gamepad = gameController.extendedGamepad {
+      self.gamePadLeft = gamepad.dpad
+      buttonA = gamepad.buttonA
+      buttonB = gamepad.buttonB
+      rightTrigger = gamepad.rightTrigger
+    } else if let gamepad = gameController.microGamepad {
+      self.gamePadLeft = gamepad.dpad
+      buttonA = gamepad.buttonA
+      buttonB = gamepad.buttonX
+    }
+    
+    buttonA?.valueChangedHandler = {(_ button: GCControllerButtonInput, _ value: Float, _ pressed: Bool) -> Void in
+      guard let strongController = weakController else {
+        return
+      }
+      strongController.controllerEatFood(pressed)
+    }
+    
+    buttonB?.valueChangedHandler = {(_ button: GCControllerButtonInput, _ value: Float, _ pressed: Bool) -> Void in
+      guard let strongController = weakController else {
+        return
+      }
+      strongController.controllerAttack()
+    }
+    
+    rightTrigger?.pressedChangedHandler = buttonB?.valueChangedHandler
   }
-
-  private func updateActiveControllers() {
-    hasMiFiControllers = !GCController.controllers().isEmpty
+  
+  func unregisterGameController() {
+    gamePadLeft = nil
+    gamePadCurrent = nil
   }
+  
+  func pollInput() {
+    var characterDirection : simd_float2
+    
+    if let gamePadLeft = self.gamePadLeft {
+      characterDirection = simd_make_float2(gamePadLeft.xAxis.value, -gamePadLeft.yAxis.value)
+    } else {
+      characterDirection = simd_make_float2(0)
+    }
+    
+    // Mouse
+    // let mouseSpeed: CGFloat = 0.02
+    // self.cameraDirection += simd_make_float2(-Float(self.delta.x * mouseSpeed), Float(self.delta.y * mouseSpeed))
+    // self.delta = CGPoint.zero
+    
+    // Keyboard
+    if let keyboard = GCKeyboard.coalesced?.keyboardInput {
+      if keyboard.button(forKeyCode: .keyA)?.isPressed ?? false { characterDirection.x = -1.0 }
+      if keyboard.button(forKeyCode: .keyD)?.isPressed ?? false { characterDirection.x = 1.0 }
+      if keyboard.button(forKeyCode: .keyW)?.isPressed ?? false { characterDirection.y = -1.0 }
+      if keyboard.button(forKeyCode: .keyS)?.isPressed ?? false { characterDirection.y = 1.0 }
+      
+      if keyboard.button(forKeyCode: .leftArrow)?.isPressed ?? false { characterDirection.x = -1.0 }
+      if keyboard.button(forKeyCode: .rightArrow)?.isPressed ?? false { characterDirection.x = 1.0 }
+      if keyboard.button(forKeyCode: .upArrow)?.isPressed ?? false { characterDirection.y = -1.0 }
+      if keyboard.button(forKeyCode: .downArrow)?.isPressed ?? false { characterDirection.y = 1.0 }
+      
+      // self.runModifier = (keyboard.button(forKeyCode: .leftShift)?.value ?? 0.0) + 1.0
+    }
+    let dir = Direction.direction(deltaX: characterDirection.x, deltaY: characterDirection.y)
+    delegate?.move(player:0, dir:dir)
+  }
+  
+  // MARK: - Controlling the Character
+  
+  func controllerEatFood(_ controllerActivated: Bool) {
+    if controllerActivated, let delegate = delegate {
+      delegate.eatFood(player: 0)
+    }
+  }
+  
+  func controllerAttack() {
+    if let delegate = delegate {
+      delegate.fire(player: 0)
+    }
+  }
+  
 }
