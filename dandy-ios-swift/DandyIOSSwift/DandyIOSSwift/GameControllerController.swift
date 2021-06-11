@@ -71,10 +71,12 @@ class GameControllerController: NSObject {
 #if os( iOS )
     if #available(iOS 15.0, *) {
       let virtualConfiguration = GCVirtualControllerConfiguration()
-      virtualConfiguration.elements = [GCInputDirectionalDpad,
-                                       GCInputButtonA,
-                                       GCInputButtonB,
-                                       GCInputButtonMenu]
+      virtualConfiguration.elements = [
+        GCInputDirectionalDpad,
+        GCInputButtonA,
+        GCInputButtonX,
+        GCInputLeftShoulder, // In iOS 15.0b1 this shows up in the lower left corner of the dpad.
+      ]
       virtualController = GCVirtualController(configuration: virtualConfiguration)
       
       // Connect to the virtual controller if no physical controllers are available.
@@ -216,13 +218,14 @@ class GameControllerController: NSObject {
     if let gamepad = gameController.extendedGamepad {
       self.gamePadLeft = gamepad.dpad
       buttonFire = gamepad.buttonA
-      buttonEatFood = gamepad.buttonB
-      buttonMenu = gamepad.buttonMenu
+      buttonEatFood = gamepad.buttonX
+      buttonMenu = gamepad.leftShoulder
     } else if let gamepad = gameController.microGamepad {
+      // 2017 era Apple TV remote control.
       self.gamePadLeft = gamepad.dpad
       buttonFire = gamepad.buttonA
       buttonEatFood = gamepad.buttonX
-      buttonMenu = gamepad.buttonMenu
+      buttonMenu = gamepad.buttonMenu // Micro gamepad doesn't have a menu button?
     }
     
     buttonFire?.valueChangedHandler = {(_ button: GCControllerButtonInput, _ value: Float, _ pressed: Bool) -> Void in
