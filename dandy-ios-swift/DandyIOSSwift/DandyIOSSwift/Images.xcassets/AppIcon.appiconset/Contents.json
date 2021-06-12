@@ -17,7 +17,7 @@
       "size" : "29x29"
     },
     {
-      "filename" : "AppIcon-Small@2x-1.png",
+      "filename" : "AppIcon-Small@2x.png",
       "idiom" : "iphone",
       "scale" : "2x",
       "size" : "29x29"
@@ -103,13 +103,6 @@
       "idiom" : "ios-marketing",
       "scale" : "1x",
       "size" : "1024x1024"
-    },
-    {
-      "filename" : "AppIcon-Small@2x.png",
-      "idiom" : "iphone",
-      "scale" : "2x",
-      "size" : "29x29",
-      "unassigned" : true
     }
   ],
   "info" : {
