@@ -22,5 +22,5 @@ langauge styles.
 Demo
 ----
 
-[Play the JavaScript version of Dandy Dungeon](http://jackpal.github.com/Dandy-Dungeon/)
+[Play the JavaScript version of Dandy Dungeon](https://jackpal.github.io/Dandy-Dungeon/)
 
