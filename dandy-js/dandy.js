@@ -3,24 +3,24 @@ const kDirToDeltaY = [-1, -1, 0, 1, 1, 1, 0, -1];
 const kDeltaToDir = [[7, 0, 1], [6, 0, 2], [5, 4, 3]];
 const kSearchOrder = [0, -1, 1];
 const kButtonsToDir = [
-                     // D U R L
-                     -1, // 0 0 0 0
-                     6, // 0 0 0 1
-                     2, // 0 0 1 0
-                     -1, // 0 0 1 1
-                     0, // 0 1 0 0
-                     7, // 0 1 0 1
-                     1, // 0 1 1 0
-                     0, // 0 1 1 1
-                     4, // 1 0 0 0
-                     5, // 1 0 0 1
-                     3, // 1 0 1 0
-                     4, // 1 0 1 1
-                     -1, // 1 1 0 0
-                     6, // 1 1 0 1
-                     2, // 1 1 1 0
-                     -1  // 1 1 1 1
-                     ];
+    // D U R L
+    -1, // 0 0 0 0
+    6, // 0 0 0 1
+    2, // 0 0 1 0
+    -1, // 0 0 1 1
+    0, // 0 1 0 0
+    7, // 0 1 0 1
+    1, // 0 1 1 0
+    0, // 0 1 1 1
+    4, // 1 0 0 0
+    5, // 1 0 0 1
+    3, // 1 0 1 0
+    4, // 1 0 1 1
+    -1, // 1 1 0 0
+    6, // 1 1 0 1
+    2, // 1 1 1 0
+    -1  // 1 1 1 1
+];
 
 // Masks
 const kButtonLeft = 1;
@@ -32,421 +32,433 @@ const kButtonBomb = 32;
 
 const kTicksPerMove = 4;
 
-let dirty = false;
-const map = [];
-let currentLevel = 0;
-let rotor = 0;
-
-let px = 0;
-let py = 0;
-let pHealth = 100;
-let pScore = 0;
-let pBombs = 0;
-let pKeys = 0;
-let pDir;
-let pax = 0;
-let pay = 0;
-let paDir = -1;
-let pButtons = 0;
-let pOldButtons = 0;
-let pPlayerMoveTimer = 0;
-
 // The width and height of a tile when displayed in the canvas.
 const windowTileWidth = 20;
 const windowTileHeight = 10;
 
-function loadLevel() {
-    const level = levels[currentLevel];
-    for (let y = 0; y < levelHeight; y++) {
-        const line = level[y];
-        for (let x = 0; x < levelWidth; x++) {
-            map[x + y * levelWidth] = encoding.indexOf(line.charAt(x));
-        }
+class DandyGame {
+    constructor() {
+        this.canvas = document.getElementById('gameCanvas');
+        this.context = this.canvas.getContext('2d');
+        this.dirty = false;
+        this.map = [];
+        this.currentLevel = 0;
+        this.rotor = 0;
+
+        this.px = 0;
+        this.py = 0;
+        this.pHealth = 100;
+        this.pScore = 0;
+        this.pBombs = 0;
+        this.pKeys = 0;
+        this.pDir = 0;
+        this.pax = 0;
+        this.pay = 0;
+        this.paDir = -1;
+        this.pButtons = 0;
+        this.pOldButtons = 0;
+        this.pPlayerMoveTimer = 0;
+
+        this.boundGameStep = this.gameStep.bind(this);
+        this.boundOnKeyDown = this.onkeydown.bind(this);
+        this.boundOnKeyUp = this.onkeyup.bind(this);
     }
-    setPlayerStartPosition();
-    paDir = -1;
-}
 
-function findFirst(item) {
-    for (let y = 0; y < levelHeight; y++) {
-        for (let x = 0; x < levelWidth; x++) {
-            if ( map[x + y * levelWidth] == item ) {
-                return [x,y];
+    init() {
+        document.addEventListener('keydown', this.boundOnKeyDown);
+        document.addEventListener('keyup', this.boundOnKeyUp);
+        this.loadLevel();
+        this.startLoop();
+    }
 
+    startLoop() {
+        requestAnimationFrame(this.boundGameStep);
+    }
+
+    gameStep() {
+        this.doButtons();
+        this.moveArrow();
+        this.moveMonsters();
+        if (this.dirty) {
+            this.drawPicture();
+            this.dirty = false;
+        }
+        if (this.pHealth <= 0) {
+            this.endGame();
+        }
+        requestAnimationFrame(this.boundGameStep);
+    }
+
+    loadLevel() {
+        const level = levels[this.currentLevel];
+        for (let y = 0; y < levelHeight; y++) {
+            const line = level[y];
+            for (let x = 0; x < levelWidth; x++) {
+                this.map[x + y * levelWidth] = encoding.indexOf(line.charAt(x));
             }
         }
+        this.setPlayerStartPosition();
+        this.paDir = -1;
+        this.dirty = true;
     }
-    return null;
-}
 
-function setPlayerStartPosition() {
-    const v = findFirst(kUp);
-    let upx, upy;
-    if (v) {
-        upx = v[0];
-        upy = v[1];
-    } else {
-        upx = 1;
-        upy = 1;
-    }
-    px = upx;
-    py = upy-1;
-    map[px + py * levelWidth] = kPlayer1;
-}
-
-function nextLevel() {
-    if (currentLevel < 25) {
-        currentLevel++;
-    }
-    loadLevel();
-}
-
-function endGame() {
-    currentLevel = 0;
-    pHealth = 100;
-    pKeys = 0;
-    pBombs = 0;
-    pScore = 0;
-    loadLevel();
-}
-
-function floodFill(pos, oc, nc) {
-    if (oc == map[pos]) {
-        map[pos] = nc;
-        floodFill(pos - levelWidth - 1, oc, nc);
-        floodFill(pos - levelWidth, oc, nc);
-        floodFill(pos - levelWidth + 1, oc, nc);
-        floodFill(pos - 1, oc, nc);
-        floodFill(pos + 1, oc, nc);
-        floodFill(pos + levelWidth - 1, oc, nc);
-        floodFill(pos + levelWidth, oc, nc);
-        floodFill(pos + levelWidth + 1, oc, nc);
-    }
-}
-
-function getVisibleTopLeftCorner() {
-    return [clamp(px - (windowTileWidth >> 1), 0, levelWidth - windowTileWidth),
-            clamp(py - (windowTileHeight >> 1), 0, levelHeight - windowTileHeight)];
-}
-
-function drawPicture(){
-    const canvas = document.getElementById('gameCanvas');
-
-    const context = canvas.getContext('2d');
-
-    const tl = getVisibleTopLeftCorner();
-    const baseX = tl[0];
-    const baseY = tl[1];
-
-    const canvasTileWidth = tileWidth * 2;
-    const canvasTileHeight = tileHeight * 2;
-
-    for (let y = 0; y < windowTileHeight; y++) {
-        for (let x = 0; x < windowTileWidth; x++) {
-            const d = map[(baseX + x) + (baseY + y)*levelWidth];
-            const tx = tileWidth * (d & 15);
-            const ty = tileHeight * (d >> 4);
-            context.drawImage(strike, tx, ty, tileWidth, tileHeight,
-                    x * canvasTileWidth, y * canvasTileHeight,
-                    canvasTileWidth, canvasTileHeight);
+    findFirst(item) {
+        for (let y = 0; y < levelHeight; y++) {
+            for (let x = 0; x < levelWidth; x++) {
+                if (this.map[x + y * levelWidth] == item) {
+                    return [x, y];
+                }
+            }
         }
+        return null;
     }
-}
 
-function game() {
-    loadLevel();
-    setInterval(gameStep, 15);
-}
-
-function gameStep() {
-    doButtons();
-    moveArrow();
-    moveMonsters();
-    if (dirty) {
-        drawPicture();
-        dirty = false;
-    }
-    if (pHealth <= 0) {
-        endGame();
-    }
-}
-
-function clamp(x, min, max) {
-    return Math.min(max, Math.max(min, x));
-}
-
-function move(dir) {
-    const nx = clamp(px + kDirToDeltaX[dir], 0, levelWidth-1);
-    const ny = clamp(py + kDirToDeltaY[dir], 0, levelHeight-1);
-    const pos = nx + ny * levelWidth;
-    const v = map[pos];
-    let canMove = true;
-    switch (v) {
-    case kSpace:
-        break;
-    case kDoor:
-        if ( pKeys > 0) {
-            pKeys -= 1;
-            floodFill(pos, kDoor, kSpace);
+    setPlayerStartPosition() {
+        const v = this.findFirst(kUp);
+        let upx, upy;
+        if (v) {
+            upx = v[0];
+            upy = v[1];
         } else {
-            canMove = false;
+            upx = 1;
+            upy = 1;
         }
-        break;
-    case kMoney:
-        pScore += 100;
-        break;
-    case kKey:
-        pKeys += 1;
-        break;
-    case kBomb:
-        pBombs += 1;
-        break;
-    case kFood:
-        pHealth += 100;
-        break;
-    case kDown:
-        nextLevel();
-        return;
-    default:
-        canMove = false;
-    break;
+        this.px = upx;
+        this.py = upy - 1;
+        this.map[this.px + this.py * levelWidth] = kPlayer1;
     }
-    if (canMove) {
-        map[px + py * levelWidth] = kSpace;
-        px = nx;
-        py = ny;
-        map[px + py * levelWidth] = kPlayer1;
-        dirty = true;
-    }
-    return canMove;
-}
 
-function moveArrow() {
-    if (paDir != -1) {
-        const nx = clamp(pax + kDirToDeltaX[paDir], 0, levelWidth-1);
-        const ny = clamp(pay + kDirToDeltaY[paDir], 0, levelHeight-1);
-        const tl = getVisibleTopLeftCorner();
+    nextLevel() {
+        if (this.currentLevel < 25) {
+            this.currentLevel++;
+        }
+        this.loadLevel();
+    }
+
+    endGame() {
+        this.currentLevel = 0;
+        this.pHealth = 100;
+        this.pKeys = 0;
+        this.pBombs = 0;
+        this.pScore = 0;
+        this.loadLevel();
+    }
+
+    floodFill(pos, oc, nc) {
+        if (oc == this.map[pos]) {
+            this.map[pos] = nc;
+            this.floodFill(pos - levelWidth - 1, oc, nc);
+            this.floodFill(pos - levelWidth, oc, nc);
+            this.floodFill(pos - levelWidth + 1, oc, nc);
+            this.floodFill(pos - 1, oc, nc);
+            this.floodFill(pos + 1, oc, nc);
+            this.floodFill(pos + levelWidth - 1, oc, nc);
+            this.floodFill(pos + levelWidth, oc, nc);
+            this.floodFill(pos + levelWidth + 1, oc, nc);
+        }
+    }
+
+    getVisibleTopLeftCorner() {
+        return [this.clamp(this.px - (windowTileWidth >> 1), 0, levelWidth - windowTileWidth),
+        this.clamp(this.py - (windowTileHeight >> 1), 0, levelHeight - windowTileHeight)];
+    }
+
+    drawPicture() {
+        const tl = this.getVisibleTopLeftCorner();
         const baseX = tl[0];
         const baseY = tl[1];
-        const pos = pax + pay * levelWidth;
-        const npos = nx + ny * levelWidth;
-        const v = map[pos];
-        let nv = map[npos];
-        if (v >= kArrow && v <= kArrow + 7) {
-            map[pos] = kSpace;
+
+        const canvasTileWidth = tileWidth * 2;
+        const canvasTileHeight = tileHeight * 2;
+
+        for (let y = 0; y < windowTileHeight; y++) {
+            for (let x = 0; x < windowTileWidth; x++) {
+                const d = this.map[(baseX + x) + (baseY + y) * levelWidth];
+                const tx = tileWidth * (d & 15);
+                const ty = tileHeight * (d >> 4);
+                this.context.drawImage(strike, tx, ty, tileWidth, tileHeight,
+                    x * canvasTileWidth, y * canvasTileHeight,
+                    canvasTileWidth, canvasTileHeight);
+            }
         }
-        if (nx < baseX || ny < baseY || nx >= baseX + windowTileWidth
+    }
+
+    clamp(x, min, max) {
+        return Math.min(max, Math.max(min, x));
+    }
+
+    move(dir) {
+        const nx = this.clamp(this.px + kDirToDeltaX[dir], 0, levelWidth - 1);
+        const ny = this.clamp(this.py + kDirToDeltaY[dir], 0, levelHeight - 1);
+        const pos = nx + ny * levelWidth;
+        const v = this.map[pos];
+        let canMove = true;
+        switch (v) {
+            case kSpace:
+                break;
+            case kDoor:
+                if (this.pKeys > 0) {
+                    this.pKeys -= 1;
+                    this.floodFill(pos, kDoor, kSpace);
+                } else {
+                    canMove = false;
+                }
+                break;
+            case kMoney:
+                this.pScore += 100;
+                break;
+            case kKey:
+                this.pKeys += 1;
+                break;
+            case kBomb:
+                this.pBombs += 1;
+                break;
+            case kFood:
+                this.pHealth += 100;
+                break;
+            case kDown:
+                this.nextLevel();
+                return;
+            default:
+                canMove = false;
+                break;
+        }
+        if (canMove) {
+            this.map[this.px + this.py * levelWidth] = kSpace;
+            this.px = nx;
+            this.py = ny;
+            this.map[this.px + this.py * levelWidth] = kPlayer1;
+            this.dirty = true;
+        }
+        return canMove;
+    }
+
+    moveArrow() {
+        if (this.paDir != -1) {
+            const nx = this.clamp(this.pax + kDirToDeltaX[this.paDir], 0, levelWidth - 1);
+            const ny = this.clamp(this.pay + kDirToDeltaY[this.paDir], 0, levelHeight - 1);
+            const tl = this.getVisibleTopLeftCorner();
+            const baseX = tl[0];
+            const baseY = tl[1];
+            const pos = this.pax + this.pay * levelWidth;
+            const npos = nx + ny * levelWidth;
+            const v = this.map[pos];
+            let nv = this.map[npos];
+            if (v >= kArrow && v <= kArrow + 7) {
+                this.map[pos] = kSpace;
+            }
+            if (nx < baseX || ny < baseY || nx >= baseX + windowTileWidth
                 || ny >= baseY + windowTileHeight) {
-            nv = -1; // Kill arrow
-        }
-        if (nv != kSpace) {
-            paDir = -1;
-            if ( nv >= kBomb && nv < kArrow ) {
-                let rv = kSpace;
-                if (nv == kBomb) {
-                    doBomb();
-                } else if (nv == kHeart) {
-                    rv = kMonster3;
-                } else if (nv == kMonster2 || nv == kMonster3) {
-                    rv = nv - 1;
-                }
-                map[npos] = rv;
+                nv = -1; // Kill arrow
             }
-        } else {
-            map[npos] = kArrow + ((paDir - 5) & 7);
-            pax = nx;
-            pay = ny;
-        }
-        dirty = true;
-    }
-}
-
-function doBomb() {
-    const tl = getVisibleTopLeftCorner();
-    const baseX = tl[0];
-    const baseY = tl[1];
-
-    for (let y = 0; y < windowTileHeight; y++) {
-        for (let x = 0; x < windowTileWidth; x++) {
-            const pos = (baseX + x) + (baseY + y) * levelWidth;
-            const v = map[pos];
-            if ((v >= kMonster1 && v <= kMonster3) ||
-                    (v >= kGenerator1 && v <= kGenerator3)) {
-                map[pos] = kSpace;
-            }
-        }
-    }
-    dirty = true;
-}
-
-function toDelta(a, b) {
-    if (a > b) {
-        return 1;
-    } else if (a < b) {
-        return -1;
-    } else {
-        return 0;
-    }
-}
-
-function adjust(x, m, dx) {
-    return m * Math.floor(x / m) + dx;
-}
-
-function moveMonsters() {
-    const tl = getVisibleTopLeftCorner();
-    const baseX = tl[0];
-    const baseY = tl[1];
-
-    let dx;
-    let dy;
-    if (true) {
-        dx = 4;
-        dy = 4;
-    } else {
-        dx = 2;
-        dy = 2;
-    }
-    if (++rotor >= (dx * dy)) {
-        rotor = 0;
-    }
-    const xBase = adjust(baseX, dx, rotor % dx);
-    const yBase = adjust(baseY, dy, Math.floor(rotor / dx));
-    const xEnd = baseX + windowTileWidth;
-    const yEnd = baseY + windowTileHeight;
-    for (let my = yBase; my < yEnd; my += dx) {
-        for (let mx = xBase; mx < xEnd; mx += dy) {
-            const pos = mx + my * levelWidth;
-            const v = map[pos];
-            if (v >= kMonster1 && v <= kMonster3) {
-                const mDir = kDeltaToDir[toDelta(py, my) + 1][toDelta(px, mx) + 1];
-                for (let d = 0; d < 3; d++) {
-                    const dd = (mDir + kSearchOrder[d]) & 7;
-                    const npos = pos + kDirToDeltaX[dd] + kDirToDeltaY[dd] * levelWidth;
-                    const nv = map[npos];
-                    if (nv == kPlayer1)  {
-                        map[pos] = kSpace;
-                        pHealth -= 10 * (v - kMonster1 + 1);
-                        dirty = true;
-                        break;
-                    } else if (nv == kSpace ) {
-                        map[pos] = kSpace;
-                        map[npos] = v;
-                        dirty = true;
-                        break;
-                    } else if (nv >= kArrow && nv <= kArrow+7) {
-                        // Don't try to walk around arrows.
-                        break;
+            if (nv != kSpace) {
+                this.paDir = -1;
+                if (nv >= kBomb && nv < kArrow) {
+                    let rv = kSpace;
+                    if (nv == kBomb) {
+                        this.doBomb();
+                    } else if (nv == kHeart) {
+                        rv = kMonster3;
+                    } else if (nv == kMonster2 || nv == kMonster3) {
+                        rv = nv - 1;
                     }
+                    this.map[npos] = rv;
                 }
-            } else if (v >= kGenerator1 && v <= kGenerator3) {
-                const ran_number=Math.floor(Math.random()*8);
-                if (ran_number < 4) {
-                    const gd = ran_number * 2;
-                    for (let dd = 0; dd < 8; dd += 2) {
-                        const gd2 = (gd + dd) % 7;
-                        const gpos = pos + kDirToDeltaX[gd2] + kDirToDeltaY[gd2] * levelWidth;
-                        if (map[gpos] == kSpace) {
-                            map[gpos] = kMonster1 + (v - kGenerator1);
+            } else {
+                this.map[npos] = kArrow + ((this.paDir - 5) & 7);
+                this.pax = nx;
+                this.pay = ny;
+            }
+            this.dirty = true;
+        }
+    }
+
+    doBomb() {
+        const tl = this.getVisibleTopLeftCorner();
+        const baseX = tl[0];
+        const baseY = tl[1];
+
+        for (let y = 0; y < windowTileHeight; y++) {
+            for (let x = 0; x < windowTileWidth; x++) {
+                const pos = (baseX + x) + (baseY + y) * levelWidth;
+                const v = this.map[pos];
+                if ((v >= kMonster1 && v <= kMonster3) ||
+                    (v >= kGenerator1 && v <= kGenerator3)) {
+                    this.map[pos] = kSpace;
+                }
+            }
+        }
+        this.dirty = true;
+    }
+
+    toDelta(a, b) {
+        if (a > b) {
+            return 1;
+        } else if (a < b) {
+            return -1;
+        } else {
+            return 0;
+        }
+    }
+
+    adjust(x, m, dx) {
+        return m * Math.floor(x / m) + dx;
+    }
+
+    moveMonsters() {
+        const tl = this.getVisibleTopLeftCorner();
+        const baseX = tl[0];
+        const baseY = tl[1];
+
+        let dx;
+        let dy;
+        if (true) {
+            dx = 4;
+            dy = 4;
+        } else {
+            dx = 2;
+            dy = 2;
+        }
+        if (++this.rotor >= (dx * dy)) {
+            this.rotor = 0;
+        }
+        const xBase = this.adjust(baseX, dx, this.rotor % dx);
+        const yBase = this.adjust(baseY, dy, Math.floor(this.rotor / dx));
+        const xEnd = baseX + windowTileWidth;
+        const yEnd = baseY + windowTileHeight;
+        for (let my = yBase; my < yEnd; my += dx) {
+            for (let mx = xBase; mx < xEnd; mx += dy) {
+                const pos = mx + my * levelWidth;
+                const v = this.map[pos];
+                if (v >= kMonster1 && v <= kMonster3) {
+                    const mDir = kDeltaToDir[this.toDelta(this.py, my) + 1][this.toDelta(this.px, mx) + 1];
+                    for (let d = 0; d < 3; d++) {
+                        const dd = (mDir + kSearchOrder[d]) & 7;
+                        const npos = pos + kDirToDeltaX[dd] + kDirToDeltaY[dd] * levelWidth;
+                        const nv = this.map[npos];
+                        if (nv == kPlayer1) {
+                            this.map[pos] = kSpace;
+                            this.pHealth -= 10 * (v - kMonster1 + 1);
+                            this.dirty = true;
                             break;
+                        } else if (nv == kSpace) {
+                            this.map[pos] = kSpace;
+                            this.map[npos] = v;
+                            this.dirty = true;
+                            break;
+                        } else if (nv >= kArrow && nv <= kArrow + 7) {
+                            // Don't try to walk around arrows.
+                            break;
+                        }
+                    }
+                } else if (v >= kGenerator1 && v <= kGenerator3) {
+                    const ran_number = Math.floor(Math.random() * 8);
+                    if (ran_number < 4) {
+                        const gd = ran_number * 2;
+                        for (let dd = 0; dd < 8; dd += 2) {
+                            const gd2 = (gd + dd) % 7;
+                            const gpos = pos + kDirToDeltaX[gd2] + kDirToDeltaY[gd2] * levelWidth;
+                            if (this.map[gpos] == kSpace) {
+                                this.map[gpos] = kMonster1 + (v - kGenerator1);
+                                break;
+                            }
                         }
                     }
                 }
             }
         }
     }
-}
 
-function fire() {
-    if (paDir == -1) {
-        pax = px;
-        pay = py;
-        paDir = pDir;
-    }
-}
-
-function doButtons() {
-    const deltaDown = pButtons & ~ pOldButtons;
-    pOldButtons = pButtons;
-    if (deltaDown & kButtonBomb) {
-        if (pBombs > 0) {
-            pBombs--;
-            doBomb();
+    fire() {
+        if (this.paDir == -1) {
+            this.pax = this.px;
+            this.pay = this.py;
+            this.paDir = this.pDir;
         }
     }
 
-    if (pButtons & kButtonFire) {
-        fire();
-    }
-    const d = kButtonsToDir[pButtons & 15];
+    doButtons() {
+        const deltaDown = this.pButtons & ~this.pOldButtons;
+        this.pOldButtons = this.pButtons;
+        if (deltaDown & kButtonBomb) {
+            if (this.pBombs > 0) {
+                this.pBombs--;
+                this.doBomb();
+            }
+        }
 
-    if (d >= 0) {
-        pDir = d;
-        if (pPlayerMoveTimer == 0) {
-            pPlayerMoveTimer = kTicksPerMove;
-            for ( let di = 0; di < 3; di++) {
-                const dd = (pDir + kSearchOrder[di]) & 7;
-                if (move(dd)) {
-                    break;
+        if (this.pButtons & kButtonFire) {
+            this.fire();
+        }
+        const d = kButtonsToDir[this.pButtons & 15];
+
+        if (d >= 0) {
+            this.pDir = d;
+            if (this.pPlayerMoveTimer == 0) {
+                this.pPlayerMoveTimer = kTicksPerMove;
+                for (let di = 0; di < 3; di++) {
+                    const dd = (this.pDir + kSearchOrder[di]) & 7;
+                    if (this.move(dd)) {
+                        break;
+                    }
                 }
             }
         }
+
+        if (this.pPlayerMoveTimer > 0) {
+            this.pPlayerMoveTimer--;
+        }
     }
 
-    if (pPlayerMoveTimer > 0) {
-        pPlayerMoveTimer--;
+    onkeydown(e) {
+        this.pButtons = this.updateMask(this.pButtons, e.code, 1);
+        // Suppress default behavior for game keys
+        if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space', 'KeyB'].includes(e.code)) {
+             e.preventDefault();
+             return false;
+        }
+        return true;
     }
-}
 
-function onkeydown(e) {
-    if(!e) {
-        e = window.event;
+    onkeyup(e) {
+        this.pButtons = this.updateMask(this.pButtons, e.code, 0);
+        return false;
     }
-    pButtons = updateMask(pButtons, e.keyCode, 1);
-    // Suppress default behavior
-    return false;
-}
 
-function onkeyup(e) {
-    if(!e) {
-        e = window.event;
-    }
-    pButtons = updateMask(pButtons, e.keyCode, 0);
-    // Suppress default behavior
-    return false;
-}
-
-function updateMask(mask, code, down) {
-    let k = 0;
-    switch (code) {
-    case 37:
-        k = kButtonLeft;
-        break;
-    case 38:
-        k = kButtonUp;
-        break;
-    case 39:
-        k = kButtonRight;
-        break;
-    case 40:
-        k = kButtonDown;
-        break;
-    case 66:
-        k = kButtonBomb;
-        break;
-    case 32:
-        k = kButtonFire;
-        break;
-    default:
+    updateMask(mask, code, down) {
+        let k = 0;
+        switch (code) {
+            case 'ArrowLeft':
+                k = kButtonLeft;
+                break;
+            case 'ArrowUp':
+                k = kButtonUp;
+                break;
+            case 'ArrowRight':
+                k = kButtonRight;
+                break;
+            case 'ArrowDown':
+                k = kButtonDown;
+                break;
+            case 'KeyB':
+                k = kButtonBomb;
+                break;
+            case 'Space':
+                k = kButtonFire;
+                break;
+            default:
+                return mask;
+        }
+        if (down) {
+            mask = mask | k;
+        } else {
+            mask = mask & ~k;
+        }
         return mask;
     }
-    if ( down ) {
-        mask = mask | k;
-    } else {
-        mask = mask & ~ k;
-    }
-    return mask;
 }
 
-document.onkeydown = onkeydown;
-document.onkeyup = onkeyup;
+function game() {
+    const dandy = new DandyGame();
+    dandy.init();
+}
