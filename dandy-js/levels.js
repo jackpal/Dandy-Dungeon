@@ -1,4 +1,4 @@
-var levels = [
+const levels = [
    ["************************************************************",
     "*2            1 1                111111                1111*",
     "*22          1 1          K                        ******* *",
@@ -780,26 +780,26 @@ var levels = [
     "*iiiiiiiiii$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$*",
     "************************************************************"]];
 
-var encoding = " *DudKF$i123mnop";
+const encoding = " *DudKF$i123mnop";
 
-var levelWidth = 60;
-var levelHeight = 30;
+const levelWidth = 60;
+const levelHeight = 30;
 
-var kSpace = 0;
-var kWall = 1;
-var kDoor = 2;
-var kUp = 3;
-var kDown = 4;
-var kKey = 5;
-var kFood = 6;
-var kMoney = 7;
-var kBomb = 8;
-var kMonster1 = 9;
-var kMonster2 = 10;
-var kMonster3 = 11;
-var kHeart = 12;
-var kGenerator1 = 13;
-var kGenerator2 = 14;
-var kGenerator3 = 15;
-var kArrow = 16;
-var kPlayer1 = kArrow + 8;
+const kSpace = 0;
+const kWall = 1;
+const kDoor = 2;
+const kUp = 3;
+const kDown = 4;
+const kKey = 5;
+const kFood = 6;
+const kMoney = 7;
+const kBomb = 8;
+const kMonster1 = 9;
+const kMonster2 = 10;
+const kMonster3 = 11;
+const kHeart = 12;
+const kGenerator1 = 13;
+const kGenerator2 = 14;
+const kGenerator3 = 15;
+const kArrow = 16;
+const kPlayer1 = kArrow + 8;

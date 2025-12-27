@@ -1,8 +1,8 @@
 // The width and height of a tile in pixels (in the strike image)
-var tileWidth = 16;
-var tileHeight = 16;
+const tileWidth = 16;
+const tileHeight = 16;
 
-var strike = new Image();
+const strike = new Image();
 strike.src = "data:image/png;base64,"+
 "iVBORw0KGgoAAAANSUhEUgAAAQAAAAAgCAYAAAD9qabkAAAACXBIWXMAAB"+
 "cSAAAXEgFnn9JSAAAHtklEQVR4Ae2cv5IbRRDGVy5iilcgdNWVQ86khJBB"+

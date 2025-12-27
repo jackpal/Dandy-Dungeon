@@ -1,8 +1,8 @@
-var kDirToDeltaX = [0, 1, 1, 1, 0, -1 , -1, -1];
-var kDirToDeltaY = [-1, -1, 0, 1, 1, 1, 0, -1];
-var kDeltaToDir = [[7, 0, 1], [6, 0, 2], [5, 4, 3]];
-var kSearchOrder = [0, -1, 1];
-var kButtonsToDir = [
+const kDirToDeltaX = [0, 1, 1, 1, 0, -1 , -1, -1];
+const kDirToDeltaY = [-1, -1, 0, 1, 1, 1, 0, -1];
+const kDeltaToDir = [[7, 0, 1], [6, 0, 2], [5, 4, 3]];
+const kSearchOrder = [0, -1, 1];
+const kButtonsToDir = [
                      // D U R L
                      -1, // 0 0 0 0
                      6, // 0 0 0 1
@@ -23,43 +23,43 @@ var kButtonsToDir = [
                      ];
 
 // Masks
-var kButtonLeft = 1;
-var kButtonRight = 2;
-var kButtonUp = 4;
-var kButtonDown = 8;
-var kButtonFire = 16;
-var kButtonBomb = 32;
+const kButtonLeft = 1;
+const kButtonRight = 2;
+const kButtonUp = 4;
+const kButtonDown = 8;
+const kButtonFire = 16;
+const kButtonBomb = 32;
 
-var kTicksPerMove = 4;
+const kTicksPerMove = 4;
 
-var dirty = false;
-var map = [];
-var currentLevel = 0;
-var rotor = 0;
+let dirty = false;
+const map = [];
+let currentLevel = 0;
+let rotor = 0;
 
-var px = 0;
-var py = 0;
-var pHealth = 100;
-var pScore = 0;
-var pBombs = 0;
-var pKeys = 0;
-var pDir;
-var pax = 0;
-var pay = 0;
-var paDir = -1;
-var pButtons = 0;
-var pOldButtons = 0;
-var pPlayerMoveTimer = 0;
+let px = 0;
+let py = 0;
+let pHealth = 100;
+let pScore = 0;
+let pBombs = 0;
+let pKeys = 0;
+let pDir;
+let pax = 0;
+let pay = 0;
+let paDir = -1;
+let pButtons = 0;
+let pOldButtons = 0;
+let pPlayerMoveTimer = 0;
 
 // The width and height of a tile when displayed in the canvas.
-var windowTileWidth = 20;
-var windowTileHeight = 10;
+const windowTileWidth = 20;
+const windowTileHeight = 10;
 
 function loadLevel() {
-    var level = levels[currentLevel];
-    for (var y = 0; y < levelHeight; y++) {
-        var line = level[y];
-        for (var x = 0; x < levelWidth; x++) {
+    const level = levels[currentLevel];
+    for (let y = 0; y < levelHeight; y++) {
+        const line = level[y];
+        for (let x = 0; x < levelWidth; x++) {
             map[x + y * levelWidth] = encoding.indexOf(line.charAt(x));
         }
     }
@@ -68,8 +68,8 @@ function loadLevel() {
 }
 
 function findFirst(item) {
-    for (var y = 0; y < levelHeight; y++) {
-        for (var x = 0; x < levelWidth; x++) {
+    for (let y = 0; y < levelHeight; y++) {
+        for (let x = 0; x < levelWidth; x++) {
             if ( map[x + y * levelWidth] == item ) {
                 return [x,y];
 
@@ -80,7 +80,8 @@ function findFirst(item) {
 }
 
 function setPlayerStartPosition() {
-    v = findFirst(kUp);
+    const v = findFirst(kUp);
+    let upx, upy;
     if (v) {
         upx = v[0];
         upy = v[1];
@@ -129,22 +130,22 @@ function getVisibleTopLeftCorner() {
 }
 
 function drawPicture(){
-    var canvas = document.getElementById('gameCanvas');
+    const canvas = document.getElementById('gameCanvas');
 
-    var context = canvas.getContext('2d');
+    const context = canvas.getContext('2d');
 
-    var tl = getVisibleTopLeftCorner();
-    var baseX = tl[0];
-    var baseY = tl[1];
+    const tl = getVisibleTopLeftCorner();
+    const baseX = tl[0];
+    const baseY = tl[1];
 
-    var canvasTileWidth = tileWidth * 2;
-    var canvasTileHeight = tileHeight * 2;
+    const canvasTileWidth = tileWidth * 2;
+    const canvasTileHeight = tileHeight * 2;
 
-    for (var y = 0; y < windowTileHeight; y++) {
-        for (var x = 0; x < windowTileWidth; x++) {
-            var d = map[(baseX + x) + (baseY + y)*levelWidth];
-            var tx = tileWidth * (d & 15);
-            var ty = tileHeight * (d >> 4);
+    for (let y = 0; y < windowTileHeight; y++) {
+        for (let x = 0; x < windowTileWidth; x++) {
+            const d = map[(baseX + x) + (baseY + y)*levelWidth];
+            const tx = tileWidth * (d & 15);
+            const ty = tileHeight * (d >> 4);
             context.drawImage(strike, tx, ty, tileWidth, tileHeight,
                     x * canvasTileWidth, y * canvasTileHeight,
                     canvasTileWidth, canvasTileHeight);
@@ -175,11 +176,11 @@ function clamp(x, min, max) {
 }
 
 function move(dir) {
-    nx = clamp(px + kDirToDeltaX[dir], 0, levelWidth-1);
-    ny = clamp(py + kDirToDeltaY[dir], 0, levelHeight-1);
-    pos = nx + ny * levelWidth;
-    v = map[pos];
-    canMove = true;
+    const nx = clamp(px + kDirToDeltaX[dir], 0, levelWidth-1);
+    const ny = clamp(py + kDirToDeltaY[dir], 0, levelHeight-1);
+    const pos = nx + ny * levelWidth;
+    const v = map[pos];
+    let canMove = true;
     switch (v) {
     case kSpace:
         break;
@@ -222,15 +223,15 @@ function move(dir) {
 
 function moveArrow() {
     if (paDir != -1) {
-        nx = clamp(pax + kDirToDeltaX[paDir], 0, levelWidth-1);
-        ny = clamp(pay + kDirToDeltaY[paDir], 0, levelHeight-1);
-        var tl = getVisibleTopLeftCorner();
-        var baseX = tl[0];
-        var baseY = tl[1];
-        pos = pax + pay * levelWidth;
-        npos = nx + ny * levelWidth;
-        v = map[pos];
-        nv = map[npos];
+        const nx = clamp(pax + kDirToDeltaX[paDir], 0, levelWidth-1);
+        const ny = clamp(pay + kDirToDeltaY[paDir], 0, levelHeight-1);
+        const tl = getVisibleTopLeftCorner();
+        const baseX = tl[0];
+        const baseY = tl[1];
+        const pos = pax + pay * levelWidth;
+        const npos = nx + ny * levelWidth;
+        const v = map[pos];
+        let nv = map[npos];
         if (v >= kArrow && v <= kArrow + 7) {
             map[pos] = kSpace;
         }
@@ -241,7 +242,7 @@ function moveArrow() {
         if (nv != kSpace) {
             paDir = -1;
             if ( nv >= kBomb && nv < kArrow ) {
-                var rv = kSpace;
+                let rv = kSpace;
                 if (nv == kBomb) {
                     doBomb();
                 } else if (nv == kHeart) {
@@ -261,14 +262,14 @@ function moveArrow() {
 }
 
 function doBomb() {
-    var tl = getVisibleTopLeftCorner();
-    var baseX = tl[0];
-    var baseY = tl[1];
+    const tl = getVisibleTopLeftCorner();
+    const baseX = tl[0];
+    const baseY = tl[1];
 
-    for (var y = 0; y < windowTileHeight; y++) {
-        for (var x = 0; x < windowTileWidth; x++) {
-            var pos = (baseX + x) + (baseY + y) * levelWidth;
-            var v = map[pos];
+    for (let y = 0; y < windowTileHeight; y++) {
+        for (let x = 0; x < windowTileWidth; x++) {
+            const pos = (baseX + x) + (baseY + y) * levelWidth;
+            const v = map[pos];
             if ((v >= kMonster1 && v <= kMonster3) ||
                     (v >= kGenerator1 && v <= kGenerator3)) {
                 map[pos] = kSpace;
@@ -293,12 +294,12 @@ function adjust(x, m, dx) {
 }
 
 function moveMonsters() {
-    var tl = getVisibleTopLeftCorner();
-    var baseX = tl[0];
-    var baseY = tl[1];
+    const tl = getVisibleTopLeftCorner();
+    const baseX = tl[0];
+    const baseY = tl[1];
 
-    var dx;
-    var dy;
+    let dx;
+    let dy;
     if (true) {
         dx = 4;
         dy = 4;
@@ -309,20 +310,20 @@ function moveMonsters() {
     if (++rotor >= (dx * dy)) {
         rotor = 0;
     }
-    var xBase = adjust(baseX, dx, rotor % dx);
-    var yBase = adjust(baseY, dy, Math.floor(rotor / dx));
-    var xEnd = baseX + windowTileWidth;
-    var yEnd = baseY + windowTileHeight;
-    for (var my = yBase; my < yEnd; my += dx) {
-        for (var mx = xBase; mx < xEnd; mx += dy) {
-            var pos = mx + my * levelWidth;
-            var v = map[pos];
+    const xBase = adjust(baseX, dx, rotor % dx);
+    const yBase = adjust(baseY, dy, Math.floor(rotor / dx));
+    const xEnd = baseX + windowTileWidth;
+    const yEnd = baseY + windowTileHeight;
+    for (let my = yBase; my < yEnd; my += dx) {
+        for (let mx = xBase; mx < xEnd; mx += dy) {
+            const pos = mx + my * levelWidth;
+            const v = map[pos];
             if (v >= kMonster1 && v <= kMonster3) {
-                var mDir = kDeltaToDir[toDelta(py, my) + 1][toDelta(px, mx) + 1];
-                for (var d = 0; d < 3; d++) {
-                    var dd = (mDir + kSearchOrder[d]) & 7;
-                    var npos = pos + kDirToDeltaX[dd] + kDirToDeltaY[dd] * levelWidth;
-                    var nv = map[npos];
+                const mDir = kDeltaToDir[toDelta(py, my) + 1][toDelta(px, mx) + 1];
+                for (let d = 0; d < 3; d++) {
+                    const dd = (mDir + kSearchOrder[d]) & 7;
+                    const npos = pos + kDirToDeltaX[dd] + kDirToDeltaY[dd] * levelWidth;
+                    const nv = map[npos];
                     if (nv == kPlayer1)  {
                         map[pos] = kSpace;
                         pHealth -= 10 * (v - kMonster1 + 1);
@@ -339,12 +340,12 @@ function moveMonsters() {
                     }
                 }
             } else if (v >= kGenerator1 && v <= kGenerator3) {
-                var ran_number=Math.floor(Math.random()*8);
+                const ran_number=Math.floor(Math.random()*8);
                 if (ran_number < 4) {
-                    var gd = ran_number * 2;
-                    for (var dd = 0; dd < 8; dd += 2) {
-                        var gd2 = (gd + dd) % 7;
-                        var gpos = pos + kDirToDeltaX[gd2] + kDirToDeltaY[gd2] * levelWidth;
+                    const gd = ran_number * 2;
+                    for (let dd = 0; dd < 8; dd += 2) {
+                        const gd2 = (gd + dd) % 7;
+                        const gpos = pos + kDirToDeltaX[gd2] + kDirToDeltaY[gd2] * levelWidth;
                         if (map[gpos] == kSpace) {
                             map[gpos] = kMonster1 + (v - kGenerator1);
                             break;
@@ -365,7 +366,7 @@ function fire() {
 }
 
 function doButtons() {
-    var deltaDown = pButtons & ~ pOldButtons;
+    const deltaDown = pButtons & ~ pOldButtons;
     pOldButtons = pButtons;
     if (deltaDown & kButtonBomb) {
         if (pBombs > 0) {
@@ -377,14 +378,14 @@ function doButtons() {
     if (pButtons & kButtonFire) {
         fire();
     }
-    var d = kButtonsToDir[pButtons & 15];
+    const d = kButtonsToDir[pButtons & 15];
 
     if (d >= 0) {
         pDir = d;
         if (pPlayerMoveTimer == 0) {
             pPlayerMoveTimer = kTicksPerMove;
-            for ( var di = 0; di < 3; di++) {
-                var dd = (pDir + kSearchOrder[di]) & 7;
+            for ( let di = 0; di < 3; di++) {
+                const dd = (pDir + kSearchOrder[di]) & 7;
                 if (move(dd)) {
                     break;
                 }
@@ -416,7 +417,7 @@ function onkeyup(e) {
 }
 
 function updateMask(mask, code, down) {
-    var k = 0;
+    let k = 0;
     switch (code) {
     case 37:
         k = kButtonLeft;
