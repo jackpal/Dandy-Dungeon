@@ -181,6 +181,15 @@
     </style>
     <!-- Point to the bundled output -->
     <script src="dandy.js" defer></script>
+    <script>
+        window.addEventListener('load', () => {
+            if (window.game) {
+                window.game();
+            } else {
+                console.error("Game function not found. Is dandy.js loaded?");
+            }
+        });
+    </script>
 </head>
 <body>
     <div class="container">

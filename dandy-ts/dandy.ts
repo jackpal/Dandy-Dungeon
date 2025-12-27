@@ -118,9 +118,18 @@ class DandyGame {
     init() {
         document.addEventListener('keydown', this.boundOnKeyDown);
         document.addEventListener('keyup', this.boundOnKeyUp);
-        this.loadLevel();
-        this.updateHud();
-        this.startLoop();
+
+        const start = () => {
+            this.loadLevel();
+            this.updateHud();
+            this.startLoop();
+        };
+
+        if (strike.complete) {
+            start();
+        } else {
+            strike.onload = start;
+        }
     }
 
     startLoop() {

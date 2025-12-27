@@ -2,6 +2,10 @@
   "name": "dandy-ts",
   "module": "index.ts",
   "type": "module",
+  "scripts": {
+    "build": "bun build ./dandy.ts --outdir ./",
+    "dev": "bun x serve ."
+  },
   "private": true,
   "devDependencies": {
     "@types/bun": "latest"
