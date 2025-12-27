@@ -69,6 +69,12 @@ class DandyGame {
         this.healthDisplay = document.getElementById('health-display');
         this.bombDisplay = document.getElementById('bomb-display');
         this.keyDisplay = document.getElementById('key-display');
+
+        // Cached HUD values to minimize DOM updates
+        this.lastScore = -1;
+        this.lastHealth = -1;
+        this.lastBombs = -1;
+        this.lastKeys = -1;
     }
 
     init() {
@@ -84,10 +90,22 @@ class DandyGame {
     }
 
     updateHud() {
-        if (this.scoreDisplay) this.scoreDisplay.textContent = this.pScore;
-        if (this.healthDisplay) this.healthDisplay.textContent = this.pHealth;
-        if (this.bombDisplay) this.bombDisplay.textContent = this.pBombs;
-        if (this.keyDisplay) this.keyDisplay.textContent = this.pKeys;
+        if (this.pScore !== this.lastScore) {
+            if (this.scoreDisplay) this.scoreDisplay.textContent = this.pScore;
+            this.lastScore = this.pScore;
+        }
+        if (this.pHealth !== this.lastHealth) {
+            if (this.healthDisplay) this.healthDisplay.textContent = this.pHealth;
+            this.lastHealth = this.pHealth;
+        }
+        if (this.pBombs !== this.lastBombs) {
+            if (this.bombDisplay) this.bombDisplay.textContent = this.pBombs;
+            this.lastBombs = this.pBombs;
+        }
+        if (this.pKeys !== this.lastKeys) {
+            if (this.keyDisplay) this.keyDisplay.textContent = this.pKeys;
+            this.lastKeys = this.pKeys;
+        }
     }
 
     gameStep() {
