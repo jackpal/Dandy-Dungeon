@@ -60,6 +60,34 @@
             border: 2px solid var(--border-color);
             box-shadow: 0 20px 40px rgba(0,0,0,0.6);
             line-height: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        #hud {
+            width: 100%;
+            display: flex;
+            justify-content: space-around;
+            background-color: #000;
+            color: var(--accent-color);
+            padding: 0.5rem 0;
+            font-family: 'Courier New', Courier, monospace;
+            font-weight: bold;
+            font-size: 1rem;
+            border-bottom: 2px solid #222;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+        }
+
+        .hud-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .hud-item span {
+            color: #fff;
         }
 
         canvas {
@@ -169,6 +197,12 @@
         </header>
 
         <main class="canvas-wrapper">
+            <div id="hud">
+                <div class="hud-item">Score <span id="score-display">0</span></div>
+                <div class="hud-item">Health <span id="health-display">100</span></div>
+                <div class="hud-item">Bombs <span id="bomb-display">0</span></div>
+                <div class="hud-item">Keys <span id="key-display">0</span></div>
+            </div>
             <canvas id="gameCanvas" width="640" height="320">
                 This game requires a browser that supports the HTML5 canvas tag.
             </canvas>
@@ -194,10 +228,6 @@
                 <div class="control-item">
                     <div class="keys"><kbd>B</kbd></div>
                     <span class="control-label">Smart Bomb</span>
-                </div>
-                <div class="control-item">
-                    <div class="keys"><kbd>F5</kbd></div>
-                    <span class="control-label">Reload Level</span>
                 </div>
             </div>
         </section>

@@ -62,12 +62,19 @@ class DandyGame {
         this.boundGameStep = this.gameStep.bind(this);
         this.boundOnKeyDown = this.onkeydown.bind(this);
         this.boundOnKeyUp = this.onkeyup.bind(this);
+
+        // HUD Elements
+        this.scoreDisplay = document.getElementById('score-display');
+        this.healthDisplay = document.getElementById('health-display');
+        this.bombDisplay = document.getElementById('bomb-display');
+        this.keyDisplay = document.getElementById('key-display');
     }
 
     init() {
         document.addEventListener('keydown', this.boundOnKeyDown);
         document.addEventListener('keyup', this.boundOnKeyUp);
         this.loadLevel();
+        this.updateHud();
         this.startLoop();
     }
 
@@ -75,10 +82,21 @@ class DandyGame {
         requestAnimationFrame(this.boundGameStep);
     }
 
+    updateHud() {
+        if (this.scoreDisplay) this.scoreDisplay.textContent = this.pScore;
+        if (this.healthDisplay) this.healthDisplay.textContent = this.pHealth;
+        if (this.bombDisplay) this.bombDisplay.textContent = this.pBombs;
+        if (this.keyDisplay) this.keyDisplay.textContent = this.pKeys;
+    }
+
     gameStep() {
         this.doButtons();
         this.moveArrow();
         this.moveMonsters();
+        
+        // Update HUD (could be optimized to only run when values change, but 60fps DOM update for text is usually fine here)
+        this.updateHud();
+
         if (this.dirty) {
             this.drawPicture();
             this.dirty = false;
