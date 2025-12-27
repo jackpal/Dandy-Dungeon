@@ -40,6 +40,7 @@ class DandyGame {
     constructor() {
         this.canvas = document.getElementById('gameCanvas');
         this.context = this.canvas.getContext('2d');
+        this.context.imageSmoothingEnabled = false;
         this.dirty = false;
         this.map = [];
         this.currentLevel = 0;
