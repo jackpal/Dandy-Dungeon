@@ -834,8 +834,10 @@ strike.src = "data:image/png;base64,"+
 
 var levelWidth = 60;
 var levelHeight = 30;
+// The width and height of a tile in pixels (in the strike image)
 var tileWidth = 16;
 var tileHeight = 16;
+// The width and height of a tile when displayed in the canvas.
 var windowTileWidth = 20;
 var windowTileHeight = 10;
 
