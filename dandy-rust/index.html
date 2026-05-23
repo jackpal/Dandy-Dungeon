@@ -68,30 +68,44 @@
 
         #hud {
             width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
             background-color: #000;
             color: var(--accent-color);
-            padding: 0.5rem 0;
             font-family: 'Courier New', Courier, monospace;
             font-weight: bold;
             font-size: 0.95rem;
             border-bottom: 2px solid #222;
             margin-bottom: 5px;
-            display: flex;
-            flex-direction: column;
-            gap: 0.25rem;
-            align-items: center;
             line-height: normal;
         }
 
-        .hud-row {
-            display: flex;
-            justify-content: space-around;
-            width: 100%;
+        #hud th, #hud td {
+            padding: 0.5rem 0.25rem;
+            box-sizing: border-box;
+        }
+
+        #hud th {
+            width: 20%;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            color: var(--text-secondary);
+            font-weight: normal;
+            border-bottom: 1px solid #222;
+        }
+
+        .text-left {
+            text-align: left;
+        }
+
+        .text-right {
+            text-align: right;
         }
 
         .hud-p2-inactive {
             color: #666;
             font-style: italic;
+            text-align: center;
         }
 
         canvas {
@@ -193,17 +207,29 @@
         </header>
 
         <main class="canvas-wrapper">
-            <div id="hud">
-                <div class="hud-row" id="hud-p1">
-                    <div>P1 Score: <span id="p1-score">0</span></div>
-                    <div>Health: <span id="p1-health">1000</span></div>
-                    <div>Keys: <span id="p1-keys">0</span></div>
-                    <div>Bombs: <span id="p1-bombs">0</span></div>
-                </div>
-                <div class="hud-row" id="hud-p2">
-                    <div class="hud-p2-inactive">Player 2: Press WASD/F/G to Join</div>
-                </div>
-            </div>
+            <table id="hud">
+                <thead>
+                    <tr>
+                        <th class="text-left">Player</th>
+                        <th class="text-right">Score</th>
+                        <th class="text-right">Health</th>
+                        <th class="text-right">Keys</th>
+                        <th class="text-right">Bombs</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr id="hud-p1">
+                        <td class="text-left">P1</td>
+                        <td id="p1-score" class="text-right">0</td>
+                        <td id="p1-health" class="text-right">1000</td>
+                        <td id="p1-keys" class="text-right">0</td>
+                        <td id="p1-bombs" class="text-right">0</td>
+                    </tr>
+                    <tr id="hud-p2">
+                        <td colspan="5" class="hud-p2-inactive">Player 2: Press WASD/F/G to Join</td>
+                    </tr>
+                </tbody>
+            </table>
             <canvas id="gameCanvas" width="640" height="320">
                 This game requires a browser that supports the HTML5 canvas tag.
             </canvas>

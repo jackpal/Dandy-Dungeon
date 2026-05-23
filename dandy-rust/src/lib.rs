@@ -152,10 +152,10 @@ pub fn main_js() -> Result<(), JsValue> {
             if let Some(ref el) = hud_p2_el {
                 if p2_active {
                     el.set_inner_html(
-                        "<div>P2 Score: <span id=\"p2-score\">0</span></div>                         <div>Health: <span id=\"p2-health\">1000</span></div>                         <div>Keys: <span id=\"p2-keys\">0</span></div>                         <div>Bombs: <span id=\"p2-bombs\">0</span></div>"
+                        "<td class=\"text-left\">P2</td>                         <td id=\"p2-score\" class=\"text-right\">0</td>                         <td id=\"p2-health\" class=\"text-right\">1000</td>                         <td id=\"p2-keys\" class=\"text-right\">0</td>                         <td id=\"p2-bombs\" class=\"text-right\">0</td>"
                     );
                 } else {
-                    el.set_inner_html("<div class=\"hud-p2-inactive\">Player 2: Press WASD/F/G to Join</div>");
+                    el.set_inner_html("<td colspan=\"5\" class=\"hud-p2-inactive\">Player 2: Press WASD/F/G to Join</td>");
                 }
             }
             last_p2_active = p2_active;
