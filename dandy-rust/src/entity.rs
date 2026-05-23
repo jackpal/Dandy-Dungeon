@@ -43,7 +43,7 @@ impl Player {
         self.x = x;
         self.y = y;
         self.dir = dir;
-        self.health = 1000; // Standard starting health
+        self.health = 100; // Standard starting health
         self.bombs = 0;
         self.keys = 0;
         self.active = true;

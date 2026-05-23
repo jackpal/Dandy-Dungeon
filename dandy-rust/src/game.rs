@@ -357,7 +357,7 @@ impl Game {
                             self.players[p_idx].alive = true;
                             self.players[p_idx].x = nx;
                             self.players[p_idx].y = ny;
-                            self.players[p_idx].health = 500; // Resurrect with 500 health
+                            self.players[p_idx].health = 50; // Resurrect with 50 health
                             new_v = PLAYER + (p_idx as u8);
                             break;
                         }
