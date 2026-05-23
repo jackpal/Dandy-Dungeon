@@ -33,6 +33,9 @@ pub const DIR_TO_DELTA: [(i32, i32); 8] = [
     (-1, -1), // 7: Up-Left
 ];
 
+// Player spawn directions: P1 (North/Up), P2 (East/Right), P3 (South/Down), P4 (West/Left)
+pub const PLAYER_SPAWN_DIRS: [usize; 4] = [0, 2, 4, 6];
+
 // Controls definitions for Players
 pub struct PlayerControls {
     pub left: &'static str,

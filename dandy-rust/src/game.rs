@@ -28,7 +28,7 @@ pub struct Game {
 impl Game {
     pub fn new() -> Self {
         let mut players = Vec::new();
-        for i in 0..2 {
+        for i in 0..4 {
             players.push(Player::new(i));
         }
         // Player 1 starts active
@@ -54,22 +54,17 @@ impl Game {
         // Find player spawn (stairs UP)
         let spawn = self.map.find(UP).unwrap_or((2, 2));
         
-        // Start Player 1
-        if self.players[0].active {
-            let dir = 0; // Up
-            let px = spawn.0 + DIR_TO_DELTA[dir].0;
-            let py = spawn.1 + DIR_TO_DELTA[dir].1;
-            self.players[0].start(px, py, dir);
-            self.map.set(px, py, PLAYER + 0);
-        }
-
-        // Start Player 2 if they were already active
-        if self.players[1].active {
-            let dir = 2; // Right
-            let px = spawn.0 + DIR_TO_DELTA[dir].0;
-            let py = spawn.1 + DIR_TO_DELTA[dir].1;
-            self.players[1].start(px, py, dir);
-            self.map.set(px, py, PLAYER + 1);
+        // Start active players
+        for (i, player) in self.players.iter_mut().enumerate() {
+            if player.active {
+                if i < PLAYER_SPAWN_DIRS.len() {
+                    let dir = PLAYER_SPAWN_DIRS[i];
+                    let px = spawn.0 + DIR_TO_DELTA[dir].0;
+                    let py = spawn.1 + DIR_TO_DELTA[dir].1;
+                    player.start(px, py, dir);
+                    self.map.set(px, py, PLAYER + i as u8);
+                }
+            }
         }
 
         // Initialize camera position to spawn
@@ -168,14 +163,13 @@ impl Game {
             if p2_triggered {
                 self.players[1].active = true;
                 self.players[1].alive = true;
-                // Spawn P2 at P1's position if P1 is alive, otherwise at UP stairs
-                let spawn_pos = if self.players[0].alive {
-                    (self.players[0].x, self.players[0].y)
-                } else {
-                    self.map.find(UP).unwrap_or((2, 2))
-                };
-                self.players[1].start(spawn_pos.0, spawn_pos.1, 2);
-                self.map.set(spawn_pos.0, spawn_pos.1, PLAYER + 1);
+                // Spawn P2 exactly 1 tile East of the UP stairs
+                let spawn = self.map.find(UP).unwrap_or((2, 2));
+                let dir = PLAYER_SPAWN_DIRS[1]; // East/Right (2)
+                let px = spawn.0 + DIR_TO_DELTA[dir].0;
+                let py = spawn.1 + DIR_TO_DELTA[dir].1;
+                self.players[1].start(px, py, dir);
+                self.map.set(px, py, PLAYER + 1);
             }
         }
 
@@ -186,7 +180,7 @@ impl Game {
             let mut players_active = false;
             
             // Step each player
-            for i in 0..2 {
+            for i in 0..self.players.len() {
                 if self.players[i].active && self.players[i].alive {
                     players_active = true;
                     let p = self.players[i].clone();
@@ -204,6 +198,7 @@ impl Game {
     }
 
     fn step_player(&mut self, index: usize, p: &Player, keys: &HashSet<String>) {
+        if index >= 2 { return; } // No controls for P3/P4 yet
         let controls = if index == 0 { &P1_CONTROLS } else { &P2_CONTROLS };
 
         // 1. Check Smart Bomb
@@ -357,13 +352,13 @@ impl Game {
                 HEART => {
                     // RESURRECTION!
                     new_v = GHOST + 2; // Heart turns into level-3 ghost if nobody resurrected?
-                    for p2_idx in 0..2 {
-                        if self.players[p2_idx].active && !self.players[p2_idx].alive {
-                            self.players[p2_idx].alive = true;
-                            self.players[p2_idx].x = nx;
-                            self.players[p2_idx].y = ny;
-                            self.players[p2_idx].health = 500; // Resurrect with 500 health
-                            new_v = PLAYER + (p2_idx as u8);
+                    for p_idx in 0..self.players.len() {
+                        if self.players[p_idx].active && !self.players[p_idx].alive {
+                            self.players[p_idx].alive = true;
+                            self.players[p_idx].x = nx;
+                            self.players[p_idx].y = ny;
+                            self.players[p_idx].health = 500; // Resurrect with 500 health
+                            new_v = PLAYER + (p_idx as u8);
                             break;
                         }
                     }
@@ -436,7 +431,7 @@ impl Game {
         let mut best_p_idx = None;
         let mut best_dist = None;
         
-        for i in 0..2 {
+        for i in 0..self.players.len() {
             if self.players[i].active && self.players[i].alive {
                 let dist = (self.players[i].x - gx).abs() + (self.players[i].y - gy).abs();
                 if best_dist.is_none() || dist < best_dist.unwrap() {
@@ -483,7 +478,7 @@ impl Game {
                 self.map.set(gx, gy, SPACE);
                 self.map.set(nx, ny, ghost_val);
                 break;
-            } else if nv >= PLAYER && nv <= PLAYER + 1 {
+            } else if nv >= PLAYER && nv <= PLAYER + 3 {
                 // Hurt player!
                 let p_index = (nv - PLAYER) as usize;
                 let pain = 10 * (ghost_val - GHOST + 1) as i32;
@@ -531,5 +526,76 @@ impl Game {
                 self.map.set(nx, ny, new_ghost);
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::collections::HashSet;
+
+    #[test]
+    fn test_game_init() {
+        let game = Game::new();
+        assert_eq!(game.players.len(), 4);
+        assert!(game.players[0].active);
+        assert!(game.players[0].alive);
+        assert!(!game.players[1].active);
+        assert!(!game.players[2].active);
+        assert!(!game.players[3].active);
+    }
+
+    #[test]
+    fn test_player_spawning() {
+        let mut game = Game::new();
+        // Manually activate all players for testing spawn
+        for p in &mut game.players {
+            p.active = true;
+        }
+        game.load();
+
+        let spawn = game.map.find(UP).unwrap_or((2, 2));
+
+        // P1: North (0, -1)
+        assert_eq!(game.players[0].x, spawn.0);
+        assert_eq!(game.players[0].y, spawn.1 - 1);
+        assert_eq!(game.players[0].dir, 0);
+
+        // P2: East (1, 0)
+        assert_eq!(game.players[1].x, spawn.0 + 1);
+        assert_eq!(game.players[1].y, spawn.1);
+        assert_eq!(game.players[1].dir, 2);
+
+        // P3: South (0, 1)
+        assert_eq!(game.players[2].x, spawn.0);
+        assert_eq!(game.players[2].y, spawn.1 + 1);
+        assert_eq!(game.players[2].dir, 4);
+
+        // P4: West (-1, 0)
+        assert_eq!(game.players[3].x, spawn.0 - 1);
+        assert_eq!(game.players[3].y, spawn.1);
+        assert_eq!(game.players[3].dir, 6);
+    }
+
+    #[test]
+    fn test_p2_hot_join() {
+        let mut game = Game::new();
+        game.load();
+
+        assert!(!game.players[1].active);
+
+        let mut keys = HashSet::new();
+        keys.insert(P2_CONTROLS.up.to_string());
+
+        game.step(&keys);
+
+        assert!(game.players[1].active);
+        assert!(game.players[1].alive);
+
+        let spawn = game.map.find(UP).unwrap_or((2, 2));
+        // P2 should spawn 1 tile East of UP stairs
+        assert_eq!(game.players[1].x, spawn.0 + 1);
+        assert_eq!(game.players[1].y, spawn.1);
+        assert_eq!(game.players[1].dir, 2);
     }
 }
