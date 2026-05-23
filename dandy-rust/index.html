@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dandy Dungeon - Rust WebAssembly</title>
+    <style>
+        :root {
+            --bg-color: #121212;
+            --surface-color: #1e1e1e;
+            --text-color: #e0e0e0;
+            --text-secondary: #b0b0b0;
+            --accent-color: #ffa726;
+            --border-color: #333;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 2rem 1rem;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 800px;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        h1 {
+            color: var(--accent-color);
+            margin: 0 0 0.5rem 0;
+            font-size: 2.5rem;
+            letter-spacing: -0.02em;
+        }
+
+        p.subtitle {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+            margin: 0;
+        }
+
+        .canvas-wrapper {
+            position: relative;
+            background: #000;
+            padding: 10px;
+            border-radius: 8px;
+            border: 2px solid var(--border-color);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.6);
+            line-height: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 640px;
+        }
+
+        #hud {
+            width: 100%;
+            background-color: #000;
+            color: var(--accent-color);
+            padding: 0.5rem 0;
+            font-family: 'Courier New', Courier, monospace;
+            font-weight: bold;
+            font-size: 0.95rem;
+            border-bottom: 2px solid #222;
+            margin-bottom: 5px;
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+            align-items: center;
+        }
+
+        .hud-row {
+            display: flex;
+            justify-content: space-around;
+            width: 100%;
+        }
+
+        .hud-p2-inactive {
+            color: #666;
+            font-style: italic;
+        }
+
+        canvas {
+            image-rendering: pixelated;
+            max-width: 100%;
+            height: auto;
+            border-radius: 2px;
+        }
+
+        section {
+            width: 100%;
+            max-width: 664px;
+            margin-top: 2rem;
+            background: var(--surface-color);
+            padding: 1.5rem;
+            border-radius: 12px;
+            box-sizing: border-box;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+
+        h2 {
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 0.75rem;
+            margin-top: 0;
+            font-size: 1.25rem;
+            color: var(--accent-color);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .controls-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .control-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .keys {
+            display: flex;
+            gap: 4px;
+        }
+
+        kbd {
+            background-color: #333;
+            border-radius: 4px;
+            border: 1px solid #444;
+            box-shadow: 0 2px 0 #000;
+            color: #fff;
+            display: inline-block;
+            font-size: 0.85em;
+            font-weight: 700;
+            font-family: inherit;
+            line-height: 1;
+            padding: 4px 8px;
+            white-space: nowrap;
+        }
+
+        .control-label {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+        }
+
+        footer {
+            margin-top: 4rem;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            text-align: center;
+            border-top: 1px solid var(--border-color);
+            width: 100%;
+            padding-top: 2rem;
+        }
+
+        em {
+            color: var(--accent-color);
+            font-style: normal;
+        }
+
+        @media (max-width: 600px) {
+            body {
+                padding: 1rem;
+            }
+            h1 {
+                font-size: 1.8rem;
+            }
+        }
+    </style>
+    <link rel="rust" href="Cargo.toml" />
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>DANDY DUNGEON</h1>
+            <p class="subtitle">A retro masterpiece, modernized in Rust WebAssembly.</p>
+        </header>
+
+        <main class="canvas-wrapper">
+            <div id="hud">
+                <div class="hud-row" id="hud-p1">
+                    <div>P1 Score: <span id="p1-score">0</span></div>
+                    <div>Health: <span id="p1-health">1000</span></div>
+                    <div>Keys: <span id="p1-keys">0</span></div>
+                    <div>Bombs: <span id="p1-bombs">0</span></div>
+                </div>
+                <div class="hud-row" id="hud-p2">
+                    <div class="hud-p2-inactive">Player 2: Press WASD/F/G to Join</div>
+                </div>
+            </div>
+            <canvas id="gameCanvas" width="640" height="320">
+                This game requires a browser that supports the HTML5 canvas tag.
+            </canvas>
+        </main>
+
+        <section id="controls">
+            <h2>Controls</h2>
+            <div class="controls-grid">
+                <div class="control-item">
+                    <div class="keys"><kbd>←</kbd><kbd>↑</kbd><kbd>↓</kbd><kbd>→</kbd></div>
+                    <span class="control-label">P1: Move</span>
+                </div>
+                <div class="control-item">
+                    <div class="keys"><kbd>Space</kbd></div>
+                    <span class="control-label">P1: Fire Arrow</span>
+                </div>
+                <div class="control-item">
+                    <div class="keys"><kbd>B</kbd></div>
+                    <span class="control-label">P1: Smart Bomb</span>
+                </div>
+                <div class="control-item">
+                    <div class="keys"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></div>
+                    <span class="control-label">P2: Move (Joins on Keypress)</span>
+                </div>
+                <div class="control-item">
+                    <div class="keys"><kbd>F</kbd></div>
+                    <span class="control-label">P2: Fire Arrow</span>
+                </div>
+                <div class="control-item">
+                    <div class="keys"><kbd>G</kbd></div>
+                    <span class="control-label">P2: Smart Bomb</span>
+                </div>
+            </div>
+        </section>
+
+        <section id="about">
+            <h2>About</h2>
+            <p>
+                Experience the faithful Rust WebAssembly port of the classic Atari 800 game <em>Dandy Dungeon</em>. 
+                Navigate treacherous levels, collect keys, and blast monsters in this updated HTML5 implementation.
+            </p>
+        </section>
+
+        <footer>
+            <p>&copy; 2009-2026 John H. Palevich. All Rights Reserved.</p>
+        </footer>
+    </div>
+</body>
+</html>
