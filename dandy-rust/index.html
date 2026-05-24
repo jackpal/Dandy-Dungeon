@@ -110,8 +110,8 @@
 
         canvas {
             image-rendering: pixelated;
-            max-width: 100%;
-            height: auto;
+            width: 640px;
+            height: 320px;
             border-radius: 2px;
         }
 
@@ -230,7 +230,7 @@
                     </tr>
                 </tbody>
             </table>
-            <canvas id="gameCanvas" width="640" height="320">
+            <canvas id="gameCanvas" width="320" height="160">
                 This game requires a browser that supports the HTML5 canvas tag.
             </canvas>
         </main>
@@ -277,5 +277,140 @@
             <p>&copy; 2009-2026 John H. Palevich. All Rights Reserved.</p>
         </footer>
     </div>
+    <script type="module">
+        import init, { DandyApp, PlayerAction } from "./dandy-rust.js";
+
+        async function run() {
+            const wasm = await init();
+            const app = new DandyApp();
+
+            const canvas = document.getElementById("gameCanvas");
+            const ctx = canvas.getContext("2d");
+
+            const controlRegistry = {
+                "ArrowUp": { player: 0, action: PlayerAction.Up },
+                "ArrowDown": { player: 0, action: PlayerAction.Down },
+                "ArrowLeft": { player: 0, action: PlayerAction.Left },
+                "ArrowRight": { player: 0, action: PlayerAction.Right },
+                " ": { player: 0, action: PlayerAction.Shoot },
+                "b": { player: 0, action: PlayerAction.Bomb },
+                "B": { player: 0, action: PlayerAction.Bomb },
+
+                "w": { player: 1, action: PlayerAction.Up },
+                "W": { player: 1, action: PlayerAction.Up },
+                "s": { player: 1, action: PlayerAction.Down },
+                "S": { player: 1, action: PlayerAction.Down },
+                "a": { player: 1, action: PlayerAction.Left },
+                "A": { player: 1, action: PlayerAction.Left },
+                "d": { player: 1, action: PlayerAction.Right },
+                "D": { player: 1, action: PlayerAction.Right },
+                "f": { player: 1, action: PlayerAction.Shoot },
+                "F": { player: 1, action: PlayerAction.Shoot },
+                "g": { player: 1, action: PlayerAction.Bomb },
+                "G": { player: 1, action: PlayerAction.Bomb }
+            };
+
+            window.addEventListener("keydown", (e) => {
+                const bind = controlRegistry[e.key];
+                if (bind !== undefined) {
+                    app.set_action(bind.player, bind.action, true);
+                    if (e.key === " " || e.key.startsWith("Arrow")) {
+                        e.preventDefault();
+                    }
+                }
+            });
+
+            window.addEventListener("keyup", (e) => {
+                const bind = controlRegistry[e.key];
+                if (bind !== undefined) {
+                    app.set_action(bind.player, bind.action, false);
+                }
+            });
+
+            const lastHuds = [
+                { active: false, score: -1, health: -1, keys: -1, bombs: -1 },
+                { active: false, score: -1, health: -1, keys: -1, bombs: -1 }
+            ];
+
+            function updateHUD(statsArray) {
+                for (let i = 0; i < 2; i++) {
+                    const offset = i * 7;
+                    const active = statsArray[offset] === 1;
+                    const score = statsArray[offset + 3];
+                    const health = statsArray[offset + 4];
+                    const keys = statsArray[offset + 5];
+                    const bombs = statsArray[offset + 6];
+
+                    const cache = lastHuds[i];
+
+                    if (active !== cache.active) {
+                        if (i > 0) {
+                            const row = document.getElementById("hud-p2");
+                            if (row) {
+                                if (active) {
+                                    row.innerHTML = `
+                                        <td class="text-left">P2</td>
+                                        <td id="p2-score" class="text-right">0</td>
+                                        <td id="p2-health" class="text-right">100</td>
+                                        <td id="p2-keys" class="text-right">0</td>
+                                        <td id="p2-bombs" class="text-right">0</td>
+                                    `;
+                                } else {
+                                    row.innerHTML = `<td colspan="5" class="hud-p2-inactive">Player 2: Press WASD/F/G to Join</td>`;
+                                }
+                            }
+                        }
+                        cache.active = active;
+                        cache.score = -1;
+                        cache.health = -1;
+                        cache.keys = -1;
+                        cache.bombs = -1;
+                    }
+
+                    if (active) {
+                        const metrics = [
+                            { suffix: "score", val: score, prop: "score" },
+                            { suffix: "health", val: health, prop: "health" },
+                            { suffix: "keys", val: keys, prop: "keys" },
+                            { suffix: "bombs", val: bombs, prop: "bombs" }
+                        ];
+
+                        for (const m of metrics) {
+                            if (m.val !== cache[m.prop]) {
+                                const el = document.getElementById("p" + (i + 1) + "-" + m.suffix);
+                                if (el) {
+                                    el.textContent = m.val.toString();
+                                }
+                                cache[m.prop] = m.val;
+                            }
+                        }
+                    }
+                }
+            }
+
+            function gameLoop() {
+                app.tick();
+
+                const fbPtr = app.get_framebuffer_ptr();
+                const fbSize = app.get_framebuffer_size();
+                const fbBytes = new Uint8ClampedArray(wasm.memory.buffer, fbPtr, fbSize);
+
+                const imgData = new ImageData(fbBytes, 320, 160);
+                ctx.putImageData(imgData, 0, 0);
+
+                const statsPtr = app.get_stats_ptr();
+                const statsLen = app.get_stats_len();
+                const statsArray = new Int32Array(wasm.memory.buffer, statsPtr, statsLen);
+
+                updateHUD(statsArray);
+
+                requestAnimationFrame(gameLoop);
+            }
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        run();
+    </script>
 </body>
 </html>

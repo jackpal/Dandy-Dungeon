@@ -2,7 +2,6 @@
 use crate::consts::*;
 use crate::entity::{Player, Arrow};
 use crate::map::Map;
-use std::collections::HashSet;
 
 #[derive(Clone, Copy, Debug)]
 pub struct ActiveRect {
@@ -23,6 +22,9 @@ pub struct Game {
     // Camera variables
     pub cog_x: f64,
     pub cog_y: f64,
+
+    // Platform-independent PRNG state
+    pub rng_state: u32,
 }
 
 impl Game {
@@ -44,7 +46,15 @@ impl Game {
             rotor: 0,
             cog_x: 0.0,
             cog_y: 0.0,
+            rng_state: 12345, // Default seed
         }
+    }
+
+    // Platform-independent pseudo-random number generator (LCG)
+    pub fn next_random(&mut self) -> f64 {
+        self.rng_state = self.rng_state.wrapping_mul(1103515245).wrapping_add(12345);
+        let val = (self.rng_state >> 16) & 0x7fff;
+        (val as f64) / 32768.0
     }
 
     pub fn load(&mut self) {
@@ -110,8 +120,8 @@ impl Game {
     }
 
     pub fn get_camera_offsets(&self) -> (f64, f64) {
-        let screen_width = 320.0;
-        let screen_height = 160.0;
+        let screen_width = SCREEN_WIDTH as f64;
+        let screen_height = SCREEN_HEIGHT as f64;
         
         let map_width = (MAP_WIDTH * TILE_SIZE) as f64;
         let map_height = (MAP_HEIGHT * TILE_SIZE) as f64;
@@ -129,10 +139,10 @@ impl Game {
         let (offset_x, offset_y) = self.get_camera_offsets();
         
         let left = (-offset_x / (TILE_SIZE as f64)).floor() as i32;
-        let right = ((-offset_x + 320.0 + (TILE_SIZE as f64) - 1.0) / (TILE_SIZE as f64)).floor() as i32;
+        let right = ((-offset_x + (SCREEN_WIDTH as f64) + (TILE_SIZE as f64) - 1.0) / (TILE_SIZE as f64)).floor() as i32;
         
         let top = (-offset_y / (TILE_SIZE as f64)).floor() as i32;
-        let bottom = ((-offset_y + 160.0 + (TILE_SIZE as f64) - 1.0) / (TILE_SIZE as f64)).floor() as i32;
+        let bottom = ((-offset_y + (SCREEN_HEIGHT as f64) + (TILE_SIZE as f64) - 1.0) / (TILE_SIZE as f64)).floor() as i32;
         
         // Bound within map coordinates
         let left = left.clamp(0, MAP_WIDTH);
@@ -148,17 +158,12 @@ impl Game {
         }
     }
 
-    pub fn step(&mut self, keys: &HashSet<String>) {
+    pub fn step(&mut self) {
         self.time += 1;
 
         // Handle Player 2 joining dynamically
         if !self.players[1].active {
-            let p2_triggered = keys.contains(P2_CONTROLS.up)
-                || keys.contains(P2_CONTROLS.down)
-                || keys.contains(P2_CONTROLS.left)
-                || keys.contains(P2_CONTROLS.right)
-                || keys.contains(P2_CONTROLS.shoot)
-                || keys.contains(P2_CONTROLS.bomb);
+            let p2_triggered = self.players[1].input_mask != 0;
             
             if p2_triggered {
                 self.players[1].active = true;
@@ -177,11 +182,12 @@ impl Game {
         if self.time - self.last_move_time >= 4 {
             self.last_move_time = self.time;
 
-            // Step each player
+            // Step each player (optimized using primitive local parameters to satisfy borrow checks)
             for i in 0..self.players.len() {
                 if self.players[i].active && self.players[i].alive && !self.players[i].escaped {
-                    let p = self.players[i].clone();
-                    self.step_player(i, &p, keys);
+                    let px = self.players[i].x;
+                    let py = self.players[i].y;
+                    self.step_player(i, px, py);
                 }
             }
 
@@ -217,25 +223,25 @@ impl Game {
         }
     }
 
-    fn step_player(&mut self, index: usize, p: &Player, keys: &HashSet<String>) {
-        if index >= 2 { return; } // No controls for P3/P4 yet
-        let controls = if index == 0 { &P1_CONTROLS } else { &P2_CONTROLS };
+    fn step_player(&mut self, index: usize, start_x: i32, start_y: i32) {
+        if index >= 4 { return; }
+        let input = self.players[index].input_mask;
 
         // 1. Check Smart Bomb
-        if keys.contains(controls.bomb) {
+        if (input & ACTION_BOMB) != 0 {
             if self.players[index].bombs > 0 {
                 self.players[index].bombs -= 1;
                 self.do_smart_bomb(index);
             }
         }
 
-        // Get direction from keys
+        // Get direction from input mask
         let mut dx = 0;
         let mut dy = 0;
-        if keys.contains(controls.left) { dx -= 1; }
-        if keys.contains(controls.right) { dx += 1; }
-        if keys.contains(controls.up) { dy -= 1; }
-        if keys.contains(controls.down) { dy += 1; }
+        if (input & ACTION_LEFT) != 0 { dx -= 1; }
+        if (input & ACTION_RIGHT) != 0 { dx += 1; }
+        if (input & ACTION_UP) != 0 { dy -= 1; }
+        if (input & ACTION_DOWN) != 0 { dy += 1; }
 
         let dir_opt = match (dx, dy) {
             (0, -1) => Some(0),
@@ -254,12 +260,12 @@ impl Game {
         }
 
         // 2. Check Shoot vs Move
-        if keys.contains(controls.shoot) {
+        if (input & ACTION_SHOOT) != 0 {
             if self.players[index].arrow.is_none() {
                 let shoot_dir = dir_opt.unwrap_or(self.players[index].dir);
                 self.players[index].arrow = Some(Arrow {
-                    x: p.x,
-                    y: p.y,
+                    x: start_x,
+                    y: start_y,
                     dir: shoot_dir,
                 });
             }
@@ -488,7 +494,7 @@ impl Game {
         };
 
         // Try direct towards player, then left-steer, then right-steer
-        let search_order = [0, 7, 1]; // 0, -1, +1 (steer left/right in clockwise directions)
+        let search_order = [0, 7, 1]; // 0, -1, +1
         for offset in search_order {
             let d = (m_dir + offset) & 7;
             let delta = DIR_TO_DELTA[d];
@@ -534,10 +540,10 @@ impl Game {
 
     fn step_generator(&mut self, gx: i32, gy: i32, gen_val: u8) {
         // 30% spawn rate
-        let ran = js_sys::Math::random();
+        let ran = self.next_random();
         if ran < 0.3 {
             // Pick random cardinal direction: 0, 2, 4, 6
-            let dir = ((js_sys::Math::random() * 4.0).floor() as usize) * 2;
+            let dir = ((self.next_random() * 4.0).floor() as usize) * 2;
             let delta = DIR_TO_DELTA[dir];
             let nx = gx + delta.0;
             let ny = gy + delta.1;
@@ -554,7 +560,6 @@ impl Game {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::collections::HashSet;
 
     #[test]
     fn test_game_init() {
@@ -606,10 +611,9 @@ mod tests {
 
         assert!(!game.players[1].active);
 
-        let mut keys = HashSet::new();
-        keys.insert(P2_CONTROLS.up.to_string());
+        game.players[1].input_mask = ACTION_UP;
 
-        game.step(&keys);
+        game.step();
 
         assert!(game.players[1].active);
         assert!(game.players[1].alive);
@@ -639,18 +643,15 @@ mod tests {
         game.map.set(game.players[0].x, game.players[0].y, PLAYER);
 
         // Move P1 DOWN (into exit)
-        let mut keys = HashSet::new();
-        keys.insert(P1_CONTROLS.down.to_string());
+        game.players[0].input_mask = ACTION_DOWN;
         
         // Step game (4 ticks to trigger move)
         for _ in 0..4 {
-            game.step(&keys);
+            game.step();
         }
 
         // P1 should have escaped, and since they were the only player, level should progress.
-        // Level starts at 0, should be 1 now.
         assert_eq!(game.level, 1);
-        // P1 should be active and alive in the new level
         assert!(game.players[0].active);
         assert!(game.players[0].alive);
         assert!(!game.players[0].escaped);
@@ -673,16 +674,13 @@ mod tests {
         game.players[0].x = exit.0;
         game.players[0].y = exit.1 - 1;
         game.map.set(game.players[0].x, game.players[0].y, PLAYER);
-
-        // Keep P2 somewhere safe (away from exit, e.g. spawn point where it already is)
         
         // Move P1 DOWN (into exit)
-        let mut keys = HashSet::new();
-        keys.insert(P1_CONTROLS.down.to_string()); // P1 moves down, P2 does nothing
+        game.players[0].input_mask = ACTION_DOWN;
 
         // Step game
         for _ in 0..4 {
-            game.step(&keys);
+            game.step();
         }
 
         // P1 should have escaped
@@ -716,12 +714,11 @@ mod tests {
         game.map.set(game.players[0].x, game.players[0].y, PLAYER);
 
         // Move P1 DOWN (into exit)
-        let mut keys = HashSet::new();
-        keys.insert(P1_CONTROLS.down.to_string());
+        game.players[0].input_mask = ACTION_DOWN;
 
         // Step game to make P1 escape
         for _ in 0..4 {
-            game.step(&keys);
+            game.step();
         }
         assert!(game.players[0].escaped);
         assert_eq!(game.level, 0); // Still level 0
@@ -732,9 +729,9 @@ mod tests {
         game.map.set(game.players[1].x, game.players[1].y, SPACE);
 
         // Step game again to trigger check
-        let empty_keys = HashSet::new();
+        game.players[0].input_mask = 0;
         for _ in 0..4 {
-            game.step(&empty_keys);
+            game.step();
         }
 
         // Level should now progress because P1 escaped and P2 is dead
@@ -763,9 +760,8 @@ mod tests {
         game.map.set(game.players[1].x, game.players[1].y, SPACE);
 
         // Step game to trigger check
-        let empty_keys = HashSet::new();
         for _ in 0..4 {
-            game.step(&empty_keys);
+            game.step();
         }
 
         // Level should NOT progress
@@ -775,4 +771,3 @@ mod tests {
         assert!(game.players[1].active && game.players[1].alive && !game.players[1].escaped);
     }
 }
-

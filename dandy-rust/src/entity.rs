@@ -9,6 +9,7 @@ pub struct Arrow {
 
 #[derive(Clone, Debug)]
 pub struct Player {
+    #[allow(dead_code)]
     pub index: usize,
     pub x: i32,
     pub y: i32,
@@ -21,6 +22,7 @@ pub struct Player {
     pub alive: bool,
     pub escaped: bool,
     pub arrow: Option<Arrow>,
+    pub input_mask: u8,
 }
 
 impl Player {
@@ -38,6 +40,7 @@ impl Player {
             alive: false,
             escaped: false,
             arrow: None,
+            input_mask: 0,
         }
     }
 
@@ -52,5 +55,6 @@ impl Player {
         self.alive = true;
         self.escaped = false;
         self.arrow = None;
+        self.input_mask = 0;
     }
 }
