@@ -13,7 +13,7 @@ impl Map {
     }
 
     pub fn get(&self, x: i32, y: i32) -> u8 {
-        if x >= 0 && x < MAP_WIDTH && y >= 0 && y < MAP_HEIGHT {
+        if (0..MAP_WIDTH).contains(&x) && (0..MAP_HEIGHT).contains(&y) {
             self.data[(x + y * MAP_WIDTH) as usize]
         } else {
             1 // Return Wall (1) as default for out of bounds to prevent entities walking out
@@ -21,7 +21,7 @@ impl Map {
     }
 
     pub fn set(&mut self, x: i32, y: i32, val: u8) {
-        if x >= 0 && x < MAP_WIDTH && y >= 0 && y < MAP_HEIGHT {
+        if (0..MAP_WIDTH).contains(&x) && (0..MAP_HEIGHT).contains(&y) {
             self.data[(x + y * MAP_WIDTH) as usize] = val;
         }
     }
@@ -79,7 +79,7 @@ impl Map {
     }
 }
 
-const LEVEL_MAPS: [&'static [u8]; 26] = [
+const LEVEL_MAPS: [&[u8]; 26] = [
     include_bytes!("../assets/levels/LEVEL.A"),
     include_bytes!("../assets/levels/LEVEL.B"),
     include_bytes!("../assets/levels/LEVEL.C"),

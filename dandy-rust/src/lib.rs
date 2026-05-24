@@ -4,6 +4,10 @@ mod entity;
 mod map;
 mod game;
 mod graphics;
+mod rand;
+mod camera;
+mod physics;
+mod ai;
 
 use consts::*;
 use game::Game;
@@ -30,6 +34,12 @@ pub struct DandyApp {
     spritesheet: Vec<u8>,
     framebuffer: Framebuffer,
     stats: Vec<i32>,
+}
+
+impl Default for DandyApp {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 #[wasm_bindgen]
