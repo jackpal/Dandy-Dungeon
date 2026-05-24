@@ -197,7 +197,7 @@
             }
         }
     </style>
-    <link rel="rust" href="Cargo.toml" />
+    <link data-trunk rel="rust" href="Cargo.toml" />
 </head>
 <body>
     <div class="container">
@@ -278,10 +278,10 @@
         </footer>
     </div>
     <script type="module">
-        import init, { DandyApp, PlayerAction } from "./dandy-rust.js";
+        window.addEventListener("TrunkApplicationStarted", (event) => {
+            const wasm = event.detail.wasm;
+            const { DandyApp, PlayerAction } = window.wasmBindings;
 
-        async function run() {
-            const wasm = await init();
             const app = new DandyApp();
 
             const canvas = document.getElementById("gameCanvas");
@@ -408,9 +408,7 @@
             }
 
             requestAnimationFrame(gameLoop);
-        }
-
-        run();
+        });
     </script>
 </body>
 </html>
