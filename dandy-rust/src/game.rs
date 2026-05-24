@@ -191,12 +191,20 @@ impl Game {
                 }
             }
 
+            // Step arrows for all active players unconditionally
+            for i in 0..self.players.len() {
+                if self.players[i].active {
+                    self.step_arrow(i);
+                }
+            }
+
             self.step_enemies();
 
             // Centralized Level Progression / Restart Check
             let mut players_in_dungeon = false;
             let mut any_escaped = false;
             let mut any_joined = false;
+            let mut arrows_in_flight = false;
 
             for p in &self.players {
                 if p.active {
@@ -207,10 +215,13 @@ impl Game {
                     if p.escaped {
                         any_escaped = true;
                     }
+                    if p.arrow.is_some() {
+                        arrows_in_flight = true;
+                    }
                 }
             }
 
-            if any_joined && !players_in_dungeon {
+            if any_joined && !players_in_dungeon && !arrows_in_flight {
                 if any_escaped {
                     // Progress to next level
                     self.level = (self.level + 1).min(25);
@@ -280,8 +291,7 @@ impl Game {
             }
         }
 
-        // Move arrow if exists
-        self.step_arrow(index);
+        // Arrow stepping moved to central Game::step
     }
 
     fn try_move_player(&mut self, index: usize, dir: usize) -> bool {
@@ -562,8 +572,8 @@ impl Game {
             return false;
         }
 
-        // 2. No Arrows in Flight for active, alive, non-escaped players
-        if self.players.iter().any(|p| p.active && p.alive && !p.escaped && p.arrow.is_some()) {
+        // 2. No Arrows in Flight for active players
+        if self.players.iter().any(|p| p.active && p.arrow.is_some()) {
             return false;
         }
 
@@ -936,12 +946,12 @@ mod tests {
         game.players[0].arrow = Some(Arrow { x: 10, y: 10, dir: 0 });
         assert!(!game.can_sleep());
 
-        // Arrow for dead player shouldn't block sleep
+        // Arrow for dead player SHOULD block sleep
         game.players[0].alive = false;
         let (tx, ty) = game.get_target_cog();
         game.cog_x = tx as f64;
         game.cog_y = ty as f64;
-        assert!(game.can_sleep());
+        assert!(!game.can_sleep());
     }
 
     #[test]
@@ -1019,6 +1029,89 @@ mod tests {
         game.map.set(gx, gy + 1, WALL);
         game.map.set(gx - 1, gy, WALL);
 
+        assert!(game.can_sleep());
+    }
+
+    #[test]
+    fn test_self_resurrection() {
+        let mut game = Game::new();
+        game.load();
+        
+        // Clear map of ghosts and generators to avoid interference
+        for y in 0..MAP_HEIGHT {
+            for x in 0..MAP_WIDTH {
+                let v = game.map.get(x, y);
+                if (v >= GHOST && v <= GHOST + 2) || (v >= GENERATOR && v <= GENERATOR + 2) {
+                    game.map.set(x, y, SPACE);
+                }
+            }
+        }
+
+        // Setup Player 1 at (5, 5) facing East (2)
+        let p1_idx = 0;
+        let px = 5;
+        let py = 5;
+        game.map.set(game.players[p1_idx].x, game.players[p1_idx].y, SPACE);
+        game.players[p1_idx].x = px;
+        game.players[p1_idx].y = py;
+        game.players[p1_idx].dir = 2;
+        game.players[p1_idx].health = 100;
+        game.players[p1_idx].alive = true;
+        game.map.set(px, py, PLAYER + p1_idx as u8);
+
+        // Clear path for arrow
+        game.map.set(px + 1, py, SPACE);
+
+        // Place HEART at (px + 2, py)
+        game.map.set(px + 2, py, HEART);
+
+        // Fire P1's arrow East (input ACTION_SHOOT)
+        game.players[p1_idx].input_mask = ACTION_SHOOT;
+        
+        // Step 4 times to trigger movement tick and fire arrow
+        for _ in 0..4 {
+            game.step();
+        }
+        
+        // Arrow should be at (px + 1, py) now (fired and moved 1 tile)
+        assert!(game.players[p1_idx].arrow.is_some());
+        assert_eq!(game.players[p1_idx].arrow.unwrap().x, px + 1);
+        assert_eq!(game.players[p1_idx].arrow.unwrap().y, py);
+        
+        // Clear input mask
+        game.players[p1_idx].input_mask = 0;
+
+        // Kill P1 on subsequent frame (before arrow hits HEART)
+        game.players[p1_idx].health = 0;
+        game.players[p1_idx].alive = false;
+        game.map.set(px, py, SPACE); // Remove player from map
+
+        // Verify Wasm cannot sleep while the arrow is in flight (even though player is dead)
+        assert!(!game.can_sleep());
+
+        // Step 4 times to trigger next movement tick (arrow hits HEART at px + 2, py)
+        for _ in 0..4 {
+            game.step();
+        }
+
+        // P1 should be resurrected to health = 50 at (px + 2, py)
+        assert!(game.players[p1_idx].alive);
+        assert_eq!(game.players[p1_idx].health, 50);
+        assert_eq!(game.players[p1_idx].x, px + 2);
+        assert_eq!(game.players[p1_idx].y, py);
+        
+        // Arrow should be destroyed
+        assert!(game.players[p1_idx].arrow.is_none());
+        
+        // Map at (px + 2, py) should now be PLAYER + p1_idx
+        assert_eq!(game.map.get(px + 2, py), PLAYER + p1_idx as u8);
+
+        // Force camera to target COG to avoid camera movement blocking sleep
+        let (tx, ty) = game.get_target_cog();
+        game.cog_x = tx as f64;
+        game.cog_y = ty as f64;
+
+        // Wasm can now sleep
         assert!(game.can_sleep());
     }
 }
