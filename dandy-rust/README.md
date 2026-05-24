@@ -15,6 +15,7 @@ The Rust engine is compiled as a pure simulation core, completely isolated from 
 ### 2. Software Framebuffer Blitting (99.5% Render Call Reduction)
 Instead of issuing 200+ expensive JavaScript Native Interface (JSNI) drawing calls per frame (e.g., drawing individual sprite coordinates on a 20x10 viewport canvas), the Rust core blits pixels internally:
 *   **Dedicated Blitter (`src/graphics.rs`)**: Statically decodes the uncompressed 24-bit BGR spritesheet (`dandy.bmp`) with spec-compliant DWORD row strides and BGR-RGBA conversions, caching it inside Wasm memory on load.
+*   **Vectorized Row Blitting (SIMD Optimized)**: Decouples loops inside `blit_tile` to calculate horizontal and vertical viewport clipping boundaries strictly **once** per tile, hoisting loop-invariant calculations outside the inner loop. Row segments are copied into the framebuffer via continuous memory blits using Rust's vector-optimized **`copy_from_slice`** (equivalent to optimized CPU `memcpy`), unlocking hardware SIMD execution.
 *   **Single-Blit Frame**: During ticks, Rust blits pixels directly to a flat local screen buffer (`Vec<u8>` representing native `320x160` pixels). The JS shell draws the entire scene on the browser canvas using **exactly one** `putImageData` call per frame.
 *   **Crisp Retro Upscaling**: The native `320x160` buffer is upscaled to a sharp `640x320` window using browser-level hardware-accelerated CSS (`image-rendering: pixelated;`).
 
@@ -43,6 +44,14 @@ Replaced all host Web API browser calls (`js_sys::Math::random()`) with a determ
 
 ### 7. Zero-Clone Borrow checking
 Wasm loops are structured to satisfy Rust borrow-checker rules by reading primitive coordinates at block scopes, completely avoiding redundant `Player::clone()` allocations during frame ticks.
+
+### 8. Stateless Modular Architecture (SRP Decoupling)
+To satisfy the Single Responsibility Principle (SRP) and maximize code legibility and testability, the monolithic engine has been decomposed into decoupled, cohesive modules:
+*   `src/game.rs`: Streamlined loop orchestrator managing ticks, level loads, and coop progress checks.
+*   `src/camera.rs`: Viewport offset calculations, active rect clipping, and player Center of Gravity (COG) math.
+*   `src/physics.rs`: Stateless 8-way wall-sliding physics, door unlocking, and arrow projectile/heart resurrection mechanics (accepts direct `&mut Player` and `&mut Map` disjoint references, resolving borrow collisions).
+*   `src/ai.rs`: Stateless ghost Manhattan chaser pathfinding, generator spawner spawning, and monster sleep blocked heuristics.
+*   `src/rand.rs`: Stateless host-independent custom LCG pseudo-random number generator.
 
 ---
 
