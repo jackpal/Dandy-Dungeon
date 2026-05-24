@@ -555,6 +555,124 @@ impl Game {
             }
         }
     }
+
+    pub fn can_sleep(&self) -> bool {
+        // 1. No Player Inputs
+        if self.players.iter().any(|p| p.input_mask != 0) {
+            return false;
+        }
+
+        // 2. No Arrows in Flight for active, alive, non-escaped players
+        if self.players.iter().any(|p| p.active && p.alive && !p.escaped && p.arrow.is_some()) {
+            return false;
+        }
+
+        // 3. Camera Arrived
+        let (tx, ty) = self.get_target_cog();
+        let dx = (tx as f64) - self.cog_x;
+        let dy = (ty as f64) - self.cog_y;
+        if dx.abs() >= 0.1 || dy.abs() >= 0.1 {
+            return false;
+        }
+
+        // Viewport active rect
+        let active = self.get_active_rect();
+
+        // Check ghosts and generators inside active viewport
+        for y in active.top..(active.top + active.height) {
+            for x in active.left..(active.left + active.width) {
+                let v = self.map.get(x, y);
+
+                // 4. Ghosts inside visible viewport
+                if v >= GHOST && v <= GHOST + 2 {
+                    if !self.is_ghost_blocked(x, y) {
+                        return false;
+                    }
+                }
+
+                // 5. Generators inside visible viewport
+                if v >= GENERATOR && v <= GENERATOR + 2 {
+                    if !self.is_generator_blocked(x, y) {
+                        return false;
+                    }
+                }
+            }
+        }
+
+        true
+    }
+
+    fn is_ghost_blocked(&self, gx: i32, gy: i32) -> bool {
+        // Find closest active & alive & non-escaped player
+        let mut best_p_idx = None;
+        let mut best_dist = None;
+        
+        for i in 0..self.players.len() {
+            if self.players[i].active && self.players[i].alive && !self.players[i].escaped {
+                let dist = (self.players[i].x - gx).abs() + (self.players[i].y - gy).abs();
+                if best_dist.is_none() || dist < best_dist.unwrap() {
+                    best_dist = Some(dist);
+                    best_p_idx = Some(i);
+                }
+            }
+        }
+
+        let p_idx = match best_p_idx {
+            Some(idx) => idx,
+            None => return true, // No active/alive players
+        };
+
+        let px = self.players[p_idx].x;
+        let py = self.players[p_idx].y;
+        
+        // Target direction
+        let dx = px - gx;
+        let dy = py - gy;
+        
+        let m_dir = match (dx.signum(), dy.signum()) {
+            (0, -1) => 0,
+            (1, -1) => 1,
+            (1, 0)  => 2,
+            (1, 1)  => 3,
+            (0, 1)  => 4,
+            (-1, 1) => 5,
+            (-1, 0) => 6,
+            (-1, -1)=> 7,
+            _ => 0,
+        };
+
+        // Try direct towards player, then left-steer, then right-steer
+        let search_order = [0, 7, 1]; // 0, -1, +1
+        for offset in search_order {
+            let d = (m_dir + offset) & 7;
+            let delta = DIR_TO_DELTA[d];
+            let nx = gx + delta.0;
+            let ny = gy + delta.1;
+
+            let nv = self.map.get(nx, ny);
+            if nv == SPACE {
+                return false;
+            } else if nv >= PLAYER && nv <= PLAYER + 3 {
+                return false;
+            } else if nv >= ARROW && nv <= ARROW + 7 {
+                return true; // Frozen arrow stops search immediately and freezes the ghost
+            }
+        }
+
+        true
+    }
+
+    fn is_generator_blocked(&self, gx: i32, gy: i32) -> bool {
+        for dir in [0, 2, 4, 6] {
+            let delta = DIR_TO_DELTA[dir];
+            let nx = gx + delta.0;
+            let ny = gy + delta.1;
+            if self.map.get(nx, ny) == SPACE {
+                return false;
+            }
+        }
+        true
+    }
 }
 
 #[cfg(test)]
@@ -769,5 +887,138 @@ mod tests {
         // Level should have restarted, players resurrected on level 0
         assert!(game.players[0].active && game.players[0].alive && !game.players[0].escaped);
         assert!(game.players[1].active && game.players[1].alive && !game.players[1].escaped);
+    }
+
+    #[test]
+    fn test_can_sleep_basic() {
+        let mut game = Game::new();
+        game.load();
+        // Clear map of ghosts and generators
+        for y in 0..MAP_HEIGHT {
+            for x in 0..MAP_WIDTH {
+                let v = game.map.get(x, y);
+                if (v >= GHOST && v <= GHOST + 2) || (v >= GENERATOR && v <= GENERATOR + 2) {
+                    game.map.set(x, y, SPACE);
+                }
+            }
+        }
+        assert!(game.can_sleep());
+    }
+
+    #[test]
+    fn test_cannot_sleep_with_input() {
+        let mut game = Game::new();
+        game.load();
+        for y in 0..MAP_HEIGHT {
+            for x in 0..MAP_WIDTH {
+                let v = game.map.get(x, y);
+                if (v >= GHOST && v <= GHOST + 2) || (v >= GENERATOR && v <= GENERATOR + 2) {
+                    game.map.set(x, y, SPACE);
+                }
+            }
+        }
+        game.players[0].input_mask = ACTION_UP;
+        assert!(!game.can_sleep());
+    }
+
+    #[test]
+    fn test_cannot_sleep_with_arrow() {
+        let mut game = Game::new();
+        game.load();
+        for y in 0..MAP_HEIGHT {
+            for x in 0..MAP_WIDTH {
+                let v = game.map.get(x, y);
+                if (v >= GHOST && v <= GHOST + 2) || (v >= GENERATOR && v <= GENERATOR + 2) {
+                    game.map.set(x, y, SPACE);
+                }
+            }
+        }
+        game.players[0].arrow = Some(Arrow { x: 10, y: 10, dir: 0 });
+        assert!(!game.can_sleep());
+
+        // Arrow for dead player shouldn't block sleep
+        game.players[0].alive = false;
+        let (tx, ty) = game.get_target_cog();
+        game.cog_x = tx as f64;
+        game.cog_y = ty as f64;
+        assert!(game.can_sleep());
+    }
+
+    #[test]
+    fn test_cannot_sleep_camera_moving() {
+        let mut game = Game::new();
+        game.load();
+        for y in 0..MAP_HEIGHT {
+            for x in 0..MAP_WIDTH {
+                let v = game.map.get(x, y);
+                if (v >= GHOST && v <= GHOST + 2) || (v >= GENERATOR && v <= GENERATOR + 2) {
+                    game.map.set(x, y, SPACE);
+                }
+            }
+        }
+        game.cog_x += 1.0;
+        assert!(!game.can_sleep());
+
+        game.cog_x = (game.get_target_cog().0 as f64) + 0.05;
+        assert!(game.can_sleep());
+    }
+
+    #[test]
+    fn test_cannot_sleep_unblocked_ghost() {
+        let mut game = Game::new();
+        game.load();
+        for y in 0..MAP_HEIGHT {
+            for x in 0..MAP_WIDTH {
+                let v = game.map.get(x, y);
+                if (v >= GHOST && v <= GHOST + 2) || (v >= GENERATOR && v <= GENERATOR + 2) {
+                    game.map.set(x, y, SPACE);
+                }
+            }
+        }
+        let px = game.players[0].x;
+        let py = game.players[0].y;
+        
+        // Place ghost next to player but with gap
+        game.map.set(px + 2, py, GHOST);
+        game.map.set(px + 1, py, SPACE);
+
+        // Ghost is unblocked
+        assert!(!game.can_sleep());
+
+        // Block candidate paths
+        game.map.set(px + 1, py, WALL);
+        game.map.set(px + 1, py + 1, WALL);
+        game.map.set(px + 1, py - 1, WALL);
+
+        assert!(game.can_sleep());
+    }
+
+    #[test]
+    fn test_cannot_sleep_unblocked_generator() {
+        let mut game = Game::new();
+        game.load();
+        for y in 0..MAP_HEIGHT {
+            for x in 0..MAP_WIDTH {
+                let v = game.map.get(x, y);
+                if (v >= GHOST && v <= GHOST + 2) || (v >= GENERATOR && v <= GENERATOR + 2) {
+                    game.map.set(x, y, SPACE);
+                }
+            }
+        }
+        
+        let active = game.get_active_rect();
+        let gx = active.left + 2;
+        let gy = active.top + 2;
+        game.map.set(gx, gy, GENERATOR);
+        game.map.set(gx, gy - 1, SPACE);
+
+        assert!(!game.can_sleep());
+
+        game.map.set(gx, gy - 1, WALL);
+        game.map.set(gx + 1, gy, WALL);
+        game.map.set(gx, gy + 1, WALL);
+        game.map.set(gx - 1, gy, WALL);
+
+        assert!(game.can_sleep());
     }
 }

@@ -72,6 +72,10 @@ impl DandyApp {
         self.update_stats_buffer();
     }
 
+    pub fn can_sleep(&self) -> bool {
+        self.game.can_sleep()
+    }
+
     pub fn set_action(&mut self, player_idx: usize, action: PlayerAction, pressed: bool) {
         if player_idx < self.game.players.len() {
             let bit = 1 << (action as u8);

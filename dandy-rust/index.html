@@ -283,6 +283,8 @@
             const { DandyApp, PlayerAction } = window.wasmBindings;
 
             const app = new DandyApp();
+            let sleeping = false;
+            const pressedKeys = new Set();
 
             const canvas = document.getElementById("gameCanvas");
             const ctx = canvas.getContext("2d");
@@ -313,7 +315,15 @@
             window.addEventListener("keydown", (e) => {
                 const bind = controlRegistry[e.key];
                 if (bind !== undefined) {
+                    pressedKeys.add(e.key);
                     app.set_action(bind.player, bind.action, true);
+
+                    if (sleeping) {
+                        sleeping = false;
+                        console.log("[Idle Engine] Resumed rendering loop via keydown:", e.key);
+                        requestAnimationFrame(gameLoop);
+                    }
+
                     if (e.key === " " || e.key.startsWith("Arrow")) {
                         e.preventDefault();
                     }
@@ -323,8 +333,18 @@
             window.addEventListener("keyup", (e) => {
                 const bind = controlRegistry[e.key];
                 if (bind !== undefined) {
+                    pressedKeys.delete(e.key);
                     app.set_action(bind.player, bind.action, false);
                 }
+            });
+
+            window.addEventListener("blur", () => {
+                pressedKeys.clear();
+                for (const key in controlRegistry) {
+                    const bind = controlRegistry[key];
+                    app.set_action(bind.player, bind.action, false);
+                }
+                console.log("[Idle Engine] Focus lost (blur): Cleared inputs.");
             });
 
             const lastHuds = [
@@ -403,6 +423,12 @@
                 const statsArray = new Int32Array(wasm.memory.buffer, statsPtr, statsLen);
 
                 updateHUD(statsArray);
+
+                if (pressedKeys.size === 0 && app.can_sleep()) {
+                    sleeping = true;
+                    console.log("[Idle Engine] Suspended rendering loop (sleeping).");
+                    return;
+                }
 
                 requestAnimationFrame(gameLoop);
             }
