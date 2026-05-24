@@ -19,6 +19,7 @@ pub struct Player {
     pub keys: i32,
     pub active: bool,
     pub alive: bool,
+    pub escaped: bool,
     pub arrow: Option<Arrow>,
 }
 
@@ -35,6 +36,7 @@ impl Player {
             keys: 0,
             active: false,
             alive: false,
+            escaped: false,
             arrow: None,
         }
     }
@@ -48,6 +50,7 @@ impl Player {
         self.keys = 0;
         self.active = true;
         self.alive = true;
+        self.escaped = false;
         self.arrow = None;
     }
 }

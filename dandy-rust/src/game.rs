@@ -78,7 +78,7 @@ impl Game {
         let mut cog_y = 0;
         let mut num_active = 0;
         for p in &self.players {
-            if p.active && p.alive {
+            if p.active && p.alive && !p.escaped {
                 cog_x += p.x * TILE_SIZE;
                 cog_y += p.y * TILE_SIZE;
                 num_active += 1;
@@ -177,12 +177,9 @@ impl Game {
         if self.time - self.last_move_time >= 4 {
             self.last_move_time = self.time;
 
-            let mut players_active = false;
-            
             // Step each player
             for i in 0..self.players.len() {
-                if self.players[i].active && self.players[i].alive {
-                    players_active = true;
+                if self.players[i].active && self.players[i].alive && !self.players[i].escaped {
                     let p = self.players[i].clone();
                     self.step_player(i, &p, keys);
                 }
@@ -190,9 +187,32 @@ impl Game {
 
             self.step_enemies();
 
-            if !players_active && self.players.iter().any(|p| p.active) {
-                // If everyone who joined is dead, restart the level
-                self.load();
+            // Centralized Level Progression / Restart Check
+            let mut players_in_dungeon = false;
+            let mut any_escaped = false;
+            let mut any_joined = false;
+
+            for p in &self.players {
+                if p.active {
+                    any_joined = true;
+                    if p.alive && !p.escaped {
+                        players_in_dungeon = true;
+                    }
+                    if p.escaped {
+                        any_escaped = true;
+                    }
+                }
+            }
+
+            if any_joined && !players_in_dungeon {
+                if any_escaped {
+                    // Progress to next level
+                    self.level = (self.level + 1).min(25);
+                    self.load();
+                } else {
+                    // Everyone died, restart
+                    self.load();
+                }
             }
         }
     }
@@ -277,9 +297,11 @@ impl Game {
                 }
             }
             DOWN => {
-                // Level Completed!
-                self.level = (self.level + 1).min(25);
-                self.load();
+                // Player Escaped!
+                self.map.set(self.players[index].x, self.players[index].y, SPACE);
+                self.players[index].escaped = true;
+                self.players[index].x = -1;
+                self.players[index].y = -1;
                 return true;
             }
             KEY => {
@@ -432,7 +454,7 @@ impl Game {
         let mut best_dist = None;
         
         for i in 0..self.players.len() {
-            if self.players[i].active && self.players[i].alive {
+            if self.players[i].active && self.players[i].alive && !self.players[i].escaped {
                 let dist = (self.players[i].x - gx).abs() + (self.players[i].y - gy).abs();
                 if best_dist.is_none() || dist < best_dist.unwrap() {
                     best_dist = Some(dist);
@@ -598,4 +620,159 @@ mod tests {
         assert_eq!(game.players[1].y, spawn.1);
         assert_eq!(game.players[1].dir, 2);
     }
+
+    #[test]
+    fn test_coop_exit_warp_single_player() {
+        let mut game = Game::new();
+        game.load();
+        // P1 is active and alive. P2 is inactive.
+        assert!(game.players[0].active && game.players[0].alive);
+        assert!(!game.players[1].active);
+
+        // Find DOWN stairs
+        let exit = game.map.find(DOWN).expect("Should have DOWN stairs");
+        
+        // Teleport P1 to just next to DOWN stairs (say, North of it)
+        game.map.set(game.players[0].x, game.players[0].y, SPACE);
+        game.players[0].x = exit.0;
+        game.players[0].y = exit.1 - 1;
+        game.map.set(game.players[0].x, game.players[0].y, PLAYER);
+
+        // Move P1 DOWN (into exit)
+        let mut keys = HashSet::new();
+        keys.insert(P1_CONTROLS.down.to_string());
+        
+        // Step game (4 ticks to trigger move)
+        for _ in 0..4 {
+            game.step(&keys);
+        }
+
+        // P1 should have escaped, and since they were the only player, level should progress.
+        // Level starts at 0, should be 1 now.
+        assert_eq!(game.level, 1);
+        // P1 should be active and alive in the new level
+        assert!(game.players[0].active);
+        assert!(game.players[0].alive);
+        assert!(!game.players[0].escaped);
+    }
+
+    #[test]
+    fn test_coop_exit_warp_two_players_one_escapes_one_alive() {
+        let mut game = Game::new();
+        // Manually activate P1 and P2
+        game.players[0].active = true;
+        game.players[0].alive = true;
+        game.players[1].active = true;
+        game.players[1].alive = true;
+        game.load();
+
+        let exit = game.map.find(DOWN).expect("Should have DOWN stairs");
+
+        // Teleport P1 to just North of DOWN stairs
+        game.map.set(game.players[0].x, game.players[0].y, SPACE);
+        game.players[0].x = exit.0;
+        game.players[0].y = exit.1 - 1;
+        game.map.set(game.players[0].x, game.players[0].y, PLAYER);
+
+        // Keep P2 somewhere safe (away from exit, e.g. spawn point where it already is)
+        
+        // Move P1 DOWN (into exit)
+        let mut keys = HashSet::new();
+        keys.insert(P1_CONTROLS.down.to_string()); // P1 moves down, P2 does nothing
+
+        // Step game
+        for _ in 0..4 {
+            game.step(&keys);
+        }
+
+        // P1 should have escaped
+        assert!(game.players[0].escaped);
+        assert_eq!(game.players[0].x, -1);
+        assert_eq!(game.players[0].y, -1);
+
+        // P2 should still be in dungeon
+        assert!(game.players[1].alive);
+        assert!(!game.players[1].escaped);
+
+        // Level should NOT progress because P2 is still in dungeon
+        assert_eq!(game.level, 0);
+    }
+
+    #[test]
+    fn test_coop_exit_warp_two_players_one_escapes_one_dies() {
+        let mut game = Game::new();
+        game.players[0].active = true;
+        game.players[0].alive = true;
+        game.players[1].active = true;
+        game.players[1].alive = true;
+        game.load();
+
+        let exit = game.map.find(DOWN).expect("Should have DOWN stairs");
+
+        // Teleport P1 to just North of DOWN stairs
+        game.map.set(game.players[0].x, game.players[0].y, SPACE);
+        game.players[0].x = exit.0;
+        game.players[0].y = exit.1 - 1;
+        game.map.set(game.players[0].x, game.players[0].y, PLAYER);
+
+        // Move P1 DOWN (into exit)
+        let mut keys = HashSet::new();
+        keys.insert(P1_CONTROLS.down.to_string());
+
+        // Step game to make P1 escape
+        for _ in 0..4 {
+            game.step(&keys);
+        }
+        assert!(game.players[0].escaped);
+        assert_eq!(game.level, 0); // Still level 0
+
+        // Now kill P2
+        game.players[1].health = 0;
+        game.players[1].alive = false;
+        game.map.set(game.players[1].x, game.players[1].y, SPACE);
+
+        // Step game again to trigger check
+        let empty_keys = HashSet::new();
+        for _ in 0..4 {
+            game.step(&empty_keys);
+        }
+
+        // Level should now progress because P1 escaped and P2 is dead
+        assert_eq!(game.level, 1);
+        // Both players should be resurrected/reset in new level
+        assert!(game.players[0].active && game.players[0].alive && !game.players[0].escaped);
+        assert!(game.players[1].active && game.players[1].alive && !game.players[1].escaped);
+    }
+
+    #[test]
+    fn test_coop_level_restart_death() {
+        let mut game = Game::new();
+        game.players[0].active = true;
+        game.players[0].alive = true;
+        game.players[1].active = true;
+        game.players[1].alive = true;
+        game.load();
+
+        // Kill both players
+        game.players[0].health = 0;
+        game.players[0].alive = false;
+        game.map.set(game.players[0].x, game.players[0].y, SPACE);
+
+        game.players[1].health = 0;
+        game.players[1].alive = false;
+        game.map.set(game.players[1].x, game.players[1].y, SPACE);
+
+        // Step game to trigger check
+        let empty_keys = HashSet::new();
+        for _ in 0..4 {
+            game.step(&empty_keys);
+        }
+
+        // Level should NOT progress
+        assert_eq!(game.level, 0);
+        // Level should have restarted, players resurrected on level 0
+        assert!(game.players[0].active && game.players[0].alive && !game.players[0].escaped);
+        assert!(game.players[1].active && game.players[1].alive && !game.players[1].escaped);
+    }
 }
+
