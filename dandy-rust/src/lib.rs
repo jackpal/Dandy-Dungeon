@@ -16,6 +16,15 @@ use web_sys::{CanvasRenderingContext2d, HtmlCanvasElement, ImageData};
 
 const SPRITESHEET_BYTES: &[u8] = include_bytes!("../assets/dandy.bmp");
 
+#[derive(Clone, Copy)]
+struct PlayerHudCache {
+    score: i32,
+    health: i32,
+    keys: i32,
+    bombs: i32,
+    active: bool,
+}
+
 #[wasm_bindgen(start)]
 pub fn main_js() -> Result<(), JsValue> {
     console_error_panic_hook::set_once();
@@ -78,14 +87,6 @@ pub fn main_js() -> Result<(), JsValue> {
         closure.forget();
     }
 
-    // Setup HUD Element caches
-    let p1_score_el = document.get_element_by_id("p1-score");
-    let p1_health_el = document.get_element_by_id("p1-health");
-    let p1_keys_el = document.get_element_by_id("p1-keys");
-    let p1_bombs_el = document.get_element_by_id("p1-bombs");
-
-    let hud_p2_el = document.get_element_by_id("hud-p2");
-
     // Initialize Game
     let mut game = Game::new();
     game.load();
@@ -95,16 +96,11 @@ pub fn main_js() -> Result<(), JsValue> {
     let g = f.clone();
 
     // Maintain dynamic HUD states
-    let mut last_p1_score = -1;
-    let mut last_p1_health = -1;
-    let mut last_p1_keys = -1;
-    let mut last_p1_bombs = -1;
-
-    let mut last_p2_active = false;
-    let mut last_p2_score = -1;
-    let mut last_p2_health = -1;
-    let mut last_p2_keys = -1;
-    let mut last_p2_bombs = -1;
+    let mut last_huds = vec![
+        PlayerHudCache { score: -1, health: -1, keys: -1, bombs: -1, active: false };
+        2
+    ];
+    last_huds[0].active = true; // Player 1 starts active
 
     *g.borrow_mut() = Some(Closure::new(move || {
         let current_keys = keys.borrow();
@@ -116,88 +112,57 @@ pub fn main_js() -> Result<(), JsValue> {
         // Draw scene
         draw_scene(&context, &offscreen_canvas, &game);
 
-        // Update Player 1 HUD
-        if let Some(ref el) = p1_score_el {
-            let val = game.players[0].score;
-            if val != last_p1_score {
-                el.set_text_content(Some(&val.to_string()));
-                last_p1_score = val;
-            }
-        }
-        if let Some(ref el) = p1_health_el {
-            let val = game.players[0].health;
-            if val != last_p1_health {
-                el.set_text_content(Some(&val.to_string()));
-                last_p1_health = val;
-            }
-        }
-        if let Some(ref el) = p1_keys_el {
-            let val = game.players[0].keys;
-            if val != last_p1_keys {
-                el.set_text_content(Some(&val.to_string()));
-                last_p1_keys = val;
-            }
-        }
-        if let Some(ref el) = p1_bombs_el {
-            let val = game.players[0].bombs;
-            if val != last_p1_bombs {
-                el.set_text_content(Some(&val.to_string()));
-                last_p1_bombs = val;
-            }
-        }
-
-        // Update Player 2 HUD dynamically
-        let p2_active = game.players[1].active;
-        if p2_active != last_p2_active {
-            if let Some(ref el) = hud_p2_el {
-                if p2_active {
-                    el.set_inner_html(
-                        "<td class=\"text-left\">P2</td>                         <td id=\"p2-score\" class=\"text-right\">0</td>                         <td id=\"p2-health\" class=\"text-right\">100</td>                         <td id=\"p2-keys\" class=\"text-right\">0</td>                         <td id=\"p2-bombs\" class=\"text-right\">0</td>"
-                    );
-                } else {
-                    el.set_inner_html("<td colspan=\"5\" class=\"hud-p2-inactive\">Player 2: Press WASD/F/G to Join</td>");
+        // Generalized HUD Updates for P1 and P2
+        for i in 0..2 {
+            let player = &game.players[i];
+            let last_hud = &mut last_huds[i];
+            
+            // 1. Dynamic Join/Leave HTML injection (Skip P1 since it is statically in index.html)
+            if player.active != last_hud.active {
+                if i > 0 {
+                    let row_el = document.get_element_by_id(&format!("hud-p{}", i + 1));
+                    if let Some(row) = row_el {
+                        if player.active {
+                            row.set_inner_html(&format!(
+                                "<td class=\"text-left\">P{}</td>\
+                                 <td id=\"p{}-score\" class=\"text-right\">0</td>\
+                                 <td id=\"p{}-health\" class=\"text-right\">100</td>\
+                                 <td id=\"p{}-keys\" class=\"text-right\">0</td>\
+                                 <td id=\"p{}-bombs\" class=\"text-right\">0</td>",
+                                 i + 1, i + 1, i + 1, i + 1, i + 1
+                            ));
+                        } else {
+                            row.set_inner_html(&format!(
+                                "<td colspan=\"5\" class=\"hud-p2-inactive\">Player {}: Press WASD/F/G to Join</td>",
+                                i + 1
+                            ));
+                        }
+                    }
                 }
+                last_hud.active = player.active;
+                // Force update elements on state change
+                last_hud.score = -1;
+                last_hud.health = -1;
+                last_hud.keys = -1;
+                last_hud.bombs = -1;
             }
-            last_p2_active = p2_active;
-            // Force update elements on state change
-            last_p2_score = -1;
-            last_p2_health = -1;
-            last_p2_keys = -1;
-            last_p2_bombs = -1;
-        }
-
-        if p2_active {
-            let p2_score_el = document.get_element_by_id("p2-score");
-            let p2_health_el = document.get_element_by_id("p2-health");
-            let p2_keys_el = document.get_element_by_id("p2-keys");
-            let p2_bombs_el = document.get_element_by_id("p2-bombs");
-
-            if let Some(ref el) = p2_score_el {
-                let val = game.players[1].score;
-                if val != last_p2_score {
-                    el.set_text_content(Some(&val.to_string()));
-                    last_p2_score = val;
-                }
-            }
-            if let Some(ref el) = p2_health_el {
-                let val = game.players[1].health;
-                if val != last_p2_health {
-                    el.set_text_content(Some(&val.to_string()));
-                    last_p2_health = val;
-                }
-            }
-            if let Some(ref el) = p2_keys_el {
-                let val = game.players[1].keys;
-                if val != last_p2_keys {
-                    el.set_text_content(Some(&val.to_string()));
-                    last_p2_keys = val;
-                }
-            }
-            if let Some(ref el) = p2_bombs_el {
-                let val = game.players[1].bombs;
-                if val != last_p2_bombs {
-                    el.set_text_content(Some(&val.to_string()));
-                    last_p2_bombs = val;
+            
+            // 2. Update Metrics text contents if active
+            if player.active {
+                let metrics = [
+                    ("score", player.score, &mut last_hud.score),
+                    ("health", player.health, &mut last_hud.health),
+                    ("keys", player.keys, &mut last_hud.keys),
+                    ("bombs", player.bombs, &mut last_hud.bombs),
+                ];
+                
+                for (suffix, current_val, cached_val) in metrics {
+                    if current_val != *cached_val {
+                        if let Some(el) = document.get_element_by_id(&format!("p{}-{}", i + 1, suffix)) {
+                            el.set_text_content(Some(&current_val.to_string()));
+                            *cached_val = current_val;
+                        }
+                    }
                 }
             }
         }
