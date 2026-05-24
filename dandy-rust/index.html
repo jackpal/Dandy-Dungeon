@@ -320,7 +320,6 @@
 
                     if (sleeping) {
                         sleeping = false;
-                        console.log("[Idle Engine] Resumed rendering loop via keydown:", e.key);
                         requestAnimationFrame(gameLoop);
                     }
 
@@ -344,7 +343,6 @@
                     const bind = controlRegistry[key];
                     app.set_action(bind.player, bind.action, false);
                 }
-                console.log("[Idle Engine] Focus lost (blur): Cleared inputs.");
             });
 
             const lastHuds = [
@@ -426,7 +424,6 @@
 
                 if (pressedKeys.size === 0 && app.can_sleep()) {
                     sleeping = true;
-                    console.log("[Idle Engine] Suspended rendering loop (sleeping).");
                     return;
                 }
 
