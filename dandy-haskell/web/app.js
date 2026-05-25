@@ -3,10 +3,44 @@ import { WASI, Fd, File } from "https://cdn.jsdelivr.net/npm/@bjorn3/browser_was
 async function init() {
     const args = ["dandy-haskell"];
     const env = [];
+    function makeLoggingFd(name) {
+        const base = new Fd();
+        return new Proxy(base, {
+            get(target, prop, receiver) {
+                const orig = target[prop];
+                if (typeof orig === "function") {
+                    return function(...args) {
+                        // If it's a write call, decode the bytes and log them
+                        if (prop === "fd_write" && args.length >= 2) {
+                            try {
+                                const [view8, iovs] = args;
+                                const decoder = new TextDecoder("utf-8");
+                                let text = "";
+                                for (const iov of iovs) {
+                                    const bytes = new Uint8Array(view8.buffer, iov.buf, iov.buf_len);
+                                    text += decoder.decode(bytes);
+                                }
+                                if (text) {
+                                    console.warn(`[WASI ${name}]`, text);
+                                }
+                            } catch (e) {
+                                console.error(`Failed to decode WASI ${name} write:`, e);
+                            }
+                        }
+                        
+                        const res = orig.apply(target, args);
+                        return res;
+                    };
+                }
+                return orig;
+            }
+        });
+    }
+
     const fds = [
-        new Fd(), // stdin
-        new Fd(), // stdout
-        new Fd(), // stderr
+        makeLoggingFd("stdin"),
+        makeLoggingFd("stdout"),
+        makeLoggingFd("stderr"),
     ];
     const wasi = new WASI(args, env, fds);
 
