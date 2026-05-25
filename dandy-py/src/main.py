@@ -19,14 +19,14 @@
 
 
 from __future__ import with_statement
-import random, os, os.path
+import os
+import os.path
 
 import pygame
-from pygame.locals import *
 
 TILE_SIZE = 16
-SCREENRECT = Rect(0, 0, 320, 240)
-MAPRECT = Rect(0,0, SCREENRECT.width, TILE_SIZE * 10)
+SCREENRECT = pygame.Rect(0, 0, 320, 240)
+MAPRECT = pygame.Rect(0, 0, SCREENRECT.width, TILE_SIZE * 10)
 MAP_WIDTH = 60
 MAP_HEIGHT = 30
 
@@ -40,14 +40,16 @@ KEY = 5
 FOOD = 6
 MONEY = 7
 BOMB = 8
-GHOST = 9 # 9, 10, 11
+GHOST = 9  # 9, 10, 11
 HEART = 12
-GENERATOR = 13 # 13, 14, 15
-ARROW = 16 # .. 23
-PLAYER = 24 # 24..27
+GENERATOR = 13  # 13, 14, 15
+ARROW = 16  # .. 23
+PLAYER = 24  # 24..27
+
 
 def get_media_path(path):
-    return os.path.join('../Media', path)
+    return os.path.abspath(os.path.join(os.path.dirname(__file__), "../Media", path))
+
 
 def load_image(file):
     "loads an image, prepares it for play"
@@ -55,25 +57,29 @@ def load_image(file):
     try:
         surface = pygame.image.load(file)
     except pygame.error:
-        raise SystemExit, 'Could not load image "%s" %s'%(file, pygame.get_error())
+        raise SystemExit('Could not load image "%s" %s' % (file, pygame.get_error()))
     return surface
+
 
 class Strike:
     def __init__(self, name, tileSize):
         self.image = load_image(name)
         self.tileSize = tileSize
-        self.tileStride = self.image.get_width() / tileSize
-        self.tileMaxY = self.image.get_height() / tileSize
+        self.tileStride = self.image.get_width() // tileSize
+        self.tileMaxY = self.image.get_height() // tileSize
 
     def draw(self, surface, offsetX, offsetY, x, y, index):
-        ty = index / self.tileStride
+        ty = index // self.tileStride
         if ty <= self.tileMaxY:
             tx = index - ty * self.tileStride
-            surface.blit(self.image,
-                        (offsetX + x * self.tileSize,
-                         offsetY + y * self.tileSize),
-                        Rect(tx * self.tileSize, ty * self.tileSize,
-                              self.tileSize, self.tileSize))
+            surface.blit(
+                self.image,
+                (offsetX + x * self.tileSize, offsetY + y * self.tileSize),
+                pygame.Rect(
+                    tx * self.tileSize, ty * self.tileSize, self.tileSize, self.tileSize
+                ),
+            )
+
 
 class Map:
     def __init__(self, width, height):
@@ -81,7 +87,7 @@ class Map:
         self.width = width
         self.height = height
         self.data = [0] * width * height
-        self.data = [x % 32 for x in xrange(0, width* height)]
+        self.data = [x % 32 for x in range(0, width * height)]
 
     def set(self, x, y, val):
         if 0 <= x < self.width and 0 <= y < self.height:
@@ -117,8 +123,8 @@ class Map:
 
     def toOffset(self, target, screenLength, mapLength):
         "target, screenLength, mapLength all in pixels"
-        offset = -target + screenLength / 2
-        return max(min(0, offset) , -(mapLength - screenLength))
+        offset = -target + screenLength // 2
+        return max(min(0, offset), -(mapLength - screenLength))
 
     def draw(self, screen, targetX, targetY, tileset):
         "draw map on screen using tileset. Try to put (targetX, targetY) at the center of the screen"
@@ -126,11 +132,13 @@ class Map:
         offsetX = self.toOffset(targetX, screen.get_width(), self.width * tileSize)
         offsetY = self.toOffset(targetY, screen.get_height(), self.height * tileSize)
         active = self.getActive(screen, targetX, targetY, tileset.tileSize)
-        for y in xrange(0, active.height):
+        for y in range(0, active.height):
             dy = y + active.top
-            for x in xrange(0, active.width):
+            for x in range(0, active.width):
                 dx = x + active.left
-                tileset.draw(screen, offsetX, offsetY, dx, dy, self.data[dy * self.width + dx])
+                tileset.draw(
+                    screen, offsetX, offsetY, dx, dy, self.data[dy * self.width + dx]
+                )
         return active
 
     def getActive(self, screen, targetX, targetY, tileSize):
@@ -139,30 +147,30 @@ class Map:
         screenHeight = screen.get_height()
         offsetX = self.toOffset(targetX, screenWidth, self.width * tileSize)
         offsetY = self.toOffset(targetY, screenHeight, self.height * tileSize)
-        left = -offsetX / tileSize
-        right = (-offsetX + screenWidth + tileSize - 1) / tileSize
-        top = -offsetY / tileSize
-        bottom = (-offsetY + screenHeight + tileSize - 1) / tileSize
-        return Rect(left, top, right - left, bottom - top)
+        left = -offsetX // tileSize
+        right = (-offsetX + screenWidth + tileSize - 1) // tileSize
+        top = -offsetY // tileSize
+        bottom = (-offsetY + screenHeight + tileSize - 1) // tileSize
+        return pygame.Rect(left, top, right - left, bottom - top)
 
     def load(self, level):
-        levelPath = get_media_path("levels/LEVEL." + chr(ord('A') + level))
-        with open(levelPath, 'r') as f:
-            for x in xrange(0, len(self.data) / 2):
-                b = ord(f.read(1))
-                self.data[x * 2] = b & 15
-                self.data[x * 2 + 1] = (b >> 4) & 15
+        levelPath = get_media_path("levels/LEVEL." + chr(ord("A") + level))
+        with open(levelPath, "rb") as f:
+            block = f.read(len(self.data) // 2)
+            for i, b in enumerate(block):
+                self.data[i * 2] = b & 15
+                self.data[i * 2 + 1] = (b >> 4) & 15
 
     def find(self, item):
-        for i in xrange(len(self.data)):
+        for i in range(len(self.data)):
             if self.data[i] == item:
-                return (i % self.width, i / self.width)
-        raise Exception("Didn't find item")
+                return (i % self.width, i // self.width)
+        raise Exception("Did not find item")
 
     def bomb(self, rect):
         score = 0
-        for y in xrange(rect.top, rect.bottom):
-            for x in xrange(rect.left, rect.right):
+        for y in range(rect.top, rect.bottom):
+            for x in range(rect.left, rect.right):
                 offset = x + y * self.width
                 v = self.data[offset]
                 if GHOST <= v < GHOST + 3:
@@ -170,15 +178,18 @@ class Map:
                     score += 10 * (v - GHOST + 1)
         return score
 
+
 class Arrow:
     def __init__(self, x, y, dir):
         self.x = x
         self.y = y
         self.dir = dir
 
+
 STATE_DEAD = 0
 STATE_ACTIVE = 1
 STATE_IN_WARP = 2
+
 
 class Player:
     def __init__(self, index):
@@ -199,31 +210,42 @@ class Player:
         self.arrow = None
         self.state = STATE_ACTIVE
 
+
 # Direction, up is 0, clockwise
 
-DIR_TO_DELTA_X = [ 0,  1, 1, 1, 0, -1, -1, -1]
-DIR_TO_DELTA_Y = [-1, -1, 0, 1, 1,  1,  0, -1]
+DIR_TO_DELTA_X = [0, 1, 1, 1, 0, -1, -1, -1]
+DIR_TO_DELTA_Y = [-1, -1, 0, 1, 1, 1, 0, -1]
 DELTA_TO_DIR = [[7, 0, 1], [6, None, 2], [5, 4, 3]]
 
+
 def sign(x):
-    if x > 0: return 1
-    elif x == 0: return 0
-    else: return -1
+    if x > 0:
+        return 1
+    elif x == 0:
+        return 0
+    else:
+        return -1
+
 
 def dir_to_delta(dir):
     return DIR_TO_DELTA_X[dir], DIR_TO_DELTA_Y[dir]
 
+
 def delta_to_dir(dx, dy):
     return DELTA_TO_DIR[sign(dy) + 1][sign(dx) + 1]
+
 
 def steer_left(dir):
     return (dir - 1) & 7
 
+
 def steer_right(dir):
     return (dir + 1) & 7
 
+
 def getDelta(dir):
     return (DIR_TO_DELTA_X[dir], DIR_TO_DELTA_Y[dir])
+
 
 class Controls:
     def __init__(self, left, right, up, down, shoot, bomb):
@@ -237,20 +259,36 @@ class Controls:
     def getDir(self, keystate):
         dx = 0
         dy = 0
-        if keystate[self.left]: dx -= 1
-        if keystate[self.right]: dx += 1
-        if keystate[self.up]: dy -= 1
-        if keystate[self.down]: dy += 1
+        if keystate[self.left]:
+            dx -= 1
+        if keystate[self.right]:
+            dx += 1
+        if keystate[self.up]:
+            dy -= 1
+        if keystate[self.down]:
+            dy += 1
         return DELTA_TO_DIR[dy + 1][dx + 1]
+
 
 class Game:
     def __init__(self):
-        self.tiles = Strike('dandy.bmp', TILE_SIZE)
-        # Change xrange for 1..4 players
-        self.players = [Player(i) for i in xrange(0,1)]
+        self.tiles = Strike("dandy.bmp", TILE_SIZE)
+        # Change range for 1..4 players
+        self.players = [Player(i) for i in range(0, 1)]
         self.players[0].state = STATE_ACTIVE
-        self.controls = [Controls(K_LEFT, K_RIGHT, K_UP, K_DOWN, K_SPACE, K_z),
-                         None, None, None]
+        self.controls = [
+            Controls(
+                pygame.K_LEFT,
+                pygame.K_RIGHT,
+                pygame.K_UP,
+                pygame.K_DOWN,
+                pygame.K_SPACE,
+                pygame.K_z,
+            ),
+            None,
+            None,
+            None,
+        ]
         self.level = 0
         self.map = Map(MAP_WIDTH, MAP_HEIGHT)
         self.load()
@@ -258,6 +296,7 @@ class Game:
         self.last_move_time = 0
         self.TICKS_PER_MOVE = 4
         self.rotor = 0
+        self.visibleRect = None
 
     def active_players(self):
         for p in self.players:
@@ -268,12 +307,12 @@ class Game:
         for p in self.players:
             if p.isAlive():
                 yield p
-                
+
     def dead_players(self):
         for p in self.players:
             if not p.isAlive():
                 yield p
-                
+
     def load(self):
         self.map.load(self.level)
         self.rotor = 0
@@ -319,37 +358,38 @@ class Game:
 
     def step_enemies(self):
         vr = self.visibleRect
-        if vr == None:
+        if vr is None:
             return
         self.rotor = (self.rotor + 1) & 3
         xStart = ((vr.left + 1) & ~1) + (self.rotor & 1)
         yStart = ((vr.top + 1) & ~1) + ((self.rotor >> 1) & 1)
-        for y in xrange(yStart, vr.bottom, 2):
-            for x in xrange(xStart, vr.right, 2):
+        for y in range(yStart, vr.bottom, 2):
+            for x in range(xStart, vr.right, 2):
                 v = self.map.get(x, y)
                 if GHOST <= v <= GHOST + 2:
                     self.step_ghost(x, y)
                 elif GENERATOR <= v <= GENERATOR + 2:
                     self.step_generator(x, y)
-    
+
     def step_ghost(self, x, y):
         p, dir = self.closest_player(x, y)
-        if dir == None:
+        if dir is None:
             return
-        self.move_ghost(x, y, dir) or self.move_ghost(x, y, steer_left(dir)) \
-            or self.move_ghost(x, y, steer_right(dir))
-    
+        self.move_ghost(x, y, dir) or self.move_ghost(
+            x, y, steer_left(dir)
+        ) or self.move_ghost(x, y, steer_right(dir))
+
     def closest_player(self, x, y):
         best_p, best_dist, best_dir = None, None, None
         for p in self.active_players():
             dx, dy = p.x - x, p.y - y
             distance = abs(dx) + abs(dy)
-            if best_dist == None or best_dist > distance:
+            if best_dist is None or best_dist > distance:
                 best_dist, best_p, best_dx, best_dy = distance, p, dx, dy
-        if best_dist != None:
+        if best_dist is not None:
             best_dir = delta_to_dir(best_dx, best_dy)
         return best_p, best_dir
-    
+
     def move_ghost(self, x, y, dir):
         dx, dy = dir_to_delta(dir)
         nx, ny = x + dx, y + dy
@@ -361,13 +401,13 @@ class Game:
             return True
         elif PLAYER <= v <= PLAYER + 3:
             self.map.set(x, y, SPACE)
-            self.hurt_player(self.players[v-PLAYER], 10 * (mv - GHOST))
+            self.hurt_player(self.players[v - PLAYER], 10 * (mv - GHOST))
             return True
         elif ARROW <= v <= ARROW + 7:
             # monsters freeze when about to move into an arrow
             return True
         return False
-    
+
     def hurt_player(self, p, pain):
         if p.health > pain:
             p.health -= pain
@@ -382,10 +422,11 @@ class Game:
 
     def step_generator(self, x, y):
         pass
+
     def step_player(self, p, keystate):
         control = self.controls[p.index]
         dir = control.getDir(keystate)
-        if dir != None:
+        if dir is not None:
             p.dir = dir
 
         if keystate[control.bomb]:
@@ -393,24 +434,26 @@ class Game:
                 p.bombs -= 1
                 self.do_bomb(p)
         if keystate[control.shoot]:
-            if p.arrow == None:
-                if dir == None:
+            if p.arrow is None:
+                if dir is None:
                     dir = p.dir
-                if dir == None:
+                if dir is None:
                     dir = 0
                 p.arrow = Arrow(p.x, p.y, dir)
         else:
-            if dir != None:
-                self.try_move(p, dir) or self.try_move(p, (dir + 1) & 7) or self.try_move(p, (dir - 1) & 7)
+            if dir is not None:
+                self.try_move(p, dir) or self.try_move(
+                    p, (dir + 1) & 7
+                ) or self.try_move(p, (dir - 1) & 7)
         self.move_arrow(p)
 
     def move_arrow(self, p):
         a = p.arrow
-        if a != None:
+        if a is not None:
             dir = a.dir
             arrowVal = ARROW + ((dir + 3) & 7)
             dx, dy = getDelta(dir)
-            x, y =  a.x + dx, a.y + dy
+            x, y = a.x + dx, a.y + dy
             self.map.erase(a.x, a.y, arrowVal)
             v = self.map.get(x, y)
             newV = SPACE
@@ -426,12 +469,11 @@ class Game:
             elif v == HEART:
                 newV = GHOST + 2
                 for p2 in self.dead_players():
-                    # pick the first one.
-				    p2.state = STATE_ACTIVE
-				    p2.x = x
-				    p2.y = y
-				    newV = PLAYER + p2.index
-				    break
+                    p2.state = STATE_ACTIVE
+                    p2.x = x
+                    p2.y = y
+                    newV = PLAYER + p2.index
+                    break
             elif v == BOMB:
                 self.do_bomb(p)
             else:
@@ -441,7 +483,8 @@ class Game:
                 p.arrow = None
 
     def do_bomb(self, p):
-        p.score += self.map.bomb(self.visibleRect)
+        if self.visibleRect is not None:
+            p.score += self.map.bomb(self.visibleRect)
 
     def try_move(self, p, dir):
         p.dir = dir
@@ -486,15 +529,15 @@ class Game:
             cogy += TILE_SIZE * p.y
             numActive += 1
         if numActive > 0:
-            cogx /= numActive
-            cogy /= numActive
-        cogx += TILE_SIZE / 2
-        cogy += TILE_SIZE / 2
+            cogx //= numActive
+            cogy //= numActive
+        cogx += TILE_SIZE // 2
+        cogy += TILE_SIZE // 2
         return (cogx, cogy)
 
     def draw(self, screen, mapScreen):
         x, y = self.getCog()
-        maxRate = TILE_SIZE / self.TICKS_PER_MOVE
+        maxRate = TILE_SIZE // self.TICKS_PER_MOVE
         dx = x - self.cogX
         dy = y - self.cogY
         if dx != 0 or dy != 0:
@@ -505,12 +548,67 @@ class Game:
 
         self.visibleRect = self.map.draw(mapScreen, self.cogX, self.cogY, self.tiles)
 
+    def can_ghost_move_dir(self, x, y, dir):
+        dx, dy = dir_to_delta(dir)
+        nx, ny = x + dx, y + dy
+        if 0 <= nx < self.map.width and 0 <= ny < self.map.height:
+            v = self.map.get(nx, ny)
+            if v == SPACE or (PLAYER <= v <= PLAYER + 3):
+                return True
+        return False
+
+    def is_ghost_blocked(self, x, y):
+        p, dir = self.closest_player(x, y)
+        if dir is None:
+            return True
+        return not (
+            self.can_ghost_move_dir(x, y, dir)
+            or self.can_ghost_move_dir(x, y, steer_left(dir))
+            or self.can_ghost_move_dir(x, y, steer_right(dir))
+        )
+
+    def can_sleep(self, keystate):
+        for p in self.players:
+            if p.arrow is not None:
+                return False
+
+        x, y = self.getCog()
+        if x != self.cogX or y != self.cogY:
+            return False
+
+        for p in self.active_players():
+            control = self.controls[p.index]
+            if control:
+                if (
+                    keystate[control.left]
+                    or keystate[control.right]
+                    or keystate[control.up]
+                    or keystate[control.down]
+                    or keystate[control.shoot]
+                    or keystate[control.bomb]
+                ):
+                    return False
+
+        vr = self.visibleRect
+        if vr is not None:
+            left = max(0, vr.left)
+            right = min(self.map.width, vr.right)
+            top = max(0, vr.top)
+            bottom = min(self.map.height, vr.bottom)
+            for y in range(top, bottom):
+                for x in range(left, right):
+                    v = self.map.get(x, y)
+                    if GHOST <= v <= GHOST + 2:
+                        if not self.is_ghost_blocked(x, y):
+                            return False
+        return True
+
 
 def main():
     # Initialize pygame
     pygame.init()
     if pygame.mixer and not pygame.mixer.get_init():
-        print 'Warning, no sound'
+        print("Warning, no sound")
         pygame.mixer = None
 
     # Set the display mode
@@ -519,20 +617,41 @@ def main():
     screen = pygame.display.set_mode(SCREENRECT.size, winstyle, bestdepth)
     mapScreen = screen.subsurface(MAPRECT)
 
-    pygame.display.set_caption('Dandy Dungeon')
+    pygame.display.set_caption("Dandy Dungeon")
     pygame.mouse.set_visible(0)
 
     game = Game()
+    clock = pygame.time.Clock()
+    sleeping = False
 
-    while 1:
-        for event in pygame.event.get():
-            if event.type == QUIT or \
-                (event.type == KEYDOWN and event.key == K_ESCAPE):
-                    return
+    while True:
+        if sleeping:
+            event = pygame.event.wait()
+            if event.type == pygame.QUIT or (
+                event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE
+            ):
+                return
+            sleeping = False
+            events = [event] + pygame.event.get()
+        else:
+            events = pygame.event.get()
+
+        for event in events:
+            if event.type == pygame.QUIT or (
+                event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE
+            ):
+                return
+
         keystate = pygame.key.get_pressed()
         game.step(keystate)
         game.draw(screen, mapScreen)
         pygame.display.flip()
 
-if __name__ == '__main__':
-     main()
+        if game.can_sleep(keystate):
+            sleeping = True
+        else:
+            clock.tick(60)
+
+
+if __name__ == "__main__":
+    main()
