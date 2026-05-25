@@ -1,0 +1,66 @@
+cabal-version:      3.0
+name:               dandy-haskell
+version:            0.1.0.0
+build-type:         Simple
+
+executable dandy-haskell
+    main-is:          Main.hs
+    hs-source-dirs:   src
+    other-modules:
+        Dandy.Consts
+        Dandy.Types
+        Dandy.Rng
+        Dandy.Embed
+        Dandy.Map
+        Dandy.Camera
+        Dandy.Entity
+        Dandy.Graphics
+        Dandy.Physics
+        Dandy.AI
+        Dandy.Game
+        Dandy.Wasm
+    build-depends:
+        base,
+        bytestring,
+        array,
+        template-haskell
+    default-language: Haskell2010
+    ghc-options:
+        -Wall
+        -no-hs-main
+        -optl-mexec-model=reactor
+        -optl-Wl,--export=hs_init_game
+        -optl-Wl,--export=hs_game_tick
+        -optl-Wl,--export=hs_set_action
+        -optl-Wl,--export=hs_can_sleep
+        -optl-Wl,--export=hs_get_framebuffer_ptr
+        -optl-Wl,--export=hs_get_framebuffer_size
+        -optl-Wl,--export=hs_get_stats_ptr
+        -optl-Wl,--export=hs_get_stats_len
+        -optl-Wl,--export=hs_get_level
+        -optl-Wl,--export=hs_free_game
+
+
+executable dandy-haskell-test
+    main-is:          TestMain.hs
+    hs-source-dirs:   src
+    other-modules:
+        Dandy.Consts
+        Dandy.Types
+        Dandy.Rng
+        Dandy.Embed
+        Dandy.Map
+        Dandy.Camera
+        Dandy.Entity
+        Dandy.Graphics
+        Dandy.Physics
+        Dandy.AI
+        Dandy.Game
+    build-depends:
+        base,
+        bytestring,
+        array,
+        template-haskell
+    default-language: Haskell2010
+    ghc-options:
+        -Wall
