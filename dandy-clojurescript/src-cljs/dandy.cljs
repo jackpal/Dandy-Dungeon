@@ -835,6 +835,7 @@
 "XudyBzCuRsOf3bOzlsThnDzdPvUZfz9ubnzNsxX+f3+vFigI7FSwAAAAAE"
 "lFTkSuQmCC"))
 
+
 (def levelWidth 60)
 (def levelHeight 30)
 (def tileWidth 16)
@@ -858,33 +859,12 @@
 (def kGenerator2 14)
 (def kGenerator3 15)
 (def kArrow 16)
-(def kPlayer1 (+ kArrow 8))
+(def kPlayer1 (+ kArrow 8)) ; 24
 
-(def kDirToDeltaX [0 1 1 1 0 -1  -1 -1])
+(def kDirToDeltaX [0 1 1 1 0 -1 -1 -1])
 (def kDirToDeltaY [-1 -1 0 1 1 1 0 -1])
-(def kDeltaToDir [[7 0 1] [6 0 2] [5 4 3]])
-(def kSearchOrder [0 -1 1])
-(def kButtonsToDir [
-                     ; D U R L
-                     -1 ; 0 0 0 0
-                     6 ; 0 0 0 1
-                     2 ; 0 0 1 0
-                     -1 ; 0 0 1 1
-                     0 ; 0 1 0 0
-                     7 ; 0 1 0 1
-                     1 ; 0 1 1 0
-                     0 ; 0 1 1 1
-                     4 ; 1 0 0 0
-                     5 ; 1 0 0 1
-                     3 ; 1 0 1 0
-                     4 ; 1 0 1 1
-                     -1 ; 1 1 0 0
-                     6 ; 1 1 0 1
-                     2 ; 1 1 1 0
-                     -1  ; 1 1 1 1
-                     ])
+(def PLAYER_SPAWN_DIRS [0 2 4 6])
 
-; Masks
 (def kButtonLeft 1)
 (def kButtonRight 2)
 (def kButtonUp 4)
@@ -892,101 +872,834 @@
 (def kButtonFire 16)
 (def kButtonBomb 32)
 
-(def kTicksPerMove 4)
+;;; Pure helper functions
 
-(def dirty false)
-(def level [])
-(def currentLevel 0)
-(def rotor 0)
+(defn abs [v]
+  (if (< v 0) (- v) v))
 
-(def px 0)
-(def py 0)
-(def pHealth 100)
-(def pScore 0)
-(def pBombs 0)
-(def pKeys 0)
-(def pDir)
-(def pax 0)
-(def pay 0)
-(def paDir -1)
-(def pButtons 0)
-(def pOldButtons 0)
-(def pPlayerMoveTimer 0)
+(defn map-get [state-map x y]
+  (if (and (>= x 0) (< x 60) (>= y 0) (< y 30))
+    (nth state-map (+ x (* y 60)))
+    1)) ; Wall for out of bounds
 
-(def ! aset)
-(def ? aget)
+(defn map-set [state-map x y val]
+  (if (and (>= x 0) (< x 60) (>= y 0) (< y 30))
+    (assoc state-map (+ x (* y 60)) val)
+    state-map))
 
-(defn loadLevel []
-    (let [level (levels currentLevel)]
-      (dotimes [y levelHeight]
-        (let [line  (level y)]
-          (dotimes [x levelWidth]
-            (aset level (+ x (* y levelWidth))
-                (.indexOf encoding (.charAt line x)))
-        ))))
-    ;(setPlayerStartPosition)
-    ;(setf paDir -1)
-)
+(defn map-find [state-map item]
+  (first
+    (keep-indexed
+      (fn [idx val]
+        (when (= val item)
+          [(mod idx 60) (quot idx 60)]))
+      state-map)))
 
-(defn readLevel [level]
-  (vec
-    (for [line level]
-      (vec
-        (for [c line]
-          (.indexOf encoding c))))))
+(defn load-level-map [level-idx]
+  (let [level-strings (nth levels level-idx)
+        flat-chars (apply str level-strings)]
+    (vec (map (fn [c] (.indexOf encoding c)) flat-chars))))
 
-(defn log [& x]
-  (.log js/console (clj->js x)))
+;;; Staggered coordinates for enemy updates
 
+(defn align-even [val]
+  (bit-and val -2))
 
-;; baseX baseY is the visible top left in tiles
+(defn staggered-coords [active-rect rotor]
+  (let [rx (bit-and rotor 1)
+        ry (bit-and (bit-shift-right rotor 1) 1)
+        x-start (+ (align-even (+ (:left active-rect) 1)) rx)
+        y-start (+ (align-even (+ (:top active-rect) 1)) ry)
+        x-end (+ (:left active-rect) (:width active-rect))
+        y-end (+ (:top active-rect) (:height active-rect))]
+    (for [y (range y-start y-end 2)
+          x (range x-start x-end 2)]
+      [x y])))
 
-(defn drawLevel [canvas strike tileWidth tileHeight scale level baseX baseY]
-  (let [canvasTileWidth (* scale tileWidth)
-        canvasTileHeight (* scale tileHeight)
+;;; Camera calculations
+
+(defn calculate-target-cog [players]
+  (let [active-alive (filter (fn [p] (and (:active p) (:alive p) (not (:escaped p)))) players)
+        cnt (count active-alive)]
+    (if (> cnt 0)
+      (let [sum-x (reduce + (map (fn [p] (* (:x p) 16)) active-alive))
+            sum-y (reduce + (map (fn [p] (* (:y p) 16)) active-alive))]
+        [(+ (quot sum-x cnt) 8) (+ (quot sum-y cnt) 8)])
+      [(+ (* 10 16) 8) (+ (* 5 16) 8)])))
+
+(defn get-camera-offsets [camera]
+  (let [screen-w 320.0
+        screen-h 160.0
+        map-w (* 60 16.0)
+        map-h (* 30 16.0)
+        offset-x (+ (- (:x camera)) (/ screen-w 2.0))
+        offset-y (+ (- (:y camera)) (/ screen-h 2.0))
+        clamped-x (max (- (- map-w screen-w)) (min 0.0 offset-x))
+        clamped-y (max (- (- map-h screen-h)) (min 0.0 offset-y))]
+    [clamped-x clamped-y]))
+
+(defn get-active-rect [camera]
+  (let [[offset-x offset-y] (get-camera-offsets camera)
+        left (int (.floor js/Math (/ (- offset-x) 16.0)))
+        right (int (.floor js/Math (/ (+ (- offset-x) 320.0 15.0) 16.0)))
+        top (int (.floor js/Math (/ (- offset-y) 16.0)))
+        bottom (int (.floor js/Math (/ (+ (- offset-y) 160.0 15.0) 16.0)))
+        left (max 0 (min 60 left))
+        right (max 0 (min 60 right))
+        top (max 0 (min 30 top))
+        bottom (max 0 (min 30 bottom))]
+    {:left left
+     :top top
+     :width (- right left)
+     :height (- bottom top)}))
+
+(defn update-camera [camera players]
+  (let [[tx ty] (calculate-target-cog players)
+        max-rate (/ 16.0 4.0)
+        dx (- tx (:x camera))
+        dy (- ty (:y camera))
+        clamp (fn [v r] (max (- r) (min r v)))
+        cdx (clamp dx max-rate)
+        cdy (clamp dy max-rate)]
+    {:x (+ (:x camera) cdx)
+     :y (+ (:y camera) cdy)}))
+
+;;; LCG RNG
+
+(defn lcg-next [seed]
+  (let [next-seed (mod (+ (* seed 1103515245) 12345) 4294967296)
+        val (bit-and (bit-shift-right next-seed 16) 0x7fff)]
+    [next-seed (/ val 32768.0)]))
+
+;;; Unlocking flood fill
+
+(defn flood-unlock [game-map start-x start-y]
+  (let [target kDoor
+        replacement kSpace]
+    (if (not= (map-get game-map start-x start-y) target)
+      game-map
+      (loop [m game-map
+             stack [[start-x start-y]]]
+        (if (empty? stack)
+          m
+          (let [[cx cy] (last stack)
+                stack' (pop stack)]
+            (if (= (map-get m cx cy) target)
+              (let [m' (map-set m cx cy replacement)
+                    neighbors (for [dy (range -1 2)
+                                    dx (range -1 2)
+                                    :when (or (not= dx 0) (not= dy 0))]
+                                [(+ cx dx) (+ cy dy)])
+                    new-stack (reduce
+                                (fn [s [nx ny]]
+                                  (if (= (map-get m' nx ny) target)
+                                    (conj s [nx ny])
+                                    s))
+                                stack'
+                                neighbors)]
+                (recur m' new-stack))
+              (recur m stack' ))))))))
+
+;;; Smart Bomb
+
+(defn do-smart-bomb [state player-idx active-rect]
+  (let [left (:left active-rect)
+        top (:top active-rect)
+        w (:width active-rect)
+        h (:height active-rect)
+        ghost-min kMonster1
+        ghost-max kMonster3
+        coords (for [y (range top (+ top h))
+                     x (range left (+ left w))]
+                 [x y])
+        [new-map score-gain]
+        (reduce
+          (fn [[m score] [x y]]
+            (let [tile (map-get m x y)]
+              (if (and (>= tile ghost-min) (<= tile ghost-max))
+                [(map-set m x y 0) (+ score (* 10 (+ (- tile ghost-min) 1)))]
+                [m score])))
+          [(:map state) 0]
+          coords)]
+    (-> state
+        (assoc :map new-map)
+        (update-in [:players player-idx :score] + score-gain))))
+
+;;; Player Movement
+
+(defn try-move-player [state player-idx dir]
+  (let [player (get-in state [:players player-idx])
+        state (assoc-in state [:players player-idx :dir] dir)
+        dx (nth kDirToDeltaX dir)
+        dy (nth kDirToDeltaY dir)
+        nx (+ (:x player) dx)
+        ny (+ (:y player) dy)
+        v (map-get (:map state) nx ny)]
+    (cond
+      (= v kSpace)
+      {:moved true
+       :state (-> state
+                  (assoc-in [:map] (-> (:map state)
+                                       (map-set (:x player) (:y player) 0)
+                                       (map-set nx ny (+ kPlayer1 player-idx))))
+                  (assoc-in [:players player-idx :x] nx)
+                  (assoc-in [:players player-idx :y] ny))}
+      
+      (= v kDoor)
+      (if (> (:keys player) 0)
+        (let [unlocked-map (map-set (:map state) (:x player) (:y player) 0)
+              unlocked-map (flood-unlock unlocked-map nx ny)]
+          {:moved true
+           :state (-> state
+                      (assoc-in [:map] (map-set unlocked-map nx ny (+ kPlayer1 player-idx)))
+                      (assoc-in [:players player-idx :x] nx)
+                      (assoc-in [:players player-idx :y] ny)
+                      (update-in [:players player-idx :keys] dec))})
+        {:moved false :state state})
+      
+      (= v kDown)
+      {:moved true
+       :state (-> state
+                  (assoc-in [:map] (map-set (:map state) (:x player) (:y player) 0))
+                  (assoc-in [:players player-idx :escaped] true)
+                  (assoc-in [:players player-idx :x] -1)
+                  (assoc-in [:players player-idx :y] -1))}
+      
+      (= v kKey)
+      {:moved true
+       :state (-> state
+                  (assoc-in [:map] (-> (:map state)
+                                       (map-set (:x player) (:y player) 0)
+                                       (map-set nx ny (+ kPlayer1 player-idx))))
+                  (assoc-in [:players player-idx :x] nx)
+                  (assoc-in [:players player-idx :y] ny)
+                  (update-in [:players player-idx :keys] inc))}
+      
+      (= v kFood)
+      {:moved true
+       :state (-> state
+                  (assoc-in [:map] (-> (:map state)
+                                       (map-set (:x player) (:y player) 0)
+                                       (map-set nx ny (+ kPlayer1 player-idx))))
+                  (assoc-in [:players player-idx :x] nx)
+                  (assoc-in [:players player-idx :y] ny)
+                  (update-in [:players player-idx :health] + 100))}
+      
+      (= v kMoney)
+      {:moved true
+       :state (-> state
+                  (assoc-in [:map] (-> (:map state)
+                                       (map-set (:x player) (:y player) 0)
+                                       (map-set nx ny (+ kPlayer1 player-idx))))
+                  (assoc-in [:players player-idx :x] nx)
+                  (assoc-in [:players player-idx :y] ny)
+                  (update-in [:players player-idx :score] + 100))}
+      
+      (= v kBomb)
+      {:moved true
+       :state (-> state
+                  (assoc-in [:map] (-> (:map state)
+                                       (map-set (:x player) (:y player) 0)
+                                       (map-set nx ny (+ kPlayer1 player-idx))))
+                  (assoc-in [:players player-idx :x] nx)
+                  (assoc-in [:players player-idx :y] ny)
+                  (update-in [:players player-idx :bombs] inc))}
+      
+      :else
+      {:moved false :state state})))
+
+(defn try-move-player-with-sliding [state player-idx dir]
+  (let [res (try-move-player state player-idx dir)]
+    (if (:moved res)
+      (:state res)
+      (let [dir-l (bit-and (+ dir 1) 7)
+            res-l (try-move-player state player-idx dir-l)]
+        (if (:moved res-l)
+          (:state res-l)
+          (let [dir-r (bit-and (+ dir 7) 7)
+                res-r (try-move-player state player-idx dir-r)]
+            (:state res-r)))))))
+
+(defn get-input-direction [input]
+  (let [dx (cond (not= (bit-and input kButtonLeft) 0) -1 (not= (bit-and input kButtonRight) 0) 1 :else 0)
+        dy (cond (not= (bit-and input kButtonUp) 0) -1 (not= (bit-and input kButtonDown) 0) 1 :else 0)]
+    (cond
+      (and (= dx 0) (= dy -1)) 0
+      (and (= dx 1) (= dy -1)) 1
+      (and (= dx 1) (= dy 0)) 2
+      (and (= dx 1) (= dy 1)) 3
+      (and (= dx 0) (= dy 1)) 4
+      (and (= dx -1) (= dy 1)) 5
+      (and (= dx -1) (= dy 0)) 6
+      (and (= dx -1) (= dy -1)) 7
+      :else nil)))
+
+(defn step-player [state player-idx active-rect]
+  (let [player (get-in state [:players player-idx])
+        input (:input-mask player)
+        state (if (and (not= (bit-and input kButtonBomb) 0) (> (:bombs player) 0))
+                (-> state
+                    (update-in [:players player-idx :bombs] dec)
+                    (do-smart-bomb player-idx active-rect))
+                state)
+        player (get-in state [:players player-idx])
+        dir-opt (get-input-direction input)]
+    (if (not= (bit-and input kButtonFire) 0)
+      (if (nil? (:arrow player))
+        (let [shoot-dir (or dir-opt (:dir player))]
+          (assoc-in state [:players player-idx :arrow]
+                    {:x (:x player) :y (:y player) :dir shoot-dir}))
+        state)
+      (if dir-opt
+        (try-move-player-with-sliding state player-idx dir-opt)
+        state))))
+
+;;; Arrow Physics
+
+(defn arrow-tile-val [dir]
+  (+ kArrow (bit-and (+ dir 3) 7)))
+
+(defn step-arrow [state player-idx active-rect]
+  (let [player (get-in state [:players player-idx])
+        arrow (:arrow player)]
+    (if (nil? arrow)
+      state
+      (let [dx (nth kDirToDeltaX (:dir arrow))
+            dy (nth kDirToDeltaY (:dir arrow))
+            nx (+ (:x arrow) dx)
+            ny (+ (:y arrow) dy)
+            old-tile (map-get (:map state) (:x arrow) (:y arrow))
+            expected-old-val (arrow-tile-val (:dir arrow))
+            state (if (= old-tile expected-old-val)
+                    (assoc-in state [:map] (map-set (:map state) (:x arrow) (:y arrow) 0))
+                    state)
+            v (map-get (:map state) nx ny)
+            ghost-min kMonster1
+            ghost-max kMonster3]
+        (cond
+          (= v kSpace)
+          (-> state
+              (assoc-in [:players player-idx :arrow] {:x nx :y ny :dir (:dir arrow)})
+              (assoc-in [:map] (map-set (:map state) nx ny expected-old-val)))
+          
+          (and (>= v ghost-min) (<= v ghost-max))
+          (let [new-v (if (> v ghost-min) (dec v) 0)
+                state (assoc-in state [:map] (map-set (:map state) nx ny new-v))]
+            (-> state
+                (assoc-in [:players player-idx :arrow] nil)
+                (update-in [:players player-idx :score] + 10)))
+          
+          (= v kHeart)
+          (let [dead-active-p (first (keep (fn [p] (when (and (:active p) (not (:alive p))) (:id p))) (:players state)))
+                new-v (if dead-active-p (+ kPlayer1 dead-active-p) 11)
+                state (assoc-in state [:map] (map-set (:map state) nx ny new-v))
+                state (if dead-active-p
+                        (-> state
+                            (assoc-in [:players dead-active-p :alive] true)
+                            (assoc-in [:players dead-active-p :x] nx)
+                            (assoc-in [:players dead-active-p :y] ny)
+                            (assoc-in [:players dead-active-p :health] 50))
+                        state)]
+            (assoc-in state [:players player-idx :arrow] nil))
+          
+          (= v kBomb)
+          (-> state
+              (assoc-in [:players player-idx :arrow] nil)
+              (do-smart-bomb player-idx active-rect))
+          
+          :else
+          (assoc-in state [:players player-idx :arrow] nil))))))
+
+;;; AI
+
+(defn is-generator-blocked? [game-map gx gy]
+  (let [dirs [0 2 4 6]
+        unblocked? (some
+                     (fn [dir]
+                       (let [dx (nth kDirToDeltaX dir)
+                             dy (nth kDirToDeltaY dir)
+                             nx (+ gx dx)
+                             ny (+ gy dy)]
+                         (= (map-get game-map nx ny) 0)))
+                     dirs)]
+    (not unblocked?)))
+
+(defn is-ghost-blocked? [state gx gy]
+  (let [players (:players state)
+        active-alive-p (filter (fn [p] (and (:active p) (:alive p) (not (:escaped p)))) players)]
+    (if (empty? active-alive-p)
+      true
+      (let [best-p (first (sort-by (fn [p] (+ (abs (- (:x p) gx)) (abs (- (:y p) gy)))) active-alive-p))
+            px (:x best-p)
+            py (:y best-p)
+            dx (- px gx)
+            dy (- py gy)
+            sgn (fn [v] (cond (> v 0) 1 (< v 0) -1 :else 0))
+            sdx (sgn dx)
+            sdy (sgn dy)
+            m-dir (cond
+                    (and (= sdx 0) (= sdy -1)) 0
+                    (and (= sdx 1) (= sdy -1)) 1
+                    (and (= sdx 1) (= sdy 0)) 2
+                    (and (= sdx 1) (= sdy 1)) 3
+                    (and (= sdx 0) (= sdy 1)) 4
+                    (and (= sdx -1) (= sdy 1)) 5
+                    (and (= sdx -1) (= sdy 0)) 6
+                    (and (= sdx -1) (= sdy -1)) 7
+                    :else 0)
+            search-offsets [0 7 1]
+            unblocked? (some
+                         (fn [offset]
+                           (let [d (bit-and (+ m-dir offset) 7)
+                                 nx (+ gx (nth kDirToDeltaX d))
+                                 ny (+ gy (nth kDirToDeltaY d))
+                                 nv (map-get (:map state) nx ny)]
+                             (or (= nv 0)
+                                 (and (>= nv kPlayer1) (<= nv (+ kPlayer1 3))))))
+                         search-offsets)]
+        (not unblocked?)))))
+
+(defn hurt-player [state player-idx pain]
+  (let [player (get-in state [:players player-idx])]
+    (if (> (:health player) pain)
+      (update-in state [:players player-idx :health] - pain)
+      (let [remains (if (> (:keys player) 0) kKey kSpace)
+            state (assoc-in state [:map] (map-set (:map state) (:x player) (:y player) remains))]
+        (-> state
+            (assoc-in [:players player-idx :health] 0)
+            (assoc-in [:players player-idx :alive] false))))))
+
+(defn step-ghost [state gx gy ghost-val]
+  (let [players (:players state)
+        active-alive-p (filter (fn [p] (and (:active p) (:alive p) (not (:escaped p)))) players)]
+    (if (empty? active-alive-p)
+      state
+      (let [best-p (first (sort-by (fn [p] (+ (abs (- (:x p) gx)) (abs (- (:y p) gy)))) active-alive-p))
+            px (:x best-p)
+            py (:y best-p)
+            dx (- px gx)
+            dy (- py gy)
+            sgn (fn [v] (cond (> v 0) 1 (< v 0) -1 :else 0))
+            sdx (sgn dx)
+            sdy (sgn dy)
+            m-dir (cond
+                    (and (= sdx 0) (= sdy -1)) 0
+                    (and (= sdx 1) (= sdy -1)) 1
+                    (and (= sdx 1) (= sdy 0)) 2
+                    (and (= sdx 1) (= sdy 1)) 3
+                    (and (= sdx 0) (= sdy 1)) 4
+                    (and (= sdx -1) (= sdy 1)) 5
+                    (and (= sdx -1) (= sdy 0)) 6
+                    (and (= sdx -1) (= sdy -1)) 7
+                    :else 0)
+            search-offsets [0 7 1]]
+        (loop [offsets search-offsets]
+          (if (empty? offsets)
+            state
+            (let [offset (first offsets)
+                  d (bit-and (+ m-dir offset) 7)
+                  nx (+ gx (nth kDirToDeltaX d))
+                  ny (+ gy (nth kDirToDeltaY d))
+                  nv (map-get (:map state) nx ny)]
+              (cond
+                (= nv kSpace)
+                (assoc state :map (-> (:map state)
+                                      (map-set gx gy 0)
+                                      (map-set nx ny ghost-val)))
+                
+                (and (>= nv kPlayer1) (<= nv (+ kPlayer1 3)))
+                (let [hit-player-idx (- nv kPlayer1)
+                      pain (* 10 (+ (- ghost-val kMonster1) 1))
+                      state' (hurt-player state hit-player-idx pain)]
+                  (assoc state' :map (map-set (:map state' ) gx gy 0)))
+                
+                (and (>= nv kArrow) (<= nv (+ kArrow 7)))
+                state
+                
+                :else
+                (recur (rest offsets))))))))))
+
+(defn step-generator [state gx gy gen-val]
+  (let [[rng-state ran] (lcg-next (:rng-state state))
+        state (assoc state :rng-state rng-state)]
+    (if (< ran 0.3)
+      (let [[rng-state2 ran-dir] (lcg-next (:rng-state state))
+            state (assoc state :rng-state rng-state2)
+            dir-idx (int (.floor js/Math (* ran-dir 4.0)))
+            dir (* dir-idx 2)
+            dx (nth kDirToDeltaX dir)
+            dy (nth kDirToDeltaY dir)
+            nx (+ gx dx)
+            ny (+ gy dy)]
+        (if (= (map-get (:map state) nx ny) 0)
+          (let [new-ghost (+ kMonster1 (- gen-val kGenerator1))
+                state (assoc-in state [:map] (map-set (:map state) nx ny new-ghost))]
+            state)
+          state))
+      state)))
+
+(defn step-enemies [state active-rect]
+  (let [rotor (bit-and (inc (:rotor state)) 3)
+        coords (staggered-coords active-rect rotor)
+        state (assoc state :rotor rotor)]
+    (reduce
+      (fn [s [x y]]
+        (let [v (map-get (:map s) x y)]
+          (cond
+            (and (>= v kMonster1) (<= v kMonster3)) (step-ghost s x y v)
+            (and (>= v kGenerator1) (<= v kGenerator3)) (step-generator s x y v)
+            :else s)))
+      state
+      coords)))
+
+;;; Level Progression and Resets
+
+(defn load-level-into-state [state level-idx]
+  (let [raw-map (load-level-map level-idx)
+        spawn-pos (map-find raw-map 3)
+        spawn (if spawn-pos spawn-pos [2 2])
+        players (vec
+                  (map
+                    (fn [p]
+                      (if (:active p)
+                        (let [idx (:id p)
+                              dir (nth PLAYER_SPAWN_DIRS idx)
+                              px (+ (first spawn) (nth kDirToDeltaX dir))
+                              py (+ (second spawn) (nth kDirToDeltaY dir))]
+                           (assoc p
+                             :alive true
+                             :escaped false
+                             :x px
+                             :y py
+                             :dir dir
+                             :health 100
+                             :bombs 0
+                             :keys 0
+                             :arrow nil))
+                        p))
+                    (:players state)))
+        game-map (reduce
+                   (fn [m p]
+                     (if (:active p)
+                       (map-set m (:x p) (:y p) (+ kPlayer1 (:id p)))
+                       m))
+                   raw-map
+                   players)]
+    (-> state
+        (assoc :map game-map)
+        (assoc :level-idx level-idx)
+        (assoc :players players)
+        (assoc :rotor 0)
+        (assoc :camera (let [[tx ty] (calculate-target-cog players)]
+                         {:x (double tx) :y (double ty)})))))
+
+(defn check-level-progression [state]
+  (let [players (:players state)
+        any-joined (some :active players)
+        players-in-dungeon (some (fn [p] (and (:active p) (:alive p) (not (:escaped p)))) players)
+        any-escaped (some (fn [p] (and (:active p) (:escaped p))) players)
+        arrows-in-flight (some (fn [p] (and (:active p) (not (nil? (:arrow p))))) players)]
+    (if (and any-joined (not players-in-dungeon) (not arrows-in-flight))
+      (if any-escaped
+        (let [next-level (min (inc (:level-idx state)) 25)]
+          (load-level-into-state state next-level))
+        (load-level-into-state state (:level-idx state)))
+      state)))
+
+(defn check-hot-joins [state]
+  (reduce
+    (fn [s idx]
+      (let [p (get-in s [:players idx])]
+        (if (and (not (:active p)) (not= (:input-mask p) 0))
+          (let [spawn-pos (map-find (:map s) 3)
+                spawn (if spawn-pos spawn-pos [2 2])
+                dir (nth PLAYER_SPAWN_DIRS idx)
+                dx (nth kDirToDeltaX dir)
+                dy (nth kDirToDeltaY dir)
+                px (+ (first spawn) dx)
+                py (+ (second spawn) dy)
+                p' (assoc p
+                     :active true
+                     :alive true
+                     :escaped false
+                     :x px
+                     :y py
+                     :dir dir
+                     :health 100
+                     :score 0
+                     :bombs 0
+                     :keys 0
+                     :arrow nil)
+                state' (-> s
+                           (assoc-in [:players idx] p' )
+                           (assoc-in [:map] (map-set (:map s) px py (+ kPlayer1 idx))))]
+            state' )
+          s)))
+    state
+    (range 4)))
+
+;;; CPU-Saving Sleep Mode
+
+(defn can-sleep? [state]
+  (let [players (:players state)
+        has-inputs (some (fn [p] (and (:active p) (not= (:input-mask p) 0))) players)
+        has-arrows (some (fn [p] (and (:active p) (not (nil? (:arrow p))))) players)
+        camera (:camera state)
+        [tx ty] (calculate-target-cog players)
+        dx (- tx (:x camera))
+        dy (- ty (:y camera))
+        camera-arrived (and (< (abs dx) 0.1) (< (abs dy) 0.1))]
+    (if (or has-inputs has-arrows (not camera-arrived))
+      false
+      (let [active-rect (get-active-rect camera)
+            left (:left active-rect)
+            top (:top active-rect)
+            w (:width active-rect)
+            h (:height active-rect)
+            coords (for [y (range top (+ top h))
+                         x (range left (+ left w))]
+                     [x y])
+            any-active-entity? (some
+                                 (fn [[x y]]
+                                   (let [v (map-get (:map state) x y)]
+                                     (cond
+                                       (and (>= v kMonster1) (<= v kMonster3)) (not (is-ghost-blocked? state x y))
+                                       (and (>= v kGenerator1) (<= v kGenerator3)) (not (is-generator-blocked? (:map state) x y))
+                                       :else false)))
+                                 coords)]
+        (not any-active-entity?)))))
+
+;;; State Transition step-game
+
+(defn step-game [state]
+  (let [state (update-in state [:time] inc)
+        state (check-hot-joins state)
+        should-move (= (mod (:time state) 4) 0)]
+    (if should-move
+      (let [active-rect (get-active-rect (:camera state))
+            state (reduce
+                    (fn [s idx]
+                      (let [p (get-in s [:players idx])]
+                        (if (and (:active p) (:alive p) (not (:escaped p)))
+                          (step-player s idx active-rect)
+                          s)))
+                    state
+                    (range 4))
+            state (reduce
+                    (fn [s idx]
+                      (let [p (get-in s [:players idx])]
+                        (if (:active p)
+                          (step-arrow s idx active-rect)
+                          s)))
+                    state
+                    (range 4))
+            state (step-enemies state active-rect)
+            state (check-level-progression state)]
+        (assoc state :camera (update-camera (:camera state) (:players state))))
+      (assoc state :camera (update-camera (:camera state) (:players state))))))
+
+;;; State initialization
+
+(defn init-player [id active]
+  {:id id
+   :active active
+   :alive active
+   :escaped false
+   :x -1
+   :y -1
+   :dir (nth PLAYER_SPAWN_DIRS id)
+   :health 100
+   :score 0
+   :bombs 0
+   :keys 0
+   :input-mask 0
+   :arrow nil})
+
+(defn init-game-state [level-idx]
+  (let [raw-map (load-level-map level-idx)
+        spawn-pos (map-find raw-map 3)
+        spawn (if spawn-pos spawn-pos [2 2])
+        players (vec (map (fn [id] (init-player id (= id 0))) (range 4)))
+        p1-dir (nth PLAYER_SPAWN_DIRS 0)
+        p1-x (+ (first spawn) (nth kDirToDeltaX p1-dir))
+        p1-y (+ (second spawn) (nth kDirToDeltaY p1-dir))
+        players (assoc-in players [0 :x] p1-x)
+        players (assoc-in players [0 :y] p1-y)
+        game-map (map-set raw-map p1-x p1-y (+ kPlayer1 0))]
+    {:map game-map
+     :level-idx level-idx
+     :players players
+     :camera {:x (double (* (first spawn) 16)) :y (double (* (second spawn) 16))}
+     :rotor 0
+     :time 0
+     :rng-state 12345}))
+
+(def game-state (atom (init-game-state 0)))
+
+(def pressed-keys (atom #{}))
+(def anim-frame-id (atom nil))
+(def is-sleeping (atom false))
+(def gamepad-poll-interval (atom nil))
+
+;;; Render game and DOM HUD updates
+
+(defn draw-game [canvas strike game-state]
+  (let [tile-w 16
+        tile-h 16
+        scale tileScale
+        canvas-tile-w (* scale tile-w)
+        canvas-tile-h (* scale tile-h)
         context (.getContext canvas "2d")
         cw (.-width canvas)
         ch (.-height canvas)
-        windowTileWidth (.floor js/Math (/ cw canvasTileWidth))
-        windowTileHeight (.floor js/Math (/ ch canvasTileHeight))
-        endY (min (count level) (+ baseY windowTileHeight))
-        startY (- endY windowTileHeight)]
-    (doseq [y (range startY endY)]
-      (let [line (level y)
-          endX (min (count line) (+ baseX windowTileWidth))
-          startX (- endX windowTileWidth)]
-        (doseq [x (range startX endX)]
-          (let [d (line x)
-                tx (* tileWidth (bit-and d 15))
-                ty (* tileHeight (bit-shift-right d 4))]
-            (.drawImage context strike tx ty tileWidth tileHeight
-                  (* (- x startX) canvasTileWidth)
-                  (* (- y startY) canvasTileHeight)
-                  canvasTileWidth canvasTileHeight)))))))
+        [offset-x offset-y] (get-camera-offsets (:camera game-state))
+        canvas-offset-x (* offset-x scale)
+        canvas-offset-y (* offset-y scale)
+        active-rect (get-active-rect (:camera game-state))
+        left (:left active-rect)
+        top (:top active-rect)
+        w (:width active-rect)
+        h (:height active-rect)
+        end-x (+ left w)
+        end-y (+ top h)
+        game-map (:map game-state)]
+    
+    ;; Disable image smoothing for crispy pixelated scaling
+    (set! (.-imageSmoothingEnabled context) false)
+    (.clearRect context 0 0 cw ch)
+    
+    (doseq [y (range top end-y)]
+      (doseq [x (range left end-x)]
+        (let [d (map-get game-map x y)
+              tx (* tile-w (bit-and d 15))
+              ty (* tile-h (bit-shift-right d 4))]
+          (.drawImage context strike tx ty tile-w tile-h
+                (+ canvas-offset-x (* x canvas-tile-w))
+                (+ canvas-offset-y (* y canvas-tile-h))
+                canvas-tile-w canvas-tile-h))))))
 
-(defn some-indexed
-  "Returns the first logical true value of (pred x index) for any x in
-  coll, else nil.  One common idiom is to use a set as pred, for example
-  this will return index0 if :fred is in the sequence, otherwise nil:
-  (some-index #{:fred} coll)"
-  [pred coll]
-    (loop [index 0 coll2 coll]
-      (when (seq coll2)
-        (or (pred (first coll2) index)
-          (recur (inc index) (next coll2))))))
+(def last-hud-state (atom {}))
 
-(defn find-first [item level]
-  (some-indexed
-    (fn [e i] (let [j (some-indexed (fn [e2 i2] (if (= e2 item) i2 nil)) e)]
-        (if j [j i] nil))) level))
+(defn update-hud [state]
+  (doseq [idx (range 4)]
+    (let [p (get-in state [:players idx])
+          hud-div (.getElementById js/document (str "player-hud-" idx))]
+      (if (:active p)
+        (do
+          (when hud-div (set! (.-display (.-style hud-div)) "block"))
+          (let [score-el (.getElementById js/document (str "p" idx "-score"))
+                health-el (.getElementById js/document (str "p" idx "-health"))
+                keys-el (.getElementById js/document (str "p" idx "-keys"))
+                bombs-el (.getElementById js/document (str "p" idx "-bombs"))
+                last-p (get @last-hud-state idx)]
+            (when (or (nil? last-p) (not= (:score p) (:score last-p)))
+              (when score-el (set! (.-textContent score-el) (str (:score p)))))
+            (when (or (nil? last-p) (not= (:health p) (:health last-p)) (not= (:alive p) (:alive last-p)))
+              (when health-el
+                (let [h (:health p)]
+                  (set! (.-textContent health-el) (if (:alive p) (str h) "DEAD"))
+                  (set! (.-color (.-style health-el)) (if (:alive p) (if (< h 30) "orange" "white") "red")))))
+            (when (or (nil? last-p) (not= (:keys p) (:keys last-p)))
+              (when keys-el (set! (.-textContent keys-el) (str (:keys p)))))
+            (when (or (nil? last-p) (not= (:bombs p) (:bombs last-p)))
+              (when bombs-el (set! (.-textContent bombs-el) (str (:bombs p)))))
+            (swap! last-hud-state assoc idx p)))
+        (when hud-div (set! (.-display (.-style hud-div)) "none"))))))
 
-(defn game []
-  (let [canvas (.getElementById js/document "gameCanvas")
-    level (readLevel (levels 0))
-    up (find-first kUp level)
-    px (if up (- (get up 0) 1) 0)
-    py (if up (get up 1) 0)
-        ]
-    (drawLevel canvas strike tileWidth tileHeight tileScale level px py)))
+;;; Inputs and polling
 
-(.addEventListener js/window "load" game false)
+(defn compute-p1-input [keys]
+  (let [up (if (contains? keys "ArrowUp") kButtonUp 0)
+        down (if (contains? keys "ArrowDown") kButtonDown 0)
+        left (if (contains? keys "ArrowLeft") kButtonLeft 0)
+        right (if (contains? keys "ArrowRight") kButtonRight 0)
+        fire (if (contains? keys "Space") kButtonFire 0)
+        bomb (if (contains? keys "KeyB") kButtonBomb 0)]
+    (bit-or up down left right fire bomb)))
+
+(defn compute-p2-input [keys]
+  (let [up (if (contains? keys "KeyW") kButtonUp 0)
+        down (if (contains? keys "KeyS") kButtonDown 0)
+        left (if (contains? keys "KeyA") kButtonLeft 0)
+        right (if (contains? keys "KeyD") kButtonRight 0)
+        fire (if (contains? keys "KeyF") kButtonFire 0)
+        bomb (if (contains? keys "KeyG") kButtonBomb 0)]
+    (bit-or up down left right fire bomb)))
+
+(defn poll-gamepad-input [gamepad-idx]
+  (let [gamepads (when (exists? js/navigator) (.getGamepads js/navigator))
+        gp (when gamepads (aget gamepads gamepad-idx))]
+    (if (nil? gp)
+      0
+      (let [axes (.-axes gp)
+            buttons (.-buttons gp)
+            ax (if (> (alength axes) 0) (aget axes 0) 0.0)
+            ay (if (> (alength axes) 1) (aget axes 1) 0.0)
+            left (if (< ax -0.5) kButtonLeft 0)
+            right (if (> ax 0.5) kButtonRight 0)
+            up (if (< ay -0.5) kButtonUp 0)
+            down (if (> ay 0.5) kButtonDown 0)
+            fire-btn (when (> (alength buttons) 0) (aget buttons 0))
+            fire (if (and fire-btn (.-pressed fire-btn)) kButtonFire 0)
+            bomb-btn (when (> (alength buttons) 1) (aget buttons 1))
+            bomb (if (and bomb-btn (.-pressed bomb-btn)) kButtonBomb 0)]
+        (bit-or left right up down fire bomb)))))
+
+(defn apply-inputs-to-state [state keys]
+  (let [p1-mask (compute-p1-input keys)
+        p2-mask (compute-p2-input keys)
+        p3-mask (poll-gamepad-input 0)
+        p4-mask (poll-gamepad-input 1)]
+    (-> state
+        (assoc-in [:players 0 :input-mask] p1-mask)
+        (assoc-in [:players 1 :input-mask] p2-mask)
+        (assoc-in [:players 2 :input-mask] p3-mask)
+        (assoc-in [:players 3 :input-mask] p4-mask))))
+
+;;; Loop Control
+
+(declare wake-up-loop!)
+
+(defn game-loop []
+  (let [canvas (.getElementById js/document "gameCanvas")]
+    (swap! game-state (fn [s] (apply-inputs-to-state s @pressed-keys)))
+    (swap! game-state step-game)
+    (draw-game canvas strike @game-state)
+    (update-hud @game-state)
+    
+    (if (can-sleep? @game-state)
+      (do
+        (.log js/console "Game entering sleep mode...")
+        (reset! is-sleeping true)
+        (reset! anim-frame-id nil)
+        (reset! gamepad-poll-interval (js/setInterval (fn []
+                                                       (let [p3 (poll-gamepad-input 0)
+                                                             p4 (poll-gamepad-input 1)]
+                                                         (when (or (not= p3 0) (not= p4 0))
+                                                           (wake-up-loop!)))) 100)))
+      (do
+        (when @gamepad-poll-interval
+          (js/clearInterval @gamepad-poll-interval)
+          (reset! gamepad-poll-interval nil))
+        (reset! anim-frame-id (.requestAnimationFrame js/window game-loop))))))
+
+(defn wake-up-loop! []
+  (when @is-sleeping
+    (.log js/console "Game waking up...")
+    (reset! is-sleeping false)
+    (reset! anim-frame-id (.requestAnimationFrame js/window game-loop))))
+
+(defn start-game []
+  (.addEventListener js/window "keydown"
+    (fn [e]
+      (swap! pressed-keys conj (.-code e))
+      (wake-up-loop!))
+    false)
+  (.addEventListener js/window "keyup"
+    (fn [e]
+      (swap! pressed-keys disj (.-code e)))
+    false)
+  
+  (reset! anim-frame-id (.requestAnimationFrame js/window game-loop)))
+
+(.addEventListener js/window "load" start-game false)

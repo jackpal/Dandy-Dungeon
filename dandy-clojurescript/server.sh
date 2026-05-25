@@ -1,3 +1,2 @@
 #!/bin/bash
-lein cljsbuild auto&
-python -m SimpleHTTPServer
+python3 -m http.server 8000

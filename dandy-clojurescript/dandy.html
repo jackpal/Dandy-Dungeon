@@ -1,33 +1,75 @@
 <!-- Copyright (C) 2009 John H. Palevich. All Rights Reserved. -->
 <html>
   <head>
-    <title>Dandy</title>
+    <title>Dandy Dungeon Co-op</title>
     <script src="resources/public/js/main.js">
     </script>
     <style type="text/css">
-      canvas { border: 2px solid black; }
+      canvas {
+        border: 2px solid black;
+        image-rendering: -moz-crisp-edges;
+        image-rendering: -webkit-crisp-edges;
+        image-rendering: pixelated;
+        image-rendering: crisp-edges;
+        background-color: #000;
+      }
+      body {
+        font-family: sans-serif;
+        background: #222;
+        color: #eee;
+        margin: 20px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+      }
+      h2 {
+        color: #ffae19;
+      }
     </style>
   </head>
   <body>
-    <h2>Welcome to Dandy Dungeon!</h2>
+    <h2>Dandy Dungeon Cooperative Multiplayer</h2>
+    
+    <!-- Responsive dynamic HUD -->
+    <div id="hud" style="display: flex; gap: 20px; font-family: monospace; margin-bottom: 10px; background: black; color: white; padding: 10px; border-radius: 5px; width: 620px; border: 2px solid #555; justify-content: space-around;">
+      <div id="player-hud-0" style="flex: 1; border: 1px solid #ff5555; padding: 5px; display: none; border-radius: 3px;">
+        <div style="color: #ff5555; font-weight: bold; margin-bottom: 5px;">P1 (Red - Arrows/Space)</div>
+        <div>Health: <span id="p0-health">100</span></div>
+        <div>Score: <span id="p0-score">0</span></div>
+        <div>Keys: <span id="p0-keys">0</span> | Bombs: <span id="p0-bombs">0</span></div>
+      </div>
+      <div id="player-hud-1" style="flex: 1; border: 1px solid #55ff55; padding: 5px; display: none; border-radius: 3px;">
+        <div style="color: #55ff55; font-weight: bold; margin-bottom: 5px;">P2 (Green - WASD/F)</div>
+        <div>Health: <span id="p1-health">100</span></div>
+        <div>Score: <span id="p1-score">0</span></div>
+        <div>Keys: <span id="p1-keys">0</span> | Bombs: <span id="p1-bombs">0</span></div>
+      </div>
+      <div id="player-hud-2" style="flex: 1; border: 1px solid #5555ff; padding: 5px; display: none; border-radius: 3px;">
+        <div style="color: #5555ff; font-weight: bold; margin-bottom: 5px;">P3 (Blue - Gamepad 0)</div>
+        <div>Health: <span id="p2-health">100</span></div>
+        <div>Score: <span id="p2-score">0</span></div>
+        <div>Keys: <span id="p2-keys">0</span> | Bombs: <span id="p2-bombs">0</span></div>
+      </div>
+      <div id="player-hud-3" style="flex: 1; border: 1px solid #ffff55; padding: 5px; display: none; border-radius: 3px;">
+        <div style="color: #ffff55; font-weight: bold; margin-bottom: 5px;">P4 (Yellow - Gamepad 1)</div>
+        <div>Health: <span id="p3-health">100</span></div>
+        <div>Score: <span id="p3-score">0</span></div>
+        <div>Keys: <span id="p3-keys">0</span> | Bombs: <span id="p3-bombs">0</span></div>
+      </div>
+    </div>
+
     <canvas id="gameCanvas" width="640" height="320">
     This game requires a browser that supports the canvas tag.
     </canvas>
+
+    <div style="width: 640px; margin-top: 15px; font-size: 14px; color: #aaa; line-height: 1.5;">
+      <h3>Controls</h3>
+      <strong>Player 1</strong>: Arrow keys to move, <strong>Space</strong> to shoot, <strong>B</strong> for smart bomb.<br>
+      <strong>Player 2</strong>: <strong>W/A/S/D</strong> keys to move, <strong>F</strong> to shoot, <strong>G</strong> for smart bomb.<br>
+      <strong>Player 3 & 4</strong>: Joins with Gamepad D-pad or Left Stick, Button A (0) to shoot, Button B (1) for smart bomb.<br>
+      <p>Move or press buttons to dynamically Hot-Join! Smart bomb destroys all viewport ghosts.</p>
+    </div>
     <noscript><p>This game requires Javascript.</noscript>
-
-    <h3>Controls</h3>
-
-    Use the arrow keys to move.<br>
-    Use the space bar to shoot.<br>
-    Use the 'B' key to fire a smart bomb.<br>
-    Reload the browser page to restart.
-
-  <h3>Remarks</h3>
-
-    This is a JavaScript version of my old Atari 800 game Dandy Dungeon.
-     It should play in any browser that supports the HTML 5 CANVAS tag.
-  No sound or multi-player yet.
-
-
   </body>
 </html>
