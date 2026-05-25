@@ -29,6 +29,7 @@ executable dandy-haskell
         -Wall
         -no-hs-main
         -optl-mexec-model=reactor
+        -optl-Wl,--export=hs_init
         -optl-Wl,--export=hs_init_game
         -optl-Wl,--export=hs_game_tick
         -optl-Wl,--export=hs_set_action
