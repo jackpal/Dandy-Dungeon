@@ -56,6 +56,13 @@ python3 -m http.server 8000 --directory web
 ```
 Navigate to `http://localhost:8000/` in your browser.
 
+### Remote Development (SSH Port Forwarding)
+If you are building on a remote Linux machine but want to play the game in a browser on your local computer (e.g., a Mac), you can forward the port over SSH:
+```bash
+ssh -L 8000:localhost:8000 username@remote-linux-box-ip
+```
+Once connected, you can open and play the game at `http://localhost:8000/` on your local browser.
+
 ## How to Run the Haskell Test Suite
 We have built a comprehensive, high-fidelity standalone testing suite in `src/TestMain.hs`.
 
