@@ -1,3 +1,5 @@
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE FlexibleContexts #-}
 module Dandy.Physics
   ( doSmartBomb
   , tryMovePlayer
@@ -9,79 +11,89 @@ import Dandy.Consts
 import Dandy.Types
 import Dandy.Map
 import Data.Bits ((.&.))
-import Control.Monad (forM, when)
+import Control.Monad.ST (ST, runST)
+import Data.Array.Unsafe (unsafeFreeze)
+import Data.Array.ST (STUArray)
+import Data.Array.MArray (readArray, writeArray, thaw)
+import Data.Word (Word8)
 
-doSmartBomb :: Player -> Map -> ActiveRect -> IO Player
-doSmartBomb p m active = do
+doSmartBomb :: Player -> Map -> ActiveRect -> (Player, Map)
+doSmartBomb p m active =
   let left = arLeft active
       top = arTop active
       width = arWidth active
       height = arHeight active
       xRange = [left .. left + width - 1]
       yRange = [top .. top + height - 1]
+      coords = [(x, y) | y <- yRange, x <- xRange]
 
-  scores <- forM yRange $ \y -> do
-    forM xRange $ \x -> do
-      v <- getMapTile m x y
-      if v >= ghostTile && v <= ghostTile + 2
-        then do
-          setMapTile m x y spaceTile
-          return (10 * (fromIntegral (v - ghostTile) + 1))
-        else return 0
+      (scoreGain, newMap) = runST (do
+        let Map arr = m
+        (mutArr :: STUArray s (Int, Int) Word8) <- thaw arr
+        let loop [] acc = return acc
+            loop ((x, y):cs) acc = do
+              if x >= 0 && x < mapWidth && y >= 0 && y < mapHeight
+                then do
+                  v <- readArray mutArr (x, y)
+                  if v >= ghostTile && v <= ghostTile + 2
+                    then do
+                      writeArray mutArr (x, y) spaceTile
+                      let gain = 10 * (fromIntegral (v - ghostTile) + 1)
+                      loop cs (acc + gain)
+                    else loop cs acc
+                else loop cs acc
+        score <- loop coords 0
+        frozenArr <- unsafeFreeze mutArr
+        return (score, Map frozenArr) :: ST s (Int, Map))
+  in (p { pScore = pScore p + fromIntegral scoreGain }, newMap)
 
-  let scoreGain = sum (concat scores)
-  return p { pScore = pScore p + scoreGain }
-
-tryMovePlayer :: Int -> Player -> Map -> Int -> IO (Bool, Player)
-tryMovePlayer idx p m dir = do
+tryMovePlayer :: Int -> Player -> Map -> Int -> (Bool, Player, Map)
+tryMovePlayer idx p m dir =
   let pWithDir = p { pDir = dir }
       delta = getDirDelta dir
       nx = pX p + fst delta
       ny = pY p + snd delta
+      v = getMapTile m nx ny
 
-  v <- getMapTile m nx ny
+      (moved, escaped, nextP, m1) = case v of
+        _ | v == spaceTile -> (True, False, pWithDir, m)
+        _ | v == lockTile ->
+          if pKeys p > 0
+            then
+              let mUnlocked = unlockMap m nx ny
+              in (True, False, pWithDir { pKeys = pKeys p - 1 }, mUnlocked)
+            else (False, False, pWithDir, m)
+        _ | v == downStairsTile ->
+              let mCleared = setMapTile m (pX p) (pY p) spaceTile
+              in (True, True, pWithDir { pEscaped = True, pX = -1, pY = -1 }, mCleared)
+        _ | v == keyTile ->
+              (True, False, pWithDir { pKeys = pKeys p + 1 }, m)
+        _ | v == foodTile ->
+              (True, False, pWithDir { pHealth = pHealth p + 100 }, m)
+        _ | v == moneyTile ->
+              (True, False, pWithDir { pScore = pScore p + 100 }, m)
+        _ | v == bombTile ->
+              (True, False, pWithDir { pBombs = pBombs p + 1 }, m)
+        _ -> (False, False, pWithDir, m)
+  in if moved && not escaped
+       then
+         let m2 = setMapTile m1 (pX p) (pY p) spaceTile
+             m3 = setMapTile m2 nx ny (playerTile + fromIntegral idx)
+         in (True, nextP { pX = nx, pY = ny }, m3)
+       else (moved || escaped, nextP, m1)
 
-  (moved, escaped, nextP) <- case v of
-    _ | v == spaceTile -> return (True, False, pWithDir)
-    _ | v == lockTile ->
-      if pKeys p > 0
-        then do
-          unlockMap m nx ny
-          return (True, False, pWithDir { pKeys = pKeys p - 1 })
-        else return (False, False, pWithDir)
-    _ | v == downStairsTile -> do
-          setMapTile m (pX p) (pY p) spaceTile
-          return (True, True, pWithDir { pEscaped = True, pX = -1, pY = -1 })
-    _ | v == keyTile ->
-          return (True, False, pWithDir { pKeys = pKeys p + 1 })
-    _ | v == foodTile ->
-          return (True, False, pWithDir { pHealth = pHealth p + 100 })
-    _ | v == moneyTile ->
-          return (True, False, pWithDir { pScore = pScore p + 100 })
-    _ | v == bombTile ->
-          return (True, False, pWithDir { pBombs = pBombs p + 1 })
-    _ -> return (False, False, pWithDir)
-
-  if moved && not escaped
-    then do
-      setMapTile m (pX p) (pY p) spaceTile
-      setMapTile m nx ny (playerTile + fromIntegral idx)
-      return (True, nextP { pX = nx, pY = ny })
-    else return (moved || escaped, nextP)
-
-stepPlayer :: Int -> Player -> Map -> ActiveRect -> IO Player
-stepPlayer idx p m activeRect = do
+stepPlayer :: Int -> Player -> Map -> ActiveRect -> (Player, Map)
+stepPlayer idx p m activeRect =
   let input = pInput p
       startX = pX p
       startY = pY p
 
-  pAfterBomb <- if (input .&. actionBomb) /= 0 && pBombs p > 0
-                  then do
-                    let pBombUsed = p { pBombs = pBombs p - 1 }
-                    doSmartBomb pBombUsed m activeRect
-                  else return p
+      (pAfterBomb, mAfterBomb) =
+        if (input .&. actionBomb) /= 0 && pBombs p > 0
+          then doSmartBomb (p { pBombs = pBombs p - 1 }) m activeRect
+          else (p, m)
 
-  let dx = (if (input .&. actionLeft) /= 0 then -1 else 0) +
+      dx = (if (input .&. actionLeft) /= 0 then -1 else 0) +
            (if (input .&. actionRight) /= 0 then 1 else 0)
       dy = (if (input .&. actionUp) /= 0 then -1 else 0) +
            (if (input .&. actionDown) /= 0 then 1 else 0)
@@ -97,88 +109,85 @@ stepPlayer idx p m activeRect = do
         (-1, -1)-> Just 7
         _       -> Nothing
 
-  let pAfterDir = case dirOpt of
+      pAfterDir = case dirOpt of
         Just d  -> pAfterBomb { pDir = d }
         Nothing -> pAfterBomb
+  in if (input .&. actionShoot) /= 0
+       then
+         if pArrow pAfterDir == Nothing
+           then
+             let shootDir = case dirOpt of
+                   Just d  -> d
+                   Nothing -> pDir pAfterDir
+             in (pAfterDir { pArrow = Just (Arrow startX startY shootDir) }, mAfterBomb)
+           else (pAfterDir, mAfterBomb)
+       else case dirOpt of
+         Just d ->
+           let (moved, pMoved, mMoved) = tryMovePlayer idx pAfterDir mAfterBomb d
+           in if not moved
+                then
+                  let (movedLeft, pMovedLeft, mMovedLeft) = tryMovePlayer idx pAfterDir mAfterBomb ((d + 1) .&. 7)
+                  in if not movedLeft
+                       then
+                         let (_, pMovedRight, mMovedRight) = tryMovePlayer idx pAfterDir mAfterBomb ((d + 7) .&. 7)
+                         in (pMovedRight, mMovedRight)
+                       else (pMovedLeft, mMovedLeft)
+                else (pMoved, mMoved)
+         Nothing -> (pAfterDir, mAfterBomb)
 
-  if (input .&. actionShoot) /= 0
-    then
-      if pArrow pAfterDir == Nothing
-        then do
-          let shootDir = case dirOpt of
-                Just d  -> d
-                Nothing -> pDir pAfterDir
-          return pAfterDir { pArrow = Just (Arrow startX startY shootDir) }
-        else return pAfterDir
-    else case dirOpt of
-      Just d -> do
-        (moved, pMoved) <- tryMovePlayer idx pAfterDir m d
-        if not moved
-          then do
-            (movedLeft, pMovedLeft) <- tryMovePlayer idx pAfterDir m ((d + 1) .&. 7)
-            if not movedLeft
-              then do
-                (_, pMovedRight) <- tryMovePlayer idx pAfterDir m ((d + 7) .&. 7)
-                return pMovedRight
-              else return pMovedLeft
-          else return pMoved
-      Nothing -> return pAfterDir
-
-stepArrow :: Int -> [Player] -> Map -> ActiveRect -> IO [Player]
-stepArrow idx players m activeRect = do
+stepArrow :: Int -> [Player] -> Map -> ActiveRect -> ([Player], Map)
+stepArrow idx players m activeRect =
   let p = players !! idx
-  case pArrow p of
-    Nothing -> return players
-    Just a -> do
-      let delta = getDirDelta (aDir a)
-          nx = aX a + fst delta
-          ny = aY a + snd delta
-          arrowVal = arrowTile + fromIntegral ((aDir a + 3) .&. 7)
+  in case pArrow p of
+       Nothing -> (players, m)
+       Just a ->
+         let delta = getDirDelta (aDir a)
+             nx = aX a + fst delta
+             ny = aY a + snd delta
+             arrowVal = arrowTile + fromIntegral ((aDir a + 3) .&. 7)
 
-      currentTile <- getMapTile m (aX a) (aY a)
-      when (currentTile == arrowVal) $ do
-        setMapTile m (aX a) (aY a) spaceTile
+             currentTile = getMapTile m (aX a) (aY a)
+             m1 = if currentTile == arrowVal
+                    then setMapTile m (aX a) (aY a) spaceTile
+                    else m
 
-      newTile <- getMapTile m nx ny
+             newTile = getMapTile m1 nx ny
 
-      (killArrow, newV, pScoreGain, resurrectedIdx) <- case newTile of
-        _ | newTile == spaceTile -> return (False, arrowVal, 0, Nothing)
-        _ | newTile >= ghostTile && newTile <= ghostTile + 2 -> do
-              let nextV = if newTile > ghostTile then newTile - 1 else spaceTile
-              return (True, nextV, 10, Nothing)
-        _ | newTile == heartTile -> do
-              let findDead [] _ = return (True, ghostTile + 2, 0, Nothing)
-                  findDead (otherP : rest) oIdx =
-                    if pActive otherP && not (pAlive otherP)
-                      then return (True, playerTile + fromIntegral oIdx, 0, Just oIdx)
-                      else findDead rest (oIdx + 1)
-              findDead players 0
-        _ | newTile == bombTile -> return (True, spaceTile, 0, Nothing)
-        _ -> return (True, newTile, 0, Nothing)
+             findDead [] _ = (True, ghostTile + 2, 0, Nothing)
+             findDead (otherP : rest) oIdx =
+               if pActive otherP && not (pAlive otherP)
+                 then (True, playerTile + fromIntegral oIdx, 0, Just oIdx)
+                 else findDead rest (oIdx + 1)
 
-      setMapTile m nx ny newV
+             (killArrow, newV, pScoreGain, resurrectedIdx) = case newTile of
+               _ | newTile == spaceTile -> (False, arrowVal, 0, Nothing)
+               _ | newTile >= ghostTile && newTile <= ghostTile + 2 ->
+                     let nextV = if newTile > ghostTile then newTile - 1 else spaceTile
+                     in (True, nextV, 10, Nothing)
+               _ | newTile == heartTile -> findDead players 0
+               _ | newTile == bombTile -> (True, spaceTile, 0, Nothing)
+               _ -> (True, newTile, 0, Nothing)
 
-      let updatePlayers pIdx otherP
-            | Just pIdx == resurrectedIdx =
-                let resurrectedP = otherP { pAlive = True, pX = nx, pY = ny, pHealth = 50 }
-                    finalP = if pIdx == idx
-                               then resurrectedP { pScore = pScore resurrectedP + pScoreGain, pArrow = Nothing }
-                               else resurrectedP
-                in finalP
-            | pIdx == idx =
-                let pWithScore = otherP { pScore = pScore otherP + pScoreGain }
-                    pWithArrow = if killArrow then pWithScore { pArrow = Nothing }
-                                               else pWithScore { pArrow = Just (Arrow nx ny (aDir a)) }
-                in pWithArrow
-            | otherwise = otherP
+             m2 = setMapTile m1 nx ny newV
 
-      let nextPlayers = zipWith updatePlayers [0..] players
+             updatePlayers pIdx otherP
+               | Just pIdx == resurrectedIdx =
+                   let resurrectedP = otherP { pAlive = True, pX = nx, pY = ny, pHealth = 50 }
+                       finalP = if pIdx == idx
+                                  then resurrectedP { pScore = pScore resurrectedP + pScoreGain, pArrow = Nothing }
+                                  else resurrectedP
+                   in finalP
+               | pIdx == idx =
+                   let pWithScore = otherP { pScore = pScore otherP + pScoreGain }
+                       pWithArrow = if killArrow then pWithScore { pArrow = Nothing }
+                                                 else pWithScore { pArrow = Just (Arrow nx ny (aDir a)) }
+                   in pWithArrow
+               | otherwise = otherP
 
-      finalPlayers <- if newTile == bombTile
-                        then do
-                          let firingP = nextPlayers !! idx
-                          updatedFiringP <- doSmartBomb firingP m activeRect
-                          return $ updateAt idx updatedFiringP nextPlayers
-                        else return nextPlayers
-
-      return finalPlayers
+             nextPlayers = zipWith updatePlayers [0..] players
+         in if newTile == bombTile
+              then
+                let firingP = nextPlayers !! idx
+                    (updatedFiringP, m3) = doSmartBomb firingP m2 activeRect
+                in (updateAt idx updatedFiringP nextPlayers, m3)
+              else (nextPlayers, m2)

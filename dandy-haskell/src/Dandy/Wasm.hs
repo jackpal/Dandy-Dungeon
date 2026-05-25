@@ -46,14 +46,14 @@ foreign export ccall hs_free_game :: StablePtr DandyApp -> IO ()
 hs_init_game :: IO (StablePtr DandyApp)
 hs_init_game = do
   when (1 == 0) $ c_hs_init nullPtr nullPtr
-  initialGs <- newGame
-  loadedGs <- loadGame initialGs
+  let initialGs = newGame
+      loadedGs = loadGame initialGs
   stateRef <- newIORef loadedGs
 
   let parsedSheet = parseBmp spritesheetBytes
       fbSize = screenWidth * screenHeight * 4
   fbPtr <- mallocBytes fbSize
-  
+
   let statsSize = 28 * 4
   statsPtr <- mallocBytes statsSize
 
@@ -73,10 +73,9 @@ hs_game_tick :: StablePtr DandyApp -> IO ()
 hs_game_tick sp = do
   app <- deRefStablePtr sp
   gs <- readIORef (appState app)
-  
-  nextGs <- stepGame gs
-  
-  let (tx, ty) = calculateTargetCog (gPlayers nextGs)
+
+  let nextGs = stepGame gs
+      (tx, ty) = calculateTargetCog (gPlayers nextGs)
       nextCam = updateCamera (gCamera nextGs) tx ty
       finalGs = nextGs { gCamera = nextCam }
 
@@ -105,8 +104,8 @@ renderFramebuffer app gs = do
     let dy = top + y
     forM_ [0..width-1] $ \x -> do
       let dx = left + x
-      tileVal <- getMapTile m dx dy
-      let destX = floor (offsetX + fromIntegral (dx * tileSize))
+          tileVal = getMapTile m dx dy
+          destX = floor (offsetX + fromIntegral (dx * tileSize))
           destY = floor (offsetY + fromIntegral (dy * tileSize))
       blitTile fb sheet tileVal destX destY
 
@@ -114,7 +113,7 @@ updateStatsBuffer :: DandyApp -> GameState -> IO ()
 updateStatsBuffer app gs = do
   let ptr = appStats app
       players = gPlayers gs
-  
+
   forM_ (zip [0..] players) $ \(idx, p) -> do
     let baseIdx = idx * 7
     pokeElemOff ptr baseIdx (if pActive p then 1 else 0)
@@ -146,7 +145,7 @@ hs_can_sleep :: StablePtr DandyApp -> IO Bool
 hs_can_sleep sp = do
   app <- deRefStablePtr sp
   gs <- readIORef (appState app)
-  canSleepGame gs
+  return (canSleepGame gs)
 
 hs_get_framebuffer_ptr :: StablePtr DandyApp -> IO (Ptr Word8)
 hs_get_framebuffer_ptr sp = do

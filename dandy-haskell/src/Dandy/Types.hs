@@ -11,9 +11,9 @@ module Dandy.Types
 
 import Data.Word (Word8, Word32)
 import Data.Int (Int32)
-import Data.Array.IO (IOUArray)
+import Data.Array.Unboxed (UArray)
 
-newtype Map = Map (IOUArray (Int, Int) Word8)
+newtype Map = Map (UArray (Int, Int) Word8)
 
 data Arrow = Arrow
   { aX   :: !Int
