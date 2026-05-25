@@ -37,7 +37,7 @@ sh server.sh
 This starts a Python 3 server on port `8000`.
 
 Open your browser and navigate to:
-`http://localhost:8000/dandy.html`
+`http://localhost:8000/`
 
 ---
 
@@ -49,4 +49,4 @@ If you are building the game on a remote Linux box but want to play it on a loca
 ssh -L 8000:localhost:8000 username@remote-linux-box-ip
 ```
 
-Once the SSH tunnel is connected, launch the server on the remote box (`sh server.sh`) and open `http://localhost:8000/dandy.html` in your local Mac's browser.
+Once the SSH tunnel is connected, launch the server on the remote box (`sh server.sh`) and open `http://localhost:8000/` in your local Mac's browser.
