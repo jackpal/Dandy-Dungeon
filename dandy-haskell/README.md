@@ -9,6 +9,39 @@ This directory contains a complete high-fidelity implementation of the Dandy Dun
 4. **HTML5 Gamepad API & Controls**: Polled inside browser loops, mapping active controllers to Player 3 & 4, complete with analog stick deadzones. Responsive arcade HUD displays active statistics.
 5. **Physical Engine**: Corner-sliding diagonal physics, self-resurrections via hearts, staggered rotor enemy AI updates, viewport smart bombs, and CPU-saving sleep mode.
 
+## Prerequisites
+
+To build and run the Haskell WebAssembly target and its standalone test suite, you need the GHC Wasm toolchain installed in your user space.
+
+### 1. System Dependencies (Linux/Debian/Ubuntu)
+Ensure you have the necessary system utilities and compiler tools installed:
+```bash
+sudo apt install build-essential curl libffi-dev libffi8 libgmp-dev libgmp10 libncurses-dev libncurses6 libtinfo6 pkg-config jq unzip zstd git
+```
+
+### 2. Install GHCup
+If you don't have GHCup installed, install it in minimal mode:
+```bash
+export BOOTSTRAP_HASKELL_NONINTERACTIVE=1
+export BOOTSTRAP_HASKELL_MINIMAL=1
+curl --proto '=https' --tlsv1.2 -sSf https://get-ghcup.haskell.org | sh
+source ~/.ghcup/env
+```
+
+### 3. Install GHC Wasm Toolchain
+Clone and run the `ghc-wasm-meta` installer script to set up GHC WASM bindists, wasi-sdk, cabal wrappers, and Wasmtime under `~/.ghc-wasm/`:
+```bash
+git clone https://gitlab.haskell.org/ghc/ghc-wasm-meta.git
+cd ghc-wasm-meta
+./setup.sh
+```
+*Note: You can set the GHC version using `export FLAVOUR=9.8` before running `./setup.sh` for a very stable target, or let it default to GHC 9.14.*
+
+After successful installation, add the Wasm tools to your environment path:
+```bash
+source ~/.ghc-wasm/env
+```
+
 ## How to Build the Game
 Execute the automated compilation script:
 ```bash
