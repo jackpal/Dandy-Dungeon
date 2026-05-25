@@ -68,17 +68,16 @@ playerTile :: Word8
 playerTile = 24 -- 24..27
 
 -- Movement Directions: 0 is Up, clockwise (0..7)
-dirToDelta :: [(Int, Int)]
-dirToDelta =
-  [ (0, -1)  -- 0: Up
-  , (1, -1)  -- 1: Up-Right
-  , (1, 0)   -- 2: Right
-  , (1, 1)   -- 3: Down-Right
-  , (0, 1)   -- 4: Down
-  , (-1, 1)  -- 5: Down-Left
-  , (-1, 0)  -- 6: Left
-  , (-1, -1) -- 7: Up-Left
-  ]
+getDirDelta :: Int -> (Int, Int)
+getDirDelta 0 = (0, -1)
+getDirDelta 1 = (1, -1)
+getDirDelta 2 = (1, 0)
+getDirDelta 3 = (1, 1)
+getDirDelta 4 = (0, 1)
+getDirDelta 5 = (-1, 1)
+getDirDelta 6 = (-1, 0)
+getDirDelta 7 = (-1, -1)
+getDirDelta _ = (0, 0)
 
 playerSpawnDirs :: [Int]
 playerSpawnDirs = [0, 2, 4, 6]

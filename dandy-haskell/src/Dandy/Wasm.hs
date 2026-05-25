@@ -21,7 +21,7 @@ import Control.Monad (forM_, when)
 import Data.Bits (shiftL, (.&.), (.|.), complement)
 
 spritesheetBytes :: BS.ByteString
-spritesheetBytes = BS.pack $(embedFile "assets/dandy.bmp")
+spritesheetBytes = $(embedFile "assets/dandy.bmp")
 
 data DandyApp = DandyApp
   { appState       :: !(IORef GameState)
@@ -130,7 +130,7 @@ hs_set_action sp playerIdx actionIdx pressed = do
   app <- deRefStablePtr sp
   modifyIORef' (appState app) $ \gs ->
     let ps = gPlayers gs
-    in if playerIdx < length ps
+    in if playerIdx >= 0 && playerIdx < length ps && actionIdx >= 0 && actionIdx < 8
          then
            let p = ps !! playerIdx
                bit = 1 `shiftL` actionIdx
@@ -138,7 +138,7 @@ hs_set_action sp playerIdx actionIdx pressed = do
                              then pInput p .|. bit
                              else pInput p .&. complement bit
                updatedP = p { pInput = nextInput }
-               nextPs = zipWith (\i op -> if i == playerIdx then updatedP else op) [0..] ps
+               nextPs = updateAt playerIdx updatedP ps
            in gs { gPlayers = nextPs }
          else gs
 

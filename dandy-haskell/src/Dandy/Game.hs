@@ -47,8 +47,9 @@ loadGame gs = do
   let startPs idx p
         | pActive p && idx < length playerSpawnDirs = do
             let dir = playerSpawnDirs !! idx
-                px = fst spawn + fst (dirToDelta !! dir)
-                py = snd spawn + snd (dirToDelta !! dir)
+                delta = getDirDelta dir
+                px = fst spawn + fst delta
+                py = snd spawn + snd delta
             setMapTile m px py (playerTile + fromIntegral idx)
             return $ startPlayer p px py dir
         | otherwise = return p
@@ -83,11 +84,12 @@ stepGame gs = do
                   Just (x, y) -> (x, y)
                   Nothing     -> (2, 2)
                 dir = playerSpawnDirs !! idx
-                px = fst spawn + fst (dirToDelta !! dir)
-                py = snd spawn + snd (dirToDelta !! dir)
+                delta = getDirDelta dir
+                px = fst spawn + fst delta
+                py = snd spawn + snd delta
             setMapTile m px py (playerTile + fromIntegral idx)
             let startedP = startPlayer p px py dir
-                nextPs = take idx currentPs ++ [startedP] ++ drop (idx + 1) currentPs
+                nextPs = updateAt idx startedP currentPs
             joinPlayers rest nextPs
           else joinPlayers rest currentPs
 
@@ -123,10 +125,10 @@ stepGame gs = do
         then do
           if anyEscaped
             then do
-              let nextLevel = (gLevel gs + 1) `min` 25
-              loadGame gs { gLevel = nextLevel, gPlayers = nextPs4, gTime = t, gLastMoveTime = t }
+               let nextLevel = (gLevel gs + 1) `min` 25
+               loadGame gs { gLevel = nextLevel, gPlayers = nextPs4, gTime = t, gLastMoveTime = t }
             else do
-              loadGame gs { gPlayers = nextPs4, gTime = t, gLastMoveTime = t }
+               loadGame gs { gPlayers = nextPs4, gTime = t, gLastMoveTime = t }
         else
           return gs
             { gPlayers = nextPs4

@@ -1,4 +1,13 @@
-module Dandy.Types where
+module Dandy.Types
+  ( Map(..)
+  , Arrow(..)
+  , Player(..)
+  , Camera(..)
+  , LcgRng(..)
+  , ActiveRect(..)
+  , GameState(..)
+  , updateAt
+  ) where
 
 import Data.Word (Word8, Word32)
 import Data.Int (Int32)
@@ -52,3 +61,8 @@ data GameState = GameState
   , gCamera       :: !Camera
   , gRng          :: !LcgRng
   }
+
+updateAt :: Int -> a -> [a] -> [a]
+updateAt _ _ [] = []
+updateAt 0 newVal (_:xs) = newVal : xs
+updateAt n newVal (x:xs) = x : updateAt (n - 1) newVal xs

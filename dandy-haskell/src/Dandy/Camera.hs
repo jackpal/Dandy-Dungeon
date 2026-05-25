@@ -7,6 +7,7 @@ module Dandy.Camera
 
 import Dandy.Consts
 import Dandy.Types
+import Data.List (foldl')
 
 updateCamera :: Camera -> Int -> Int -> Camera
 updateCamera (Camera cogX cogY) targetX targetY =
@@ -52,16 +53,16 @@ getActiveRect cam =
        , arHeight = clampedBottom - clampedTop
        }
 
+data CogAcc = CogAcc !Int !Int !Int
+
 calculateTargetCog :: [Player] -> (Int, Int)
 calculateTargetCog ps =
-  let activeAlive = filter (\p -> pActive p && pAlive p && not (pEscaped p)) ps
-      numActive = length activeAlive
-  in if numActive > 0
-       then
-         let sumX = sum (map (\p -> pX p * tileSize) activeAlive)
-             sumY = sum (map (\p -> pY p * tileSize) activeAlive)
-             cogX = sumX `div` numActive
-             cogY = sumY `div` numActive
-         in (cogX + tileSize `div` 2, cogY + tileSize `div` 2)
-       else
-         (10 * tileSize + tileSize `div` 2, 5 * tileSize + tileSize `div` 2)
+  let CogAcc count sumX sumY = foldl' step (CogAcc 0 0 0) ps
+        where
+          step acc@(CogAcc c sx sy) p
+            | pActive p && pAlive p && not (pEscaped p) =
+                CogAcc (c + 1) (sx + pX p * tileSize) (sy + pY p * tileSize)
+            | otherwise = acc
+  in if count > 0
+       then (sumX `div` count + tileSize `div` 2, sumY `div` count + tileSize `div` 2)
+       else (10 * tileSize + tileSize `div` 2, 5 * tileSize + tileSize `div` 2)

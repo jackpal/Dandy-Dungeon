@@ -5,63 +5,67 @@ module Dandy.Graphics
   ) where
 
 import Dandy.Consts
-import Data.Word (Word8)
-import Data.Bits (shiftR, (.&.))
+import Data.Word (Word8, Word32)
+import Data.Bits (shiftL, shiftR, (.&.), (.|.))
 import qualified Data.ByteString as BS
-import Foreign.Ptr (Ptr)
-import Foreign.Storable (pokeElemOff)
-import Control.Monad (when, forM_)
-
-readWord32LE :: BS.ByteString -> Int -> Int
-readWord32LE bs offset =
-  let b0 = fromIntegral (BS.index bs offset)
-      b1 = fromIntegral (BS.index bs (offset + 1))
-      b2 = fromIntegral (BS.index bs (offset + 2))
-      b3 = fromIntegral (BS.index bs (offset + 3))
-  in b0 .|. (b1 `shiftL` 8) .|. (b2 `shiftL` 16) .|. (b3 `shiftL` 24)
-  where
-    b1 `shiftL` n = b1 * (2 ^ n)
-    b0 .|. b1 = b0 + b1
-
-readWord16LE :: BS.ByteString -> Int -> Int
-readWord16LE bs offset =
-  let b0 = fromIntegral (BS.index bs offset)
-      b1 = fromIntegral (BS.index bs (offset + 1))
-  in b0 .|. (b1 `shiftL` 8)
-  where
-    b1 `shiftL` n = b1 * (2 ^ n)
-    b0 .|. b1 = b0 + b1
+import qualified Data.ByteString.Unsafe as BSU
+import qualified Data.ByteString.Internal as BSI
+import Foreign.Ptr (Ptr, castPtr, plusPtr)
+import Foreign.Storable (peekElemOff, pokeElemOff)
+import Foreign.Marshal.Utils (copyBytes)
+import System.IO.Unsafe (unsafePerformIO)
+import Control.Monad (when)
 
 parseBmp :: BS.ByteString -> BS.ByteString
-parseBmp bs =
+parseBmp bs = unsafePerformIO $ do
   let header = BS.take 2 bs
-  in if header /= BS.pack [66, 77]
-       then error "Invalid BMP format"
-       else
-         let dataOffset = readWord32LE bs 10
-             width = readWord32LE bs 18
-             rawHeight = readWord32LE bs 22
-             height = abs rawHeight
-             topDown = rawHeight < 0
-             bpp = readWord16LE bs 28
-         in if bpp /= 24
-              then error "Only 24bpp BMP supported"
-              else
-                let rowStride = ((width * 3 + 3) `div` 4) * 4
-                    rgbaBytes = concat
-                      [ let bmpY = if topDown then y else height - 1 - y
-                            rowStart = dataOffset + bmpY * rowStride
-                        in concat
-                             [ let pxStart = rowStart + x * 3
-                                   b = BS.index bs pxStart
-                                   g = BS.index bs (pxStart + 1)
-                                   r = BS.index bs (pxStart + 2)
-                               in [r, g, b, 255]
-                             | x <- [0..width-1]
-                             ]
-                      | y <- [0..height-1]
-                      ]
-                in BS.pack rgbaBytes
+  if header /= BS.pack [66, 77]
+    then error "Invalid BMP format"
+    else BSU.unsafeUseAsCString bs $ \cInPtr -> do
+      let inPtr = castPtr cInPtr :: Ptr Word8
+          
+          read32 :: Int -> IO Int
+          read32 offset = do
+            b0 <- fromIntegral <$> peekElemOff inPtr offset
+            b1 <- fromIntegral <$> peekElemOff inPtr (offset + 1)
+            b2 <- fromIntegral <$> peekElemOff inPtr (offset + 2)
+            b3 <- fromIntegral <$> peekElemOff inPtr (offset + 3)
+            return $ b0 .|. (b1 `shiftL` 8) .|. (b2 `shiftL` 16) .|. (b3 `shiftL` 24)
+
+          read16 :: Int -> IO Int
+          read16 offset = do
+            b0 <- fromIntegral <$> peekElemOff inPtr offset
+            b1 <- fromIntegral <$> peekElemOff inPtr (offset + 1)
+            return $ b0 .|. (b1 `shiftL` 8)
+
+      dataOffset <- read32 10
+      width <- read32 18
+      rawHeight <- read32 22
+      let height = abs rawHeight
+          topDown = rawHeight < 0
+      bpp <- read16 28
+      if bpp /= 24
+        then error "Only 24bpp BMP supported"
+        else do
+          let rowStride = ((width * 3 + 3) `div` 4) * 4
+          BSI.create (width * height * 4) $ \outPtr -> do
+            let loop y x
+                  | y >= height = return ()
+                  | x >= width  = loop (y + 1) 0
+                  | otherwise = do
+                      let bmpY = if topDown then y else height - 1 - y
+                          rowStart = dataOffset + bmpY * rowStride
+                          pxStart = rowStart + x * 3
+                          outIdx = (y * width + x) * 4
+                      b <- peekElemOff inPtr pxStart
+                      g <- peekElemOff inPtr (pxStart + 1)
+                      r <- peekElemOff inPtr (pxStart + 2)
+                      pokeElemOff outPtr outIdx r
+                      pokeElemOff outPtr (outIdx + 1) g
+                      pokeElemOff outPtr (outIdx + 2) b
+                      pokeElemOff outPtr (outIdx + 3) 255
+                      loop y (x + 1)
+            loop 0 0
 
 blitTile :: Ptr Word8 -> BS.ByteString -> Word8 -> Int -> Int -> IO ()
 blitTile fb spritesheet tileIdx destX destY = do
@@ -79,35 +83,37 @@ blitTile fb spritesheet tileIdx destX destY = do
           endPx = endX - destX
           numPixels = endPx - startPx
 
-      forM_ [startPy..endPy - 1] $ \py -> do
-        let sy = destY + py
-            srcRowStart = (tileY + py) * 256
-            destRowStart = sy * screenWidth
-            srcStartIdx = (srcRowStart + (tileX + startPx)) * 4
-            destStartIdx = (destRowStart + startX) * 4
+      BSU.unsafeUseAsCString spritesheet $ \cSpritesheet -> do
+        let pSpritesheet = castPtr cSpritesheet :: Ptr Word8
+            loop py
+              | py >= endPy = return ()
+              | otherwise = do
+                  let sy = destY + py
+                      srcRowStart = (tileY + py) * 256
+                      destRowStart = sy * screenWidth
+                      srcStartIdx = (srcRowStart + (tileX + startPx)) * 4
+                      destStartIdx = (destRowStart + startX) * 4
+                      
+                      srcPtr = pSpritesheet `plusPtr` srcStartIdx
+                      destPtr = fb `plusPtr` destStartIdx
 
-        forM_ [0..numPixels - 1] $ \px -> do
-          let sIdx = srcStartIdx + px * 4
-              dIdx = destStartIdx + px * 4
-              r = BS.index spritesheet sIdx
-              g = BS.index spritesheet (sIdx + 1)
-              b = BS.index spritesheet (sIdx + 2)
-              a = BS.index spritesheet (sIdx + 3)
-
-          pokeElemOff fb dIdx r
-          pokeElemOff fb (dIdx + 1) g
-          pokeElemOff fb (dIdx + 2) b
-          pokeElemOff fb (dIdx + 3) a
+                  copyBytes destPtr srcPtr (numPixels * 4)
+                  loop (py + 1)
+        loop startPy
 
 clearFramebuffer :: Ptr Word8 -> Word8 -> Word8 -> Word8 -> IO ()
 clearFramebuffer fb r g b = do
-  let totalBytes = screenWidth * screenHeight * 4
+  let packedColor :: Word32
+      packedColor =
+        (fromIntegral r)
+        .|. (fromIntegral g `shiftL` 8)
+        .|. (fromIntegral b `shiftL` 16)
+        .|. (255 `shiftL` 24)
+      fb32 = castPtr fb :: Ptr Word32
+      totalPixels = screenWidth * screenHeight
       loop idx
-        | idx >= totalBytes = return ()
+        | idx >= totalPixels = return ()
         | otherwise = do
-            pokeElemOff fb idx r
-            pokeElemOff fb (idx + 1) g
-            pokeElemOff fb (idx + 2) b
-            pokeElemOff fb (idx + 3) 255
-            loop (idx + 4)
+            pokeElemOff fb32 idx packedColor
+            loop (idx + 1)
   loop 0

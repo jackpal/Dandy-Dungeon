@@ -8,10 +8,8 @@ module Dandy.Physics
 import Dandy.Consts
 import Dandy.Types
 import Dandy.Map
-import Data.Word (Word8)
-import Data.Int (Int32)
-import Control.Monad (forM, when)
 import Data.Bits ((.&.))
+import Control.Monad (forM, when)
 
 doSmartBomb :: Player -> Map -> ActiveRect -> IO Player
 doSmartBomb p m active = do
@@ -37,7 +35,7 @@ doSmartBomb p m active = do
 tryMovePlayer :: Int -> Player -> Map -> Int -> IO (Bool, Player)
 tryMovePlayer idx p m dir = do
   let pWithDir = p { pDir = dir }
-      delta = dirToDelta !! dir
+      delta = getDirDelta dir
       nx = pX p + fst delta
       ny = pY p + snd delta
 
@@ -132,7 +130,7 @@ stepArrow idx players m activeRect = do
   case pArrow p of
     Nothing -> return players
     Just a -> do
-      let delta = dirToDelta !! aDir a
+      let delta = getDirDelta (aDir a)
           nx = aX a + fst delta
           ny = aY a + snd delta
           arrowVal = arrowTile + fromIntegral ((aDir a + 3) .&. 7)
@@ -180,7 +178,7 @@ stepArrow idx players m activeRect = do
                         then do
                           let firingP = nextPlayers !! idx
                           updatedFiringP <- doSmartBomb firingP m activeRect
-                          return $ zipWith (\pIdx op -> if pIdx == idx then updatedFiringP else op) [0..] nextPlayers
+                          return $ updateAt idx updatedFiringP nextPlayers
                         else return nextPlayers
 
       return finalPlayers

@@ -11,8 +11,7 @@ import Dandy.Rng
 import Data.Word (Word8)
 import Data.Int (Int32)
 import Data.List (minimumBy)
-import Control.Monad (when, forM_)
-import Data.Bits ((.&.))
+import Data.Bits ((.&.), shiftR, shiftL, (.|.))
 
 stepEnemies :: Map -> [Player] -> ActiveRect -> Word8 -> LcgRng -> IO ([Player], Word8, LcgRng)
 stepEnemies m players active curRotor curRng = do
@@ -48,9 +47,6 @@ stepEnemies m players active curRotor curRng = do
   (finalPs, finalRng) <- loopY yStart players curRng
   return (finalPs, nextRotor, finalRng)
 
-shiftR :: Word8 -> Int -> Word8
-shiftR w n = w `div` (2 ^ n)
-
 stepGhost :: Int -> Int -> Word8 -> Map -> [Player] -> IO [Player]
 stepGhost gx gy ghostVal m players = do
   let activeAlive = filter (\(_, p) -> pActive p && pAlive p && not (pEscaped p)) (zip [0..] players)
@@ -59,7 +55,7 @@ stepGhost gx gy ghostVal m players = do
   if null dists
     then return players
     else do
-      let (bestIdx, _, bestP) = minimumBy (\(_, d1, _) (_, d2, _) -> compare d1 d2) dists
+      let (_, _, bestP) = minimumBy (\(_, d1, _) (_, d2, _) -> compare d1 d2) dists
           px = pX bestP
           py = pY bestP
           dx = px - gx
@@ -78,7 +74,7 @@ stepGhost gx gy ghostVal m players = do
       let tryMove [] = return players
           tryMove (offset : rest) = do
             let d = (mDir + offset) .&. 7
-                delta = dirToDelta !! d
+                delta = getDirDelta d
                 nx = gx + fst delta
                 ny = gy + snd delta
             nv <- getMapTile m nx ny
@@ -88,9 +84,9 @@ stepGhost gx gy ghostVal m players = do
                     setMapTile m nx ny ghostVal
                     return players
               _ | nv >= playerTile && nv <= playerTile + 3 -> do
-                    let pIndex = fromIntegral (nv - playerTile)
+                    let pIndexVal = fromIntegral (nv - playerTile)
                         pain = 10 * (fromIntegral (ghostVal - ghostTile) + 1)
-                    nextPs <- hurtPlayer pIndex pain m players
+                    nextPs <- hurtPlayer pIndexVal pain m players
                     setMapTile m gx gy spaceTile
                     return nextPs
               _ | nv >= arrowTile && nv <= arrowTile + 7 -> return players
@@ -104,13 +100,13 @@ hurtPlayer idx pain m players = do
   if pHealth p > pain
     then do
       let updatedP = p { pHealth = pHealth p - pain }
-      return $ zipWith (\i op -> if i == idx then updatedP else op) [0..] players
+      return $ updateAt idx updatedP players
     else do
       let remains = if pKeys p > 0 then keyTile else spaceTile
           keysNext = if pKeys p > 0 then pKeys p - 1 else 0
       setMapTile m (pX p) (pY p) remains
       let updatedP = p { pHealth = 0, pAlive = False, pKeys = keysNext }
-      return $ zipWith (\i op -> if i == idx then updatedP else op) [0..] players
+      return $ updateAt idx updatedP players
 
 stepGenerator :: Int -> Int -> Word8 -> Map -> [Player] -> LcgRng -> IO ([Player], LcgRng)
 stepGenerator gx gy genVal m players curRng = do
@@ -119,7 +115,7 @@ stepGenerator gx gy genVal m players curRng = do
     then do
       let (ranDir, rng2) = lcgNext rng1
           dir = (floor (ranDir * 4.0) :: Int) * 2
-          delta = dirToDelta !! dir
+          delta = getDirDelta dir
           nx = gx + fst delta
           ny = gy + snd delta
       nv <- getMapTile m nx ny
@@ -139,7 +135,7 @@ isGhostBlocked gx gy m players = do
   if null dists
     then return True
     else do
-      let (bestIdx, _, bestP) = minimumBy (\(_, d1, _) (_, d2, _) -> compare d1 d2) dists
+      let (_, _, bestP) = minimumBy (\(_, d1, _) (_, d2, _) -> compare d1 d2) dists
           px = pX bestP
           py = pY bestP
           dx = px - gx
@@ -158,7 +154,7 @@ isGhostBlocked gx gy m players = do
       let checkSearch [] = return True
           checkSearch (offset : rest) = do
             let d = (mDir + offset) .&. 7
-                delta = dirToDelta !! d
+                delta = getDirDelta d
                 nx = gx + fst delta
                 ny = gy + snd delta
             nv <- getMapTile m nx ny
@@ -174,7 +170,7 @@ isGeneratorBlocked :: Int -> Int -> Map -> IO Bool
 isGeneratorBlocked gx gy m = do
   let check [] = return True
       check (dir : rest) = do
-        let delta = dirToDelta !! dir
+        let delta = getDirDelta dir
             nx = gx + fst delta
             ny = gy + snd delta
         nv <- getMapTile m nx ny

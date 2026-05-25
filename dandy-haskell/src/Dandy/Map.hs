@@ -15,6 +15,7 @@ import Data.Word (Word8)
 import Data.Array.IO (newArray, readArray, writeArray)
 import Data.Bits (shiftR, (.&.))
 import Control.Monad (forM_, when, filterM)
+import qualified Data.ByteString as BS
 
 newMap :: IO Map
 newMap = do
@@ -45,32 +46,35 @@ findMapTile (Map arr) target = do
   search 0 0
 
 unlockMap :: Map -> Int -> Int -> IO ()
-unlockMap m@(Map arr) startX startY = do
+unlockMap m startX startY = do
   startTile <- getMapTile m startX startY
   when (startTile == lockTile) $ do
+    setMapTile m startX startY spaceTile
     let loop [] = return ()
         loop ((cx, cy):rest) = do
-          tile <- getMapTile m cx cy
-          if tile == lockTile
-            then do
-              setMapTile m cx cy spaceTile
-              let neighbors = [ (cx + dx, cy + dy)
-                              | dy <- [-1..1]
-                              , dx <- [-1..1]
-                              , dx /= 0 || dy /= 0
-                              ]
-              validNeighbors <- filterM (\(nx, ny) -> do
-                t <- getMapTile m nx ny
-                return (t == lockTile)) neighbors
-              loop (validNeighbors ++ rest)
-            else loop rest
+          let neighbors = [ (cx + dx, cy + dy)
+                          | dy <- [-1..1]
+                          , dx <- [-1..1]
+                          , dx /= 0 || dy /= 0
+                          ]
+          validNeighbors <- filterM (\(nx, ny) -> do
+            t <- getMapTile m nx ny
+            if t == lockTile
+              then do
+                setMapTile m nx ny spaceTile
+                return True
+              else return False) neighbors
+          loop (rest ++ validNeighbors)
     loop [(startX, startY)]
 
 loadMap :: Map -> Int -> IO ()
 loadMap m lvlIdx = do
-  let lvlData = levelMaps !! (lvlIdx `min` 25)
-  forM_ (zip [0..] lvlData) $ \(i, b) -> do
-    let t1 = b .&. 15
+  let clampedIdx = (lvlIdx `max` 0) `min` 25
+      lvlData = levelMaps !! clampedIdx
+      len = BS.length lvlData
+  forM_ [0..len-1] $ \i -> do
+    let b = BS.index lvlData i
+        t1 = b .&. 15
         t2 = (b `shiftR` 4) .&. 15
         idx1 = i * 2
         idx2 = i * 2 + 1
@@ -81,7 +85,7 @@ loadMap m lvlIdx = do
     setMapTile m x1 y1 t1
     setMapTile m x2 y2 t2
 
-levelMaps :: [[Word8]]
+levelMaps :: [BS.ByteString]
 levelMaps =
   [ $(embedFile "assets/levels/LEVEL.A")
   , $(embedFile "assets/levels/LEVEL.B")
