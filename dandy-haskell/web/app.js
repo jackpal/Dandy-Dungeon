@@ -52,8 +52,11 @@ async function init() {
     const buffer = await response.arrayBuffer();
     const { instance } = await WebAssembly.instantiate(buffer, importObj);
 
-    // Initialize WASI / GHC RTS reactor model
+    // Initialize WASI
     wasi.initialize(instance);
+
+    // Initialize GHC RTS (required for reactor model before FFI calls)
+    instance.exports.hs_init(0, 0);
 
     // Invoke our exported FFI initialization
     const appPtr = instance.exports.hs_init_game();
