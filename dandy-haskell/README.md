@@ -57,9 +57,9 @@ python3 -m http.server 8000 --directory web
 Navigate to `http://localhost:8000/` in your browser.
 
 ### Remote Development (SSH Port Forwarding)
-If you are building on a remote Linux machine but want to play the game in a browser on your local computer (e.g., a Mac), you can forward the port over SSH. It is highly recommended to use `127.0.0.1` instead of `localhost` for the remote target, as `localhost` might resolve to IPv6 (`::1`) on the remote host while the Python server binds to IPv4 (`0.0.0.0`):
+If you are building on a remote Linux machine but want to play the game in a browser on your local computer (e.g., a Mac), you can forward the port over SSH:
 ```bash
-ssh -L 8000:127.0.0.1:8000 username@remote-linux-box-ip
+ssh -L 8000:localhost:8000 username@remote-linux-box-ip
 ```
 Once connected, you can open and play the game at `http://localhost:8000/` on your local browser.
 
