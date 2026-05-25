@@ -1669,7 +1669,6 @@
     
     (if (can-sleep? @game-state)
       (do
-        (.log js/console "Game entering sleep mode...")
         (reset! is-sleeping true)
         (reset! anim-frame-id nil)
         (reset! gamepad-poll-interval (js/setInterval (fn []
@@ -1685,7 +1684,6 @@
 
 (defn wake-up-loop! []
   (when @is-sleeping
-    (.log js/console "Game waking up...")
     (reset! is-sleeping false)
     (reset! anim-frame-id (.requestAnimationFrame js/window game-loop))))
 
