@@ -11,7 +11,7 @@ import Dandy.Camera (calculateTargetCog, getCameraOffsets, getActiveRect, update
 import Dandy.Embed (embedFile)
 import Data.Word (Word8)
 import Data.Int (Int32)
-import Foreign.Ptr (Ptr)
+import Foreign.Ptr (Ptr, nullPtr)
 import Foreign.StablePtr (StablePtr, newStablePtr, deRefStablePtr, freeStablePtr)
 import Foreign.Marshal.Alloc (mallocBytes, free)
 import Foreign.Storable (pokeElemOff)
@@ -30,6 +30,8 @@ data DandyApp = DandyApp
   , appStats       :: !(Ptr Int32)
   }
 
+foreign import ccall unsafe "hs_init" c_hs_init :: Ptr () -> Ptr () -> IO ()
+
 foreign export ccall hs_init_game :: IO (StablePtr DandyApp)
 foreign export ccall hs_game_tick :: StablePtr DandyApp -> IO ()
 foreign export ccall hs_set_action :: StablePtr DandyApp -> Int -> Int -> Bool -> IO ()
@@ -43,6 +45,7 @@ foreign export ccall hs_free_game :: StablePtr DandyApp -> IO ()
 
 hs_init_game :: IO (StablePtr DandyApp)
 hs_init_game = do
+  when (1 == 0) $ c_hs_init nullPtr nullPtr
   initialGs <- newGame
   loadedGs <- loadGame initialGs
   stateRef <- newIORef loadedGs
