@@ -1,4 +1,4 @@
-Install lieningen from https://github.com/technomancy/leiningen
+Install leiningen from https://codeberg.org/leiningen/leiningen
 
 Run server.sh
 
