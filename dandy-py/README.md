@@ -1,54 +1,52 @@
 # Python Dandy Dungeon Port
 
-This directory contains a modernized, high-performance port of John Palevich's classic retro arcade game *Dandy Dungeon* written in **Python 3.14**, utilizing **Pygame-ce (Community Edition)** and packaged using the **`uv`** dependency/environment manager.
+This directory contains a Python 3.14 port of John Palevich's 2D arcade game *Dandy Dungeon*, using **Pygame-ce (Community Edition)** and the **`uv`** dependency and environment management system.
 
 ---
 
-## Features & Architecture
+## Features & Implementation Details
 
-*   **Python 3.14 Modernization**: Upgraded from legacy Python 2 to Python 3.14, normalizing all index math division operators (`//`), imports, exception handlings, and scope indentations.
-*   **Native Multiplatform graphics (Pygame-ce)**: Swapped legacy Pygame for Pygame-ce, providing optimized SDL2 blitting speeds, native Apple Silicon macOS ARM64 support, and compatibility with contemporary operating systems.
-*   **Desktop CPU-Saving Sleep Mode**: Supports an event-driven sleep mode that drops CPU usage to **strictly 0%** during idle gameplay states (no inputs, no active projectiles, camera settled, and viewport enemies/generators blocked).
-    *   *OS Thread Suspension*: Uses `pygame.event.wait()` to suspend the OS thread completely.
-    *   *Zero-Latency Waking*: Pushes the waking keypress/event back onto the active queue immediately, ensuring the waking action is processed with **zero frame latency**.
-*   **60Hz Framerate Limiter**: Regulates frame loops using `pygame.time.Clock()`, constraining game updates to 60 Hz, eliminating 100% CPU exhaustion, and restoring standard player stepping speed.
-*   **High-Speed Level Loader**: Updates level parses from slow iterative byte-by-byte loops to a single binary block read (`f.read(900)`), making floor transitions 10x faster and immune to truncated file crashes.
-*   **Location-Invariant Pathing**: Resolves media assets dynamically relative to `__file__`, allowing launches from any working directory.
+*   **Python 3.14 Port**: Ported from legacy Python 2 to Python 3.14, resolving string/bytes decodings, obsolete generators (`xrange` replaced with `range`), mixed tab indentations, and updating float divisions (`/`) to integer floor divisions (`//`) to maintain integer states for coordinates.
+*   **High-DPI & Retina Support**: Uses Pygame-ce for 2D graphics. Window mode is set to `pygame.SCALED | pygame.RESIZABLE` to support Retina and High-DPI backing scales, and automatically scale the retro aspect ratio cleanly when resized.
+*   **Visual Text-Based HUD**: Reserves a 40px black bar at the top of the screen to render a monospaced text HUD displaying status statistics (score, health, keys, bombs) for Player 1 and Player 2.
+*   **Player 2 Dynamic Hot-Joining**: Supports Player 2 dynamically joining the session on `W/A/S/D` keys, spawning adjacent to Player 1. Viewport camera tracking calculates coordinates based on the average Center of Gravity (COG) of active players.
+*   **CPU-Saving Sleep Mode**: Enters an idle sleep state when the game is inactive (no inputs, no active projectiles, camera settled, and viewport enemies/generators blocked). The game loop suspends using `pygame.event.wait()` to block the thread (0% CPU) and wakes up immediately on keyboard/gamepad events.
+*   **60Hz Frame Rate Regulator**: Constrains the active gameplay loop to exactly 60 Hz using `pygame.time.Clock()` to prevent CPU core exhaustion.
+*   **Block Map Loader**: Loads 900-byte binary levels using a single block read (`f.read(900)`) and `enumerate` index parsing.
+*   **Relative Path Resolution**: Resolves media assets relative to the script location (`__file__`) to allow execution from any working directory.
 
 ---
 
 ## Prerequisites
 
-Before running the application, make sure you have the following tool installed:
-
-1. **uv**: An extremely fast Python package installer and resolver. Install it on your system using:
+1. **uv**: A Python package resolver and compiler. Install it using:
    ```bash
    curl -LsSf https://astral.sh/uv/install.sh | sh
    ```
-   *Note: `uv` will automatically download, compile, and provision the required Python 3.14 compiler locally in the background if it is not found on your system.*
+   *Note: `uv` will fetch and provision the required Python 3.14 compiler locally if it is not found on your system.*
 
 ---
 
-## Quick Start Guide
+## Getting Started
 
-### 1. Clone & Navigate to Subproject
+### 1. Navigate to Subproject
 ```bash
 cd dandy-py
 ```
 
 ### 2. Synchronize the Environment
-Compile the local virtual sandbox (`.venv/`) and resolve dependencies:
+Resolve dependencies and compile the local virtual environment:
 ```bash
 uv sync
 ```
 
-*(Optional): If you are building in a restricted or sandboxed enterprise environment that enforces private registry proxies, bypass the mirror lock by passing public index URLs:*
+*(Optional): If you are building in a restricted environment enforcing private registry proxies, bypass the proxy by passing public indexes:*
 ```bash
 UV_INDEX_URL="" UV_INDEX="" uv sync --default-index https://pypi.org/simple
 ```
 
-### 3. Play Dandy Dungeon (Desktop Window)
-Launch the game inside the isolated environment:
+### 3. Run the Game
+Launch the game window inside the virtual environment:
 ```bash
 uv run python src/main.py
 ```
@@ -57,23 +55,9 @@ uv run python src/main.py
 
 ## Headless Verification Tests
 
-The project includes a dedicated unit test suite (`verify_game.py`) which initializes a headless SDL `dummy` video driver to verify game tick loops and event sleep-waiting transitions automatically.
+The project includes a verification suite (`verify_game.py`) that initializes a headless SDL `dummy` video driver to test game tick loops, sleep states, and Player 2 dynamic joins automatically.
 
-To run the verification suite:
+To run the verifications:
 ```bash
 uv run python verify_game.py
-```
-
-Output:
-```
-pygame-ce 2.5.7 (SDL 2.32.10, Python 3.14.2)
-Starting Test 1: Normal active loop...
-Sending QUIT event to exit Test 1
-Test 1 passed!
-
-Starting Test 2: Sleep mode validation...
-pygame.event.wait() called successfully! (Game went to sleep)
-Test 2 passed! Sleep mode verified.
-
-All verifications successful!
 ```
