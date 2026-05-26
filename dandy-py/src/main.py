@@ -587,7 +587,7 @@ class Game:
         # P1 (Red)
         p1 = self.players[0]
         p1_text = f"P1  SCORE: {p1.score:<6}  HEALTH: {p1.health:<3}  KEYS: {p1.keys}  BOMBS: {p1.bombs}"
-        p1_surf = self.font.render(p1_text, True, (255, 85, 85))
+        p1_surf = self.font.render(p1_text, False, (255, 85, 85))
         screen.blit(p1_surf, (10, 8))
         
         # P2 (Green or Gray)
@@ -595,10 +595,10 @@ class Game:
             p2 = self.players[1]
             if p2.state == STATE_INACTIVE:
                 p2_text = "P2: Press W/A/S/D to Join"
-                p2_surf = self.font.render(p2_text, True, (128, 128, 128))
+                p2_surf = self.font.render(p2_text, False, (128, 128, 128))
             else:
                 p2_text = f"P2  SCORE: {p2.score:<6}  HEALTH: {p2.health:<3}  KEYS: {p2.keys}  BOMBS: {p2.bombs}"
-                p2_surf = self.font.render(p2_text, True, (85, 255, 85))
+                p2_surf = self.font.render(p2_text, False, (85, 255, 85))
             screen.blit(p2_surf, (10, 24))
 
     def draw(self, screen, mapScreen):
