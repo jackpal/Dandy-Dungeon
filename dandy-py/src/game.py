@@ -328,7 +328,7 @@ class Game:
         x = max(10, int(window_w * (10.0 / 640.0)))
 
         p1 = self.players[0]
-        p1_text = f"P1  SCORE: {p1.score:<6}  HEALTH: {p1.health:<3}  KEYS: {p1.keys}  BOMBS: {p1.bombs}"
+        p1_text = f"P1  SCORE: {p1.score:>6}  HEALTH: {p1.health:>3}  KEYS: {p1.keys:>2}  BOMBS: {p1.bombs:>2}"
         p1_surf = font.render(p1_text, True, (255, 85, 85))
         p1_y = int(hud_height * (15.0 / 80.0))
         screen.blit(p1_surf, (x, p1_y))
@@ -339,7 +339,7 @@ class Game:
                 p2_text = "P2: Press W/A/S/D to Join"
                 p2_surf = font.render(p2_text, True, (128, 128, 128))
             else:
-                p2_text = f"P2  SCORE: {p2.score:<6}  HEALTH: {p2.health:<3}  KEYS: {p2.keys}  BOMBS: {p2.bombs}"
+                p2_text = f"P2  SCORE: {p2.score:>6}  HEALTH: {p2.health:>3}  KEYS: {p2.keys:>2}  BOMBS: {p2.bombs:>2}"
                 p2_surf = font.render(p2_text, True, (85, 255, 85))
             p2_y = int(hud_height * (45.0 / 80.0))
             screen.blit(p2_surf, (x, p2_y))
