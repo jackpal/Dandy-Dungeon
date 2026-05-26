@@ -234,5 +234,92 @@ except Exception as e:
 
 print("Test 4 passed! Graphics architecture verified.")
 
+
+# Test 5: Hardened Sleep Loop & Insignificant Events
+print("\nStarting Test 5: Hardened Sleep Loop & Insignificant Events validation...")
+
+# Reset state
+pygame.init()
+wait_calls = []
+draw_count = 0
+draw_checks = []
+
+# Force sleep mode immediately by blocking ghosts
+Game.__init__ = mock_game_init
+
+# Mock Game.draw to check if it gets called during sleep
+original_draw = Game.draw
+def mock_game_draw(self, screen):
+    global draw_count
+    draw_count += 1
+    original_draw(self, screen)
+Game.draw = mock_game_draw
+
+# List of events that pygame.event.wait() will return sequentially
+mock_events_sequence = [
+    # Insignificant: Mouse motion (should be blocked by OS, but if it gets here, it should be ignored by is_significant_event)
+    pygame.event.Event(pygame.MOUSEMOTION),
+    # Insignificant: Joystick motion with small value
+    pygame.event.Event(pygame.JOYAXISMOTION, axis=0, value=0.10),
+    # Insignificant: Joystick motion with negative small value
+    pygame.event.Event(pygame.JOYAXISMOTION, axis=1, value=-0.05),
+    # Significant: Joystick motion with large value -> Should wake up!
+    pygame.event.Event(pygame.JOYAXISMOTION, axis=0, value=0.20),
+]
+
+event_index = 0
+
+def mock_wait_5():
+    global event_index, wait_calls, draw_count
+    # Record whether draw was called BEFORE we return the NEXT event.
+    draw_checks.append(draw_count)
+    
+    if event_index < len(mock_events_sequence):
+        ev = mock_events_sequence[event_index]
+        event_index += 1
+        print(f"pygame.event.wait() returning simulated event: {ev}")
+        wait_calls.append(ev)
+        return ev
+    else:
+        # Fallback to QUIT to avoid infinite loop
+        print("pygame.event.wait() fallback to QUIT")
+        return pygame.event.Event(pygame.QUIT)
+
+def mock_get_5():
+    return []
+
+def mock_get_pressed_clean():
+    return MockKeystate()
+
+pygame.event.get = mock_get_5
+pygame.event.wait = mock_wait_5
+pygame.key.get_pressed = mock_get_pressed_clean
+
+try:
+    main.main()
+    
+    print(f"Wait calls recorded: {len(wait_calls)}")
+    print(f"Draw checks recorded: {draw_checks}")
+    
+    assert len(wait_calls) >= 4, f"Expected at least 4 wait calls, got {len(wait_calls)}"
+    
+    expected_draw_checks = [1, 1, 1, 1, 2]
+    assert draw_checks[:5] == expected_draw_checks, f"Expected draw checks {expected_draw_checks}, got {draw_checks[:5]}"
+    
+    print("Test 5 passed! Hardened sleep loop verified.")
+    
+except Exception as e:
+    print(f"Test 5 failed with exception: {e}")
+    import traceback
+    traceback.print_exc()
+    sys.exit(1)
+finally:
+    # Restore original Game.draw
+    Game.draw = original_draw
+    # Restore original Game.__init__
+    Game.__init__ = original_init
+
+
 print("\nAll verifications successful!")
+
 

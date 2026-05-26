@@ -689,9 +689,82 @@ class Game:
         return True
 
 
+# Dynamically compile WINDOW_EVENTS from dir(pygame)
+num_events = getattr(pygame, "NUMEVENTS", 65535)
+WINDOW_EVENTS = [
+    getattr(pygame, name)
+    for name in dir(pygame)
+    if name.startswith("WINDOW")
+    and not name.startswith("WINDOWPOS")
+    and isinstance(getattr(pygame, name), int)
+    and 0 <= getattr(pygame, name) < num_events
+]
+if hasattr(pygame, "ACTIVEEVENT"):
+    WINDOW_EVENTS.append(pygame.ACTIVEEVENT)
+
+
+def is_significant_event(event):
+    if event.type in (
+        pygame.QUIT,
+        pygame.KEYDOWN,
+        pygame.KEYUP,
+        pygame.VIDEORESIZE,
+        pygame.VIDEOEXPOSE,
+    ):
+        return True
+
+    if hasattr(pygame, "JOYAXISMOTION") and event.type == pygame.JOYAXISMOTION:
+        return abs(event.value) > 0.15
+
+    # All other joystick events (buttons, hats, device updates, etc.) are significant
+    joy_types = []
+    for name in (
+        "JOYBUTTONDOWN",
+        "JOYBUTTONUP",
+        "JOYHATMOTION",
+        "JOYBALLMOTION",
+        "JOYDEVICEADDED",
+        "JOYDEVICEREMOVED",
+    ):
+        if hasattr(pygame, name):
+            joy_types.append(getattr(pygame, name))
+    if event.type in joy_types:
+        return True
+
+    if event.type in WINDOW_EVENTS:
+        return True
+
+    return False
+
+
 def main():
     # Initialize pygame
     pygame.init()
+
+    # Layer 1: OS/SDL Event Whitelisting
+    pygame.event.set_blocked(None)
+    allowed_events = [
+        pygame.QUIT,
+        pygame.KEYDOWN,
+        pygame.KEYUP,
+        pygame.VIDEORESIZE,
+        pygame.VIDEOEXPOSE,
+    ]
+    # Dynamically add all joystick events
+    for name in (
+        "JOYAXISMOTION",
+        "JOYBALLMOTION",
+        "JOYHATMOTION",
+        "JOYBUTTONDOWN",
+        "JOYBUTTONUP",
+        "JOYDEVICEADDED",
+        "JOYDEVICEREMOVED",
+    ):
+        if hasattr(pygame, name):
+            allowed_events.append(getattr(pygame, name))
+    allowed_events.extend(WINDOW_EVENTS)
+    pygame.event.set_allowed(allowed_events)
+
     if pygame.mixer and not pygame.mixer.get_init():
         print("Warning, no sound")
         pygame.mixer = None
@@ -708,13 +781,13 @@ def main():
 
     while True:
         if sleeping:
-            event = pygame.event.wait()
-            if event.type == pygame.QUIT or (
-                event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE
-            ):
-                return
-            sleeping = False
-            events = [event] + pygame.event.get()
+            # Layer 3: Hardened Sleep Loop
+            while True:
+                event = pygame.event.wait()
+                if is_significant_event(event):
+                    sleeping = False
+                    events = [event] + pygame.event.get()
+                    break
         else:
             events = pygame.event.get()
 
@@ -737,3 +810,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
