@@ -1,0 +1,29 @@
+import pygame
+
+TILE_SIZE = 16
+SCREENRECT = pygame.Rect(0, 0, 320, 280)
+MAPRECT = pygame.Rect(0, 40, 320, 240)
+MAP_WIDTH = 60
+MAP_HEIGHT = 30
+
+# Map content enums
+SPACE = 0
+WALL = 1
+LOCK = 2
+UP = 3
+DOWN = 4
+KEY = 5
+FOOD = 6
+MONEY = 7
+BOMB = 8
+GHOST = 9  # 9, 10, 11
+HEART = 12
+GENERATOR = 13  # 13, 14, 15
+ARROW = 16  # 16..23
+PLAYER = 24  # 24..27
+
+# Player states
+STATE_DEAD = 0
+STATE_ACTIVE = 1
+STATE_IN_WARP = 2
+STATE_INACTIVE = 3
