@@ -198,15 +198,19 @@ assert hasattr(game, "game_surface"), "Game is missing \"game_surface\" attribut
 assert game.game_surface is not None, "game_surface is None"
 assert game.game_surface.get_size() == (320, 240), f"game_surface size is {game.game_surface.get_size()}, expected (320, 240)"
 
-# Verify font
-assert hasattr(game, "font"), "Game is missing \"font\" attribute"
-assert game.font is not None, "font is None"
+# Verify font cache initialization
+assert hasattr(game, "hud_fonts"), "Game is missing \"hud_fonts\" attribute"
+assert isinstance(game.hud_fonts, dict), "hud_fonts is not a dictionary"
+assert len(game.hud_fonts) == 0, "hud_fonts should be empty initially"
 
 # Verify draw method works with screen
 mock_screen = pygame.Surface((640, 560))
 try:
     game.draw(mock_screen)
     print("game.draw() executed successfully on 640x560 surface.")
+    # 560 height should trigger font size 16
+    assert 16 in game.hud_fonts, "Font size 16 was not cached for 560px height"
+    assert isinstance(game.hud_fonts[16], pygame.font.Font), "Cached item is not a pygame Font"
 except Exception as e:
     print(f"game.draw() failed on 640x560 surface: {e}")
     import traceback
@@ -218,6 +222,10 @@ mock_screen_resized = pygame.Surface((1280, 1120))
 try:
     game.draw(mock_screen_resized)
     print("game.draw() executed successfully on 1280x1120 resized surface.")
+    # 1120 height should trigger font size 32
+    assert 32 in game.hud_fonts, "Font size 32 was not cached for 1120px height"
+    assert isinstance(game.hud_fonts[32], pygame.font.Font), "Cached item is not a pygame Font"
+    assert len(game.hud_fonts) == 2, f"Expected 2 cached fonts, got {len(game.hud_fonts)}"
 except Exception as e:
     print(f"game.draw() failed on 1280x1120 resized surface: {e}")
     import traceback

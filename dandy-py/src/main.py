@@ -298,7 +298,7 @@ class Game:
             None,
         ]
         pygame.font.init()
-        self.font = pygame.font.SysFont("arial,helvetica,sans", 16, bold=True)
+        self.hud_fonts = {}
         self.game_surface = pygame.Surface((320, 240))
         self.level = 0
         self.map = Map(MAP_WIDTH, MAP_HEIGHT)
@@ -585,24 +585,32 @@ class Game:
         # Clear HUD area
         screen.fill((0, 0, 0), pygame.Rect(0, 0, window_w, hud_height))
         
+        window_h = screen.get_height()
+        target_size = max(10, int(16 * (window_h / 560.0)))
+        if target_size not in self.hud_fonts:
+            self.hud_fonts[target_size] = pygame.font.SysFont("arial,helvetica,sans", target_size, bold=True)
+        font = self.hud_fonts[target_size]
+        
+        x = max(10, int(window_w * (10.0 / 640.0)))
+        
         # P1 (Red)
         p1 = self.players[0]
         p1_text = f"P1  SCORE: {p1.score:<6}  HEALTH: {p1.health:<3}  KEYS: {p1.keys}  BOMBS: {p1.bombs}"
-        p1_surf = self.font.render(p1_text, True, (255, 85, 85))
+        p1_surf = font.render(p1_text, True, (255, 85, 85))
         p1_y = int(hud_height * (15.0 / 80.0))
-        screen.blit(p1_surf, (10, p1_y))
+        screen.blit(p1_surf, (x, p1_y))
         
         # P2 (Green or Gray)
         if len(self.players) > 1:
             p2 = self.players[1]
             if p2.state == STATE_INACTIVE:
                 p2_text = "P2: Press W/A/S/D to Join"
-                p2_surf = self.font.render(p2_text, True, (128, 128, 128))
+                p2_surf = font.render(p2_text, True, (128, 128, 128))
             else:
                 p2_text = f"P2  SCORE: {p2.score:<6}  HEALTH: {p2.health:<3}  KEYS: {p2.keys}  BOMBS: {p2.bombs}"
-                p2_surf = self.font.render(p2_text, True, (85, 255, 85))
+                p2_surf = font.render(p2_text, True, (85, 255, 85))
             p2_y = int(hud_height * (45.0 / 80.0))
-            screen.blit(p2_surf, (10, p2_y))
+            screen.blit(p2_surf, (x, p2_y))
 
     def draw(self, screen):
         x, y = self.getCog()
