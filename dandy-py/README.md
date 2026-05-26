@@ -1,32 +1,30 @@
 # Python Dandy Dungeon Port
 
-This directory contains a Python 3.14 port of John Palevich's 2D arcade game *Dandy Dungeon*, using **Pygame-ce (Community Edition)** and the **`uv`** dependency and environment management system.
+This directory contains a Python 3.14 implementation of John Palevich's 2D arcade game *Dandy Dungeon*, utilizing the **Pygame-ce (Community Edition)** graphics framework and packaged using the **`uv`** dependency and environment management system.
 
 ---
 
-## Features & Implementation Details
+## Game Features & Architecture
 
-*   **Python 3.14 Port & Modularization**: Ported from legacy Python 2 to Python 3.14. The monolithic codebase has been modularized into 8 cohesive modules under `src/` (constants, media, strike, map, entities, controls, game, and main), keeping the main `src/main.py` as a re-exporting facade.
-*   **High-DPI & Retina Vector HUD**: Window display is initialized at a native physical resolution of `640x560` using `pygame.RESIZABLE` (no `pygame.SCALED` flag). HUD text is rendered directly onto the physical window screen surface at native resolution using `antialias=True` and monospaced **Courier Bold** system fonts, ensuring perfectly sharp, readable, and vertically aligned columns at all window scales.
-*   **Scaled Retro Viewport**: The core game coordinates blit onto an offscreen `320x240` gameplay surface. The draw loop dynamically upscales this virtual surface to fit the window area (minus HUD height) using nearest-neighbor scaling (`pygame.transform.scale`), keeping retro pixel art edges crisp and blocky.
-*   **Player 2 Dynamic Hot-Joining**: Supports Player 2 dynamically joining the session on `W/A/S/D` keys, spawning exactly 1 tile East of the UP stairs ("U" symbol). Viewport camera tracking calculates coordinates based on the average Center of Gravity (COG) of active players.
-*   **Hardened 0% CPU Sleep Mode**: Enters an idle sleep state when the game is inactive. Achieving strictly 0% CPU utilization using a defense-in-depth solution:
-    *   *OS-Level Event Whitelisting*: Blocks all unused events (including `pygame.MOUSEMOTION`) at the OS level using `pygame.event.set_blocked(None)`, preventing mouse hover cues from waking the thread.
-    *   *Analog Deadzone*: Ignores analog joystick drift (`pygame.JOYAXISMOTION`) below an absolute deadzone threshold of `0.15`.
-    *   *OS Thread Suspension*: Calls `pygame.event.wait()` to suspend the thread completely. Wakeups on significant inputs are prepended back to the queue to ensure zero-frame input latency.
-*   **60Hz Frame Rate Regulator**: Constrains the active gameplay loop to exactly 60 Hz using `pygame.time.Clock()` to prevent CPU core exhaustion.
-*   **Block Map Loader**: Loads 900-byte binary levels using a single block read (`f.read(900)`) and `enumerate` index parsing.
-*   **Relative Path Resolution**: Resolves media assets relative to the script location (`__file__`) using `pathlib.Path`.
+*   **Modular Architecture**: The application is organized into distinct, clean modules separating game constants, media loading, drawing utilities, map data, player/arrow entities, controls, and the core game loop.
+*   **High-DPI & Retina Display Support**: Supports pixel-perfect rendering on Retina and High-DPI monitors. The retro gameplay viewport is rendered offscreen and scales using nearest-neighbor upscaling to preserve sharp pixel art edges when resized.
+*   **Proportional Status HUD**: Displays scores, health, keys, and bombs for Player 1 and Player 2 in a dedicated status bar at the top of the screen. HUD text is rendered using a monospaced font, ensuring statistics stay aligned vertically in a perfect grid. The HUD text size and offsets scale proportionally whenever the window is resized.
+*   **Dynamic Co-Op Hot-Joining**: Supports dynamic local cooperative multiplayer. Player 2 can join dynamically by pressing their mapped keys (W/A/S/D), spawning exactly 1 tile East of the level entrance (UP stairs). The scrolling viewport camera tracks the average Center of Gravity (COG) of all active players.
+*   **CPU-Saving Sleep Mode**: Automatically enters an idle sleep state when the game is inactive (no player inputs, no active projectiles, camera settled, and viewport enemies blocked), dropping active CPU usage to strictly 0%. Any keyboard keypress or gamepad event wakes the engine instantly with zero input latency.
+*   **Framerate Regulator**: Limits active loop iterations to exactly 60 Hz to ensure consistent, manageable gameplay and stepping speeds.
+*   **Level Loader**: Seamlessly loads the 26 classic binary map files (A-Z) on floor transitions.
 
 ---
 
 ## Prerequisites
 
-1. **uv**: A Python package resolver and compiler. Install it using:
+To run this application, you need the following tool installed on your system:
+
+1. **uv**: A fast Python package resolver and environment manager. Install it using:
    ```bash
    curl -LsSf https://astral.sh/uv/install.sh | sh
    ```
-   *Note: `uv` will fetch and provision the required Python 3.14 compiler locally if it is not found on your system.*
+   *Note: `uv` will automatically fetch and provision the required Python 3.14 compiler locally if it is not found on your system.*
 
 ---
 
@@ -38,13 +36,13 @@ cd dandy-py
 ```
 
 ### 2. Synchronize the Environment
-Resolve dependencies and compile the local virtual environment:
+Create the local virtual sandbox and install dependencies:
 ```bash
 uv sync
 ```
-*Note: The lockfile `uv.lock` is ignored by Git to prevent conflicts across environments using custom package registry mirrors (such as Google's staging mirror). Dependencies resolve dynamically from `pyproject.toml`.*
+*Note: The lockfile `uv.lock` is ignored by Git to prevent staging index conflicts across development environments utilizing custom corporate package mirrors. Dependencies resolve dynamically from `pyproject.toml`.*
 
-*(Optional): If you are building in a restricted environment enforcing private registry proxies, bypass the proxy by passing public indexes:*
+*(Optional): If you are building in a restricted environment that blocks public indices, bypass the proxy by passing public PyPI mirrors explicitly:*
 ```bash
 UV_INDEX_URL="" UV_INDEX="" uv sync --default-index https://pypi.org/simple
 ```
@@ -59,10 +57,10 @@ uv run python src/main.py
 
 ## Headless Verification Tests
 
-The project includes a verification suite (`verify_game.py`) that initializes a headless SDL `dummy` video driver to test game tick loops, sleep states, Player 2 dynamic joins, and viewport scaling automatically.
+The project includes an automated verification suite (`verify_game.py`) that initializes a headless SDL video driver to validate active loops, sleep states, Player 2 dynamic joins, and viewport scaling.
 
-To run the verifications:
+To run the validations:
 ```bash
 uv run python verify_game.py
 ```
-*(If inside a restricted environment, pass PyPI index explicitly: `UV_INDEX_URL="" UV_INDEX="" uv run --default-index https://pypi.org/simple python verify_game.py`)*
+*(If inside a restricted environment, pass the PyPI index explicitly: `UV_INDEX_URL="" UV_INDEX="" uv run --default-index https://pypi.org/simple python verify_game.py`)*
