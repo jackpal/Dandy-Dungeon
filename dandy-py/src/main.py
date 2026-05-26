@@ -25,8 +25,8 @@ import os.path
 import pygame
 
 TILE_SIZE = 16
-SCREENRECT = pygame.Rect(0, 0, 320, 240)
-MAPRECT = pygame.Rect(0, 0, SCREENRECT.width, TILE_SIZE * 10)
+SCREENRECT = pygame.Rect(0, 0, 320, 280)
+MAPRECT = pygame.Rect(0, 40, 320, 240)
 MAP_WIDTH = 60
 MAP_HEIGHT = 30
 
@@ -189,6 +189,7 @@ class Arrow:
 STATE_DEAD = 0
 STATE_ACTIVE = 1
 STATE_IN_WARP = 2
+STATE_INACTIVE = 3
 
 
 class Player:
@@ -198,10 +199,11 @@ class Player:
         self.health = 100
         self.bombs = 0
         self.keys = 0
-        self.state = STATE_DEAD
+        self.state = STATE_INACTIVE if index > 0 else STATE_ACTIVE
+        self.arrow = None
 
     def isAlive(self):
-        return self.state != STATE_DEAD
+        return self.state in (STATE_ACTIVE, STATE_IN_WARP)
 
     def start(self, x, y, dir):
         self.x = x
@@ -273,9 +275,8 @@ class Controls:
 class Game:
     def __init__(self):
         self.tiles = Strike("dandy.bmp", TILE_SIZE)
-        # Change range for 1..4 players
-        self.players = [Player(i) for i in range(0, 1)]
-        self.players[0].state = STATE_ACTIVE
+        # Two players: P1 active, P2 inactive (handled by Player.__init__)
+        self.players = [Player(0), Player(1)]
         self.controls = [
             Controls(
                 pygame.K_LEFT,
@@ -285,10 +286,19 @@ class Game:
                 pygame.K_SPACE,
                 pygame.K_z,
             ),
-            None,
+            Controls(
+                pygame.K_a,
+                pygame.K_d,
+                pygame.K_w,
+                pygame.K_s,
+                pygame.K_f,
+                pygame.K_g,
+            ),
             None,
             None,
         ]
+        pygame.font.init()
+        self.font = pygame.font.SysFont("Courier", 10, bold=True)
         self.level = 0
         self.map = Map(MAP_WIDTH, MAP_HEIGHT)
         self.load()
@@ -310,7 +320,7 @@ class Game:
 
     def dead_players(self):
         for p in self.players:
-            if not p.isAlive():
+            if p.state == STATE_DEAD:
                 yield p
 
     def load(self):
@@ -332,7 +342,42 @@ class Game:
         p.y = y
         self.map.set(x, y, PLAYER + p.index)
 
+    def join_player(self, p):
+        p1 = self.players[0]
+        spawned = False
+        if p1.isAlive():
+            # Try to find empty space adjacent to P1
+            for dir in range(8):
+                dx, dy = getDelta(dir)
+                nx, ny = p1.x + dx, p1.y + dy
+                if 0 <= nx < self.map.width and 0 <= ny < self.map.height:
+                    if self.map.get(nx, ny) == SPACE:
+                        p.start(nx, ny, dir)
+                        self.map.set(nx, ny, PLAYER + p.index)
+                        spawned = True
+                        break
+        if not spawned:
+            # Fallback to UP stairs
+            try:
+                x, y = self.map.find(UP)
+            except Exception:
+                x, y = 2, 2
+            dir = p.index * 2
+            p.start(x + DIR_TO_DELTA_X[dir], y + DIR_TO_DELTA_Y[dir], dir)
+            self.map.set(p.x, p.y, PLAYER + p.index)
+            
+        # Trigger camera update to center on both
+        self.cogX, self.cogY = self.getCog()
+
     def step(self, keystate):
+        # Check P2 hot-join
+        if len(self.players) > 1:
+            p2 = self.players[1]
+            if p2.state == STATE_INACTIVE:
+                p2_control = self.controls[1]
+                if any(keystate[key] for key in [p2_control.left, p2_control.right, p2_control.up, p2_control.down, p2_control.shoot, p2_control.bomb]):
+                    self.join_player(p2)
+
         self.time += 1
         if self.time - self.last_move_time >= self.TICKS_PER_MOVE:
             self.last_move_time = self.time
@@ -535,6 +580,27 @@ class Game:
         cogy += TILE_SIZE // 2
         return (cogx, cogy)
 
+    def draw_hud(self, screen):
+        # Clear HUD area
+        screen.fill((0, 0, 0), pygame.Rect(0, 0, 320, 40))
+        
+        # P1 (Red)
+        p1 = self.players[0]
+        p1_text = f"P1  SCORE: {p1.score:<6}  HEALTH: {p1.health:<3}  KEYS: {p1.keys}  BOMBS: {p1.bombs}"
+        p1_surf = self.font.render(p1_text, True, (255, 85, 85))
+        screen.blit(p1_surf, (10, 8))
+        
+        # P2 (Green or Gray)
+        if len(self.players) > 1:
+            p2 = self.players[1]
+            if p2.state == STATE_INACTIVE:
+                p2_text = "P2: Press W/A/S/D to Join"
+                p2_surf = self.font.render(p2_text, True, (128, 128, 128))
+            else:
+                p2_text = f"P2  SCORE: {p2.score:<6}  HEALTH: {p2.health:<3}  KEYS: {p2.keys}  BOMBS: {p2.bombs}"
+                p2_surf = self.font.render(p2_text, True, (85, 255, 85))
+            screen.blit(p2_surf, (10, 24))
+
     def draw(self, screen, mapScreen):
         x, y = self.getCog()
         maxRate = TILE_SIZE // self.TICKS_PER_MOVE
@@ -547,6 +613,7 @@ class Game:
             self.cogY += dy
 
         self.visibleRect = self.map.draw(mapScreen, self.cogX, self.cogY, self.tiles)
+        self.draw_hud(screen)
 
     def can_ghost_move_dir(self, x, y, dir):
         dx, dy = dir_to_delta(dir)
@@ -570,6 +637,8 @@ class Game:
     def can_sleep(self, keystate):
         for p in self.players:
             if p.arrow is not None:
+                return False
+            if p.state == STATE_IN_WARP:
                 return False
 
         x, y = self.getCog()
@@ -612,9 +681,7 @@ def main():
         pygame.mixer = None
 
     # Set the display mode
-    winstyle = 0  # |FULLSCREEN
-    bestdepth = pygame.display.mode_ok(SCREENRECT.size, winstyle, 32)
-    screen = pygame.display.set_mode(SCREENRECT.size, winstyle, bestdepth)
+    screen = pygame.display.set_mode(SCREENRECT.size, pygame.SCALED | pygame.RESIZABLE)
     mapScreen = screen.subsurface(MAPRECT)
 
     pygame.display.set_caption("Dandy Dungeon")
