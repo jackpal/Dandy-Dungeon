@@ -105,29 +105,15 @@ class Game:
         self.map.set(x, y, PLAYER + p.index)
 
     def join_player(self, p):
-        p1 = self.players[0]
-        spawned = False
-        if p1.isAlive():
-            # Try to find empty space adjacent to P1
-            for dir in range(8):
-                dx, dy = dir_to_delta(dir)
-                nx, ny = p1.x + dx, p1.y + dy
-                if 0 <= nx < self.map.width and 0 <= ny < self.map.height:
-                    if self.map.get(nx, ny) == SPACE:
-                        p.start(nx, ny, dir)
-                        self.map.set(nx, ny, PLAYER + p.index)
-                        spawned = True
-                        break
-        if not spawned:
-            # Fallback to UP stairs
-            try:
-                x, y = self.map.find(UP)
-            except Exception:
-                x, y = 2, 2
-            dir = p.index * 2
-            dx, dy = dir_to_delta(dir)
-            p.start(x + dx, y + dy, dir)
-            self.map.set(p.x, p.y, PLAYER + p.index)
+        try:
+            x, y = self.map.find(UP)
+        except Exception:
+            x, y = 2, 2
+        px = x + 1
+        py = y
+        dir = 2
+        p.start(px, py, dir)
+        self.map.set(px, py, PLAYER + p.index)
 
         self.cogX, self.cogY = self.getCog()
 

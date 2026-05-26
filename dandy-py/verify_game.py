@@ -9,6 +9,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "src"
 
 import pygame
 import main
+import constants
 
 # Test 1: Normal Run (should not sleep immediately because Level A has active ghosts)
 frame_count = 0
@@ -142,17 +143,19 @@ def mock_get_3():
                 print("Player 2 joined successfully! (STATE_ACTIVE detected)")
                 joined_detected = True
                 
-                # Check P2 spawning coordinates relative to P1
-                print(f"Player 1 position: ({p1.x}, {p1.y})")
+                # Check P2 spawning coordinates relative to UP stairs
+                try:
+                    up_x, up_y = captured_game.map.find(constants.UP)
+                except Exception:
+                    up_x, up_y = 2, 2
+                
+                print(f"UP stairs position: ({up_x}, {up_y})")
                 print(f"Player 2 position: ({p2.x}, {p2.y})")
                 
-                dx = abs(p2.x - p1.x)
-                dy = abs(p2.y - p1.y)
-                # Spawning logic adjacent check (8-directions): distance should be <= 1
-                if dx <= 1 and dy <= 1:
-                    print("Player 2 spawned adjacent to Player 1 successfully!")
+                if p2.x == up_x + 1 and p2.y == up_y:
+                    print("Player 2 spawned exactly 1 tile East of UP stairs successfully!")
                 else:
-                    print(f"Error: Player 2 spawned at ({p2.x}, {p2.y}) which is not adjacent to Player 1 at ({p1.x}, {p1.y})!")
+                    print(f"Error: Player 2 spawned at ({p2.x}, {p2.y}) instead of ({up_x + 1}, {up_y})!")
                     sys.exit(1)
                 
                 # Check if P2 is correctly registered on the map
