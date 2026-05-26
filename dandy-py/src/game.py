@@ -321,7 +321,7 @@ class Game:
         target_size = max(10, int(16 * (window_h / 560.0)))
         if target_size not in self.hud_fonts:
             self.hud_fonts[target_size] = pygame.font.SysFont(
-                "arial,helvetica,sans", target_size, bold=True
+                "courier,courier new,mono,monospace", target_size, bold=True
             )
         font = self.hud_fonts[target_size]
 
