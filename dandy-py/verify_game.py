@@ -185,4 +185,46 @@ except Exception as e:
     traceback.print_exc()
     sys.exit(1)
 
+# Test 4: Graphics Architecture Validation (game_surface & scaling)
+print("\nStarting Test 4: Graphics Architecture validation...")
+
+# Reset state
+pygame.init()
+
+game = Game()
+
+# Verify offscreen surface
+assert hasattr(game, "game_surface"), "Game is missing \"game_surface\" attribute"
+assert game.game_surface is not None, "game_surface is None"
+assert game.game_surface.get_size() == (320, 240), f"game_surface size is {game.game_surface.get_size()}, expected (320, 240)"
+
+# Verify font
+assert hasattr(game, "font"), "Game is missing \"font\" attribute"
+assert game.font is not None, "font is None"
+
+# Verify draw method works with screen
+mock_screen = pygame.Surface((640, 560))
+try:
+    game.draw(mock_screen)
+    print("game.draw() executed successfully on 640x560 surface.")
+except Exception as e:
+    print(f"game.draw() failed on 640x560 surface: {e}")
+    import traceback
+    traceback.print_exc()
+    sys.exit(1)
+
+# Test resize scaling
+mock_screen_resized = pygame.Surface((1280, 1120))
+try:
+    game.draw(mock_screen_resized)
+    print("game.draw() executed successfully on 1280x1120 resized surface.")
+except Exception as e:
+    print(f"game.draw() failed on 1280x1120 resized surface: {e}")
+    import traceback
+    traceback.print_exc()
+    sys.exit(1)
+
+print("Test 4 passed! Graphics architecture verified.")
+
 print("\nAll verifications successful!")
+

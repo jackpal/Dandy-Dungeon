@@ -298,7 +298,8 @@ class Game:
             None,
         ]
         pygame.font.init()
-        self.font = pygame.font.SysFont("Courier", 10, bold=True)
+        self.font = pygame.font.SysFont("arial,helvetica,sans", 16, bold=True)
+        self.game_surface = pygame.Surface((320, 240))
         self.level = 0
         self.map = Map(MAP_WIDTH, MAP_HEIGHT)
         self.load()
@@ -580,28 +581,30 @@ class Game:
         cogy += TILE_SIZE // 2
         return (cogx, cogy)
 
-    def draw_hud(self, screen):
+    def draw_hud(self, screen, window_w, hud_height):
         # Clear HUD area
-        screen.fill((0, 0, 0), pygame.Rect(0, 0, 320, 40))
+        screen.fill((0, 0, 0), pygame.Rect(0, 0, window_w, hud_height))
         
         # P1 (Red)
         p1 = self.players[0]
         p1_text = f"P1  SCORE: {p1.score:<6}  HEALTH: {p1.health:<3}  KEYS: {p1.keys}  BOMBS: {p1.bombs}"
-        p1_surf = self.font.render(p1_text, False, (255, 85, 85))
-        screen.blit(p1_surf, (10, 8))
+        p1_surf = self.font.render(p1_text, True, (255, 85, 85))
+        p1_y = int(hud_height * (15.0 / 80.0))
+        screen.blit(p1_surf, (10, p1_y))
         
         # P2 (Green or Gray)
         if len(self.players) > 1:
             p2 = self.players[1]
             if p2.state == STATE_INACTIVE:
                 p2_text = "P2: Press W/A/S/D to Join"
-                p2_surf = self.font.render(p2_text, False, (128, 128, 128))
+                p2_surf = self.font.render(p2_text, True, (128, 128, 128))
             else:
                 p2_text = f"P2  SCORE: {p2.score:<6}  HEALTH: {p2.health:<3}  KEYS: {p2.keys}  BOMBS: {p2.bombs}"
-                p2_surf = self.font.render(p2_text, False, (85, 255, 85))
-            screen.blit(p2_surf, (10, 24))
+                p2_surf = self.font.render(p2_text, True, (85, 255, 85))
+            p2_y = int(hud_height * (45.0 / 80.0))
+            screen.blit(p2_surf, (10, p2_y))
 
-    def draw(self, screen, mapScreen):
+    def draw(self, screen):
         x, y = self.getCog()
         maxRate = TILE_SIZE // self.TICKS_PER_MOVE
         dx = x - self.cogX
@@ -612,8 +615,13 @@ class Game:
             self.cogX += dx
             self.cogY += dy
 
-        self.visibleRect = self.map.draw(mapScreen, self.cogX, self.cogY, self.tiles)
-        self.draw_hud(screen)
+        self.game_surface.fill((0, 0, 0))
+        self.visibleRect = self.map.draw(self.game_surface, self.cogX, self.cogY, self.tiles)
+        window_w, window_h = screen.get_size()
+        hud_height = int(window_h * (80.0 / 560.0))
+        scaled_game = pygame.transform.scale(self.game_surface, (window_w, window_h - hud_height))
+        screen.blit(scaled_game, (0, hud_height))
+        self.draw_hud(screen, window_w, hud_height)
 
     def can_ghost_move_dir(self, x, y, dir):
         dx, dy = dir_to_delta(dir)
@@ -681,8 +689,7 @@ def main():
         pygame.mixer = None
 
     # Set the display mode
-    screen = pygame.display.set_mode(SCREENRECT.size, pygame.SCALED | pygame.RESIZABLE)
-    mapScreen = screen.subsurface(MAPRECT)
+    screen = pygame.display.set_mode((640, 560), pygame.RESIZABLE)
 
     pygame.display.set_caption("Dandy Dungeon")
     pygame.mouse.set_visible(0)
@@ -711,7 +718,7 @@ def main():
 
         keystate = pygame.key.get_pressed()
         game.step(keystate)
-        game.draw(screen, mapScreen)
+        game.draw(screen)
         pygame.display.flip()
 
         if game.can_sleep(keystate):
