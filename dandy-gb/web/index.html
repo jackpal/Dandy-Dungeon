@@ -581,6 +581,12 @@
                         const clampedRow = Math.max(0, Math.min(29, mapR));
                         const tile_id = mapArray[clampedRow * 60 + clampedCol];
                         
+                        // Skip dynamic entities (sprites) to prevent duplicate/ghost drawings on the background!
+                        const isSprite = (tile_id >= 24 && tile_id <= 55) ||
+                                         (tile_id >= TILE_MONSTER1 && tile_id <= TILE_MONSTER3) ||
+                                         (tile_id >= TILE_ARROW && tile_id <= TILE_ARROW + 7);
+                        if (isSprite) continue;
+                        
                         if (tile_id === TILE_SPACE) continue;
                         
                         let draw_tile_id = tile_id;
@@ -619,9 +625,15 @@
             
             const v = player_idx; // Viewport/screen index (0..3)
             const sprites = viewportSprites[player_idx];
+            
+            // Calculate camera scroll translation difference to keep non-interpolated sprites
+            // (like monsters) perfectly locked to the background tiles with zero wobble!
+            const camScrollX = (targetVpLeft[v] - (prevVpLeft[v] + (targetVpLeft[v] - prevVpLeft[v]) * t)) * 16;
+            const camScrollY = (targetVpTop[v] - (prevVpTop[v] + (targetVpTop[v] - prevVpTop[v]) * t)) * 16;
+            
             for (const sprite of sprites) {
-                let drawX = sprite.x * 2;
-                let drawY = sprite.y * 2;
+                let drawX = sprite.x * 2 + camScrollX;
+                let drawY = sprite.y * 2 + camScrollY;
                 
                 // Interpolate Player and Arrow coordinates with simple LERP.
                 // Because the background scrolls smoothly using the exact same camera timeline,
