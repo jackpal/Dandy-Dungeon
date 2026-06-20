@@ -1,4 +1,4 @@
-/* Generated automatically from Atari CHARSET.TXT. Do not edit. */
+/* Generated automatically from dandy.bmp. Do not edit. */
 #ifndef DANDY_TILES_H
 #define DANDY_TILES_H
 
