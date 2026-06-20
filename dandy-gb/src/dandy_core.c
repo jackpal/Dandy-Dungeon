@@ -227,7 +227,18 @@ void dandy_draw_viewport(uint8_t local_p_idx) {
                 
                 // Register a hardware sprite (8x8 pixel coordinates in viewport space)
                 if (sprite_count < 40) {
-                    hal_set_sprite(sprite_count++, sx * 8, sy * 8, tile, 0);
+                    uint8_t sprite_flags = 0;
+                    if (tile >= TILE_ARROW && tile <= TILE_ARROW + 7) {
+                        // Find which player owns the arrow at this map position
+                        for (uint8_t ap = 0; ap < MAX_PLAYERS; ++ap) {
+                            if (player_joined[ap] && arrow_dir[ap] != -1 &&
+                                arrow_x[ap] == (vp_left + sx) && arrow_y[ap] == (vp_top + sy)) {
+                                sprite_flags = ap; // Store player index (0..3) in flags
+                                break;
+                            }
+                        }
+                    }
+                    hal_set_sprite(sprite_count++, sx * 8, sy * 8, tile, sprite_flags);
                 }
             } else {
                 // Static tile (wall, door, items, generator, etc.)

@@ -514,17 +514,62 @@
 
         window.jsSetSprite = function(player_idx, sprite_idx, x, y, tile_id, flags) {
             viewportSprites[player_idx].push({ x, y, tile_id, flags });
+            
+            // Capture target positions dynamically during viewport sweep
+            if (tile_id >= TILE_PLAYER1 && tile_id <= TILE_PLAYER1 + 31) {
+                const offset = tile_id - TILE_PLAYER1;
+                const p = offset >> 3; // Player index (0..3)
+                targetPlayerX[p] = x;
+                targetPlayerY[p] = y;
+                
+                // Initialize previous values on first sweep
+                if (prevPlayerX[p] === undefined) {
+                    prevPlayerX[p] = x;
+                    prevPlayerY[p] = y;
+                }
+            } else if (tile_id >= TILE_ARROW && tile_id <= TILE_ARROW + 7) {
+                const p = flags; // Owner player index passed in flags
+                targetArrowX[p] = x;
+                targetArrowY[p] = y;
+                arrowActive[p] = true;
+                
+                if (prevArrowX[p] === undefined) {
+                    prevArrowX[p] = x;
+                    prevArrowY[p] = y;
+                }
+            }
         };
 
-        function renderViewportSprites(player_idx) {
+        function renderViewportSprites(player_idx, t) {
             const ctx = ctxs[player_idx];
             if (!ctx || !spritesheetLoaded) return;
             
             const sprites = viewportSprites[player_idx];
             for (const sprite of sprites) {
-                // Scale GameBoy pixel coordinates (8x8 grid) to our 16x16 canvas pixels (multiply by 2)
-                const drawX = sprite.x * 2;
-                const drawY = sprite.y * 2;
+                let drawX = sprite.x * 2;
+                let drawY = sprite.y * 2;
+                
+                // Interpolate Player and Arrow coordinates for buttery-smooth sliding!
+                if (sprite.tile_id >= TILE_PLAYER1 && sprite.tile_id <= TILE_PLAYER1 + 31) {
+                    const offset = sprite.tile_id - TILE_PLAYER1;
+                    const p = offset >> 3; // Player index (0..3)
+                    
+                    if (prevPlayerX[p] !== undefined && targetPlayerX[p] !== undefined) {
+                        const interpX = prevPlayerX[p] + (targetPlayerX[p] - prevPlayerX[p]) * t;
+                        const interpY = prevPlayerY[p] + (targetPlayerY[p] - prevPlayerY[p]) * t;
+                        drawX = interpX * 2;
+                        drawY = interpY * 2;
+                    }
+                } else if (sprite.tile_id >= TILE_ARROW && sprite.tile_id <= TILE_ARROW + 7) {
+                    const p = sprite.flags; // Owner player index
+                    
+                    if (arrowActive[p] && prevArrowX[p] !== undefined && targetArrowX[p] !== undefined) {
+                        const interpX = prevArrowX[p] + (targetArrowX[p] - prevArrowX[p]) * t;
+                        const interpY = prevArrowY[p] + (targetArrowY[p] - prevArrowY[p]) * t;
+                        drawX = interpX * 2;
+                        drawY = interpY * 2;
+                    }
+                }
                 
                 let draw_tile_id = sprite.tile_id;
                 
@@ -541,9 +586,10 @@
                 
                 ctx.save();
                 
-                // Handle GameBoy OAM Attributes:
+                // GameBoy OAM Attributes
                 // Bit 5 (0x20): Horizontal Flip (mirroring)
                 // Bit 6 (0x40): Vertical Flip
+                // Note: For arrows, flags contains the owner index (0..3), so bits 5 and 6 are always 0.
                 const flipX = (sprite.flags & 0x20) !== 0;
                 const flipY = (sprite.flags & 0x40) !== 0;
                 
@@ -735,11 +781,24 @@
             }
         };
 
-        // Game Loop Management
+        // Game Loop & Interpolation Management
         let isRunning = false;
-        let activePlayers = 2;
         let wasmModule = null;
-        let gameTickInterval = null;
+        let lastTime = 0;
+        let accumulator = 0;
+        const tickRateMs = 1000 / 20; // 50ms per physics tick (20 Hz)
+
+        // Interpolation tracking arrays for Players 1-4 and their Arrows
+        const prevPlayerX = [0, 0, 0, 0];
+        const prevPlayerY = [0, 0, 0, 0];
+        const targetPlayerX = [0, 0, 0, 0];
+        const targetPlayerY = [0, 0, 0, 0];
+
+        const prevArrowX = [0, 0, 0, 0];
+        const prevArrowY = [0, 0, 0, 0];
+        const targetArrowX = [0, 0, 0, 0];
+        const targetArrowY = [0, 0, 0, 0];
+        const arrowActive = [false, false, false, false];
 
         // Initialize Emscripten Module
         var Module = {
@@ -774,10 +833,6 @@
             // Unlock and initialize browser Web Audio context on user gesture
             initAudio();
 
-            if (gameTickInterval) {
-                clearInterval(gameTickInterval);
-            }
-
             // Call C web_init (Initializes with only Player 1 joined)
             wasmModule._web_init();
             
@@ -796,55 +851,82 @@
                     panel.classList.add('inactive');
                     drawJoinScreen(i);
                 }
+                
+                // Reset interpolation state
+                prevPlayerX[i] = undefined;
+                prevPlayerY[i] = undefined;
+                targetPlayerX[i] = undefined;
+                targetPlayerY[i] = undefined;
+                
+                prevArrowX[i] = undefined;
+                prevArrowY[i] = undefined;
+                targetArrowX[i] = undefined;
+                targetArrowY[i] = undefined;
+                arrowActive[i] = false;
             }
 
             document.getElementById('game-over-banner').style.display = 'none';
 
-            // Step at ~20 ticks per second (retro game speed)
-            const tickRateMs = 1000 / 20; 
-            gameTickInterval = setInterval(gameLoopStep, tickRateMs);
-            isRunning = true;
+            // Reset accumulator timing and kick off the requestAnimationFrame loop!
+            lastTime = 0;
+            accumulator = 0;
+            if (!isRunning) {
+                isRunning = true;
+                requestAnimationFrame(mainRenderLoop);
+            }
         }
 
-        function gameLoopStep() {
+        // The 20 Hz deterministic physics simulation tick
+        function runPhysicsTick() {
             if (!isRunning || !wasmModule) return;
 
-            // 1. Check for late joins
+            // 1. Save current targets as previous coordinates for interpolation
+            for (let p = 0; p < 4; ++p) {
+                prevPlayerX[p] = targetPlayerX[p];
+                prevPlayerY[p] = targetPlayerY[p];
+                prevArrowX[p] = targetArrowX[p];
+                prevArrowY[p] = targetArrowY[p];
+                
+                // Fallback in case they were undefined
+                if (prevPlayerX[p] === undefined) {
+                    prevPlayerX[p] = targetPlayerX[p];
+                    prevPlayerY[p] = targetPlayerY[p];
+                }
+                if (prevArrowX[p] === undefined) {
+                    prevArrowX[p] = targetArrowX[p];
+                    prevArrowY[p] = targetArrowY[p];
+                }
+            }
+
+            // 2. Clear arrow active flags (will be set in jsSetSprite if active this tick)
+            for (let p = 0; p < 4; ++p) {
+                arrowActive[p] = false;
+            }
+
+            // 3. Check for late joins
             for (let i = 0; i < 4; ++i) {
                 const joined = wasmModule._web_is_player_joined(i);
                 if (!joined) {
                     const input = getPlayerInput(i);
                     if (input > 0) {
-                        // Player pressed a key! Join them!
                         console.log(`Player ${i + 1} has joined the game!`);
                         wasmModule._web_join_player(i);
                         panels[i].classList.remove('inactive');
-                        // Clear their join screen immediately
                         ctxs[i].clearRect(0, 0, canvases[i].width, canvases[i].height);
                     }
                 }
             }
 
-            // Get inputs
+            // 4. Get inputs
             const p1 = getPlayerInput(0);
             const p2 = getPlayerInput(1);
             const p3 = getPlayerInput(2);
             const p4 = getPlayerInput(3);
 
-            // Call C web_step
+            // 5. Step C simulation
             wasmModule._web_step(p1, p2, p3, p4);
 
-            // Redraw viewports (WASM draws backgrounds and buffers sprites)
-            wasmModule._web_draw_viewports();
-
-            // Render buffered hardware sprites on top of their backgrounds!
-            for (let i = 0; i < 4; ++i) {
-                if (wasmModule._web_is_player_joined(i)) {
-                    renderViewportSprites(i);
-                }
-            }
-
-            // Check if game over (all joined active players dead)
+            // 6. Check if game over (all joined active players dead)
             let allDead = true;
             let activeCount = 0;
             for (let i = 0; i < 4; ++i) {
@@ -861,9 +943,46 @@
             // Game over only if all active players are dead
             if (activeCount > 0 && allDead) {
                 isRunning = false;
-                clearInterval(gameTickInterval);
                 document.getElementById('game-over-banner').style.display = 'block';
             }
+        }
+
+        // High-Frame-Rate browser render loop (e.g. 60 Hz or monitor refresh rate)
+        // Implements "Fix Your Timestep" accumulator to separate physics and render rates!
+        function mainRenderLoop(timestamp) {
+            if (!isRunning) return;
+
+            if (!lastTime) lastTime = timestamp;
+            let delta = timestamp - lastTime;
+            lastTime = timestamp;
+
+            // Cap delta to prevent "spiral of death" during lag spikes
+            if (delta > 250) delta = 250;
+
+            accumulator += delta;
+
+            // Run physics ticks at 20 Hz
+            while (accumulator >= tickRateMs) {
+                runPhysicsTick();
+                accumulator -= tickRateMs;
+            }
+
+            // Calculate interpolation factor t [0.0, 1.0]
+            const t = accumulator / tickRateMs;
+
+            // Render viewports
+            // web_draw_viewports redrafts static backgrounds and populates sprite buffers
+            wasmModule._web_draw_viewports();
+
+            // Draw buffered sprites with linear interpolation!
+            for (let i = 0; i < 4; ++i) {
+                if (wasmModule._web_is_player_joined(i)) {
+                    renderViewportSprites(i, t);
+                }
+            }
+
+            // Continue loop
+            requestAnimationFrame(mainRenderLoop);
         }
 
         // Setup event handlers
