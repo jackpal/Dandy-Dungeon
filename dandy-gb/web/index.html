@@ -210,7 +210,7 @@
             <div class="screen-title">PLAYER 1 (RED)</div>
             <canvas id="canvas-0" width="320" height="160"></canvas>
             <div class="hud-panel">
-                <div class="hud-item">HP: <span class="hud-val" id="hp-0">000</span></div>
+                <div class="hud-item">HP: <span class="hud-val" id="hp-0">---</span></div>
                 <div class="hud-item">SCORE: <span class="hud-val" id="score-0">000000</span></div>
                 <div class="hud-item">BOMBS: <span class="hud-val" id="bombs-0">00</span></div>
                 <div class="hud-item">KEYS: <span class="hud-val" id="keys-0">00</span></div>
@@ -222,7 +222,7 @@
             <div class="screen-title">PLAYER 2 (BLUE)</div>
             <canvas id="canvas-1" width="320" height="160"></canvas>
             <div class="hud-panel">
-                <div class="hud-item">HP: <span class="hud-val" id="hp-1">000</span></div>
+                <div class="hud-item">HP: <span class="hud-val" id="hp-1">---</span></div>
                 <div class="hud-item">SCORE: <span class="hud-val" id="score-1">000000</span></div>
                 <div class="hud-item">BOMBS: <span class="hud-val" id="bombs-1">00</span></div>
                 <div class="hud-item">KEYS: <span class="hud-val" id="keys-1">00</span></div>
@@ -234,7 +234,7 @@
             <div class="screen-title">PLAYER 3 (GREEN)</div>
             <canvas id="canvas-2" width="320" height="160"></canvas>
             <div class="hud-panel">
-                <div class="hud-item">HP: <span class="hud-val" id="hp-2">000</span></div>
+                <div class="hud-item">HP: <span class="hud-val" id="hp-2">---</span></div>
                 <div class="hud-item">SCORE: <span class="hud-val" id="score-2">000000</span></div>
                 <div class="hud-item">BOMBS: <span class="hud-val" id="bombs-2">00</span></div>
                 <div class="hud-item">KEYS: <span class="hud-val" id="keys-2">00</span></div>
@@ -246,7 +246,7 @@
             <div class="screen-title">PLAYER 4 (YELLOW)</div>
             <canvas id="canvas-3" width="320" height="160"></canvas>
             <div class="hud-panel">
-                <div class="hud-item">HP: <span class="hud-val" id="hp-3">000</span></div>
+                <div class="hud-item">HP: <span class="hud-val" id="hp-3">---</span></div>
                 <div class="hud-item">SCORE: <span class="hud-val" id="score-3">000000</span></div>
                 <div class="hud-item">BOMBS: <span class="hud-val" id="bombs-3">00</span></div>
                 <div class="hud-item">KEYS: <span class="hud-val" id="keys-3">00</span></div>
@@ -1023,7 +1023,8 @@
             lastTime = timestamp;
 
             // Cap delta to prevent "spiral of death" during lag spikes
-            if (delta > 250) delta = 250;
+            // Cap delta to a single physics tick to prevent fast-forward warping during lag/load spikes!
+            if (delta > tickRateMs) delta = tickRateMs;
 
             accumulator += delta;
 
@@ -1051,7 +1052,7 @@
                     
                     // 3. Draw DEFEATED overlay if player is dead (avoids frame-clear flicker)
                     const hpText = document.getElementById(`hp-${i}`).textContent;
-                    if (hpText === "DEAD" || parseInt(hpText) <= 0) {
+                    if (hpText !== "---" && (hpText === "DEAD" || parseInt(hpText) <= 0)) {
                         const ctx = ctxs[i];
                         ctx.fillStyle = 'rgba(255, 0, 0, 0.1)';
                         ctx.fillRect(0, 0, canvases[i].width, canvases[i].height);
