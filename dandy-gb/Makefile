@@ -67,7 +67,7 @@ web: levels
 			-I$(SRC_DIR) \
 			-s WASM=1 \
 			-s EXPORTED_FUNCTIONS="['_web_init', '_web_step', '_web_draw_viewports', '_web_get_current_level', '_web_get_num_players', '_web_get_map', '_malloc', '_free']" \
-			-s EXPORTED_RUNTIME_METHODS="['ccall', 'cwrap']" \
+			-s EXPORTED_RUNTIME_METHODS="['ccall', 'cwrap', 'HEAPU8']" \
 			-O2 \
 			-o $(WEB_OUT); \
 		echo "----------------------------------------"; \
