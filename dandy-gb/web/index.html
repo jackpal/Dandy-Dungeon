@@ -1052,13 +1052,42 @@
             
             const debugPanel = document.getElementById('debug-panel');
             if (debugPanel) {
+                if (window.debug_history === undefined) {
+                    window.debug_history = [];
+                }
+                
                 const cam0_x = ((prevVpLeft[0] || 0) + ((targetVpLeft[0] || 0) - (prevVpLeft[0] || 0)) * t) * 16;
                 const p1_0_x = ((prevPlayerX[0][0] || 0) + ((targetPlayerX[0][0] || 0) - (prevPlayerX[0][0] || 0)) * t) * 2;
+                
+                // Add current state to history
+                window.debug_history.push({
+                    fps: window.debug_fps,
+                    t: t.toFixed(3),
+                    acc: accumulator.toFixed(1),
+                    cam: `(${prevVpLeft[0]}, ${targetVpLeft[0]})`,
+                    camX: cam0_x.toFixed(1),
+                    player: `(${prevPlayerX[0][0]}, ${targetPlayerX[0][0]})`,
+                    drawX: p1_0_x.toFixed(1)
+                });
+                
+                // Keep last 8 frames
+                if (window.debug_history.length > 8) {
+                    window.debug_history.shift();
+                }
+                
+                // Format history list
+                let historyHtml = window.debug_history.map((h, idx) => 
+                    `[F-${window.debug_history.length - idx}] t: ${h.t} | Acc: ${h.acc}ms | Cam0: ${h.cam} -> camX: ${h.camX} | P1_0: ${h.player} -> drawX: ${h.drawX}`
+                ).join('<br>');
+                
                 debugPanel.innerHTML = `
-                    <strong>DEBUG MONITOR</strong><br>
-                    FPS: ${window.debug_fps} | t: ${t.toFixed(3)} | Acc: ${accumulator.toFixed(1)}ms<br>
-                    Cam0 (prev/target): (${prevVpLeft[0]}, ${targetVpLeft[0]}) | camX: ${cam0_x.toFixed(1)}<br>
-                    P1_0 (prev/target): (${prevPlayerX[0][0]}, ${targetPlayerX[0][0]}) | drawX: ${p1_0_x.toFixed(1)}
+                    <strong>DEBUG MONITOR (FPS: ${window.debug_fps})</strong><br>
+                    Current t: ${t.toFixed(3)} | Acc: ${accumulator.toFixed(1)}ms | Cam0: (${prevVpLeft[0]}, ${targetVpLeft[0]})<br>
+                    <hr style="border: 0; border-top: 1px solid #00ff00; margin: 5px 0;">
+                    <strong>LAST 8 FRAMES HISTORY:</strong><br>
+                    <div style="font-size: 11px; font-family: monospace; white-space: nowrap;">
+                        ${historyHtml}
+                    </div>
                 `;
             }
 
