@@ -533,6 +533,14 @@
                 targetArrowY[p] = y;
                 arrowActive[p] = true;
                 
+                // Spawn Warp: If the arrow was not active last physics tick, warp its previous
+                // coordinates to the player's position immediately to prevent backward animation glitch!
+                if (!wasArrowActive[p]) {
+                    prevArrowX[p] = x;
+                    prevArrowY[p] = y;
+                    wasArrowActive[p] = true; // Lock warp for subsequent 60Hz sweeps within this tick
+                }
+                
                 if (prevArrowX[p] === undefined) {
                     prevArrowX[p] = x;
                     prevArrowY[p] = y;
@@ -799,6 +807,7 @@
         const targetArrowX = [0, 0, 0, 0];
         const targetArrowY = [0, 0, 0, 0];
         const arrowActive = [false, false, false, false];
+        const wasArrowActive = [false, false, false, false];
 
         // Initialize Emscripten Module
         var Module = {
@@ -880,12 +889,16 @@
         function runPhysicsTick() {
             if (!isRunning || !wasmModule) return;
 
-            // 1. Save current targets as previous coordinates for interpolation
+            // 1. Save current targets, manage active states, and prepare interpolation
             for (let p = 0; p < 4; ++p) {
                 prevPlayerX[p] = targetPlayerX[p];
                 prevPlayerY[p] = targetPlayerY[p];
                 prevArrowX[p] = targetArrowX[p];
                 prevArrowY[p] = targetArrowY[p];
+                
+                // Save active state from previous tick to detect spawns
+                wasArrowActive[p] = arrowActive[p];
+                arrowActive[p] = false; // Reset active flag for next sweep
                 
                 // Fallback in case they were undefined
                 if (prevPlayerX[p] === undefined) {
@@ -896,11 +909,6 @@
                     prevArrowX[p] = targetArrowX[p];
                     prevArrowY[p] = targetArrowY[p];
                 }
-            }
-
-            // 2. Clear arrow active flags (will be set in jsSetSprite if active this tick)
-            for (let p = 0; p < 4; ++p) {
-                arrowActive[p] = false;
             }
 
             // 3. Check for late joins
