@@ -515,35 +515,37 @@
         window.jsSetSprite = function(player_idx, sprite_idx, x, y, tile_id, flags) {
             viewportSprites[player_idx].push({ x, y, tile_id, flags });
             
-            // Capture target positions dynamically during viewport sweep
+            const v = player_idx; // Viewport/screen index (0..3)
+            
+            // Capture target positions dynamically for this specific viewport v
             if (tile_id >= TILE_PLAYER1 && tile_id <= TILE_PLAYER1 + 31) {
                 const offset = tile_id - TILE_PLAYER1;
                 const p = offset >> 3; // Player index (0..3)
-                targetPlayerX[p] = x;
-                targetPlayerY[p] = y;
+                targetPlayerX[v][p] = x;
+                targetPlayerY[v][p] = y;
                 
                 // Initialize previous values on first sweep
-                if (prevPlayerX[p] === undefined) {
-                    prevPlayerX[p] = x;
-                    prevPlayerY[p] = y;
+                if (prevPlayerX[v][p] === undefined) {
+                    prevPlayerX[v][p] = x;
+                    prevPlayerY[v][p] = y;
                 }
             } else if (tile_id >= TILE_ARROW && tile_id <= TILE_ARROW + 7) {
                 const p = flags; // Owner player index passed in flags
-                targetArrowX[p] = x;
-                targetArrowY[p] = y;
-                arrowActive[p] = true;
+                targetArrowX[v][p] = x;
+                targetArrowY[v][p] = y;
+                arrowActive[v][p] = true;
                 
-                // Spawn Warp: If the arrow was not active last physics tick, warp its previous
-                // coordinates to the player's position immediately to prevent backward animation glitch!
-                if (!wasArrowActive[p]) {
-                    prevArrowX[p] = x;
-                    prevArrowY[p] = y;
-                    wasArrowActive[p] = true; // Lock warp for subsequent 60Hz sweeps within this tick
+                // Spawn Warp: If the arrow was not active in this viewport last tick, warp it
+                // immediately to its start position to prevent backward sliding!
+                if (!wasArrowActive[v][p]) {
+                    prevArrowX[v][p] = x;
+                    prevArrowY[v][p] = y;
+                    wasArrowActive[v][p] = true; // Lock warp for subsequent sweeps
                 }
                 
-                if (prevArrowX[p] === undefined) {
-                    prevArrowX[p] = x;
-                    prevArrowY[p] = y;
+                if (prevArrowX[v][p] === undefined) {
+                    prevArrowX[v][p] = x;
+                    prevArrowY[v][p] = y;
                 }
             }
         };
@@ -552,28 +554,29 @@
             const ctx = ctxs[player_idx];
             if (!ctx || !spritesheetLoaded) return;
             
+            const v = player_idx; // Viewport/screen index (0..3)
             const sprites = viewportSprites[player_idx];
             for (const sprite of sprites) {
                 let drawX = sprite.x * 2;
                 let drawY = sprite.y * 2;
                 
-                // Interpolate Player and Arrow coordinates for buttery-smooth sliding!
+                // Interpolate Player and Arrow coordinates relative to this local viewport camera!
                 if (sprite.tile_id >= TILE_PLAYER1 && sprite.tile_id <= TILE_PLAYER1 + 31) {
                     const offset = sprite.tile_id - TILE_PLAYER1;
                     const p = offset >> 3; // Player index (0..3)
                     
-                    if (prevPlayerX[p] !== undefined && targetPlayerX[p] !== undefined) {
-                        const interpX = prevPlayerX[p] + (targetPlayerX[p] - prevPlayerX[p]) * t;
-                        const interpY = prevPlayerY[p] + (targetPlayerY[p] - prevPlayerY[p]) * t;
+                    if (prevPlayerX[v][p] !== undefined && targetPlayerX[v][p] !== undefined) {
+                        const interpX = prevPlayerX[v][p] + (targetPlayerX[v][p] - prevPlayerX[v][p]) * t;
+                        const interpY = prevPlayerY[v][p] + (targetPlayerY[v][p] - prevPlayerY[v][p]) * t;
                         drawX = interpX * 2;
                         drawY = interpY * 2;
                     }
                 } else if (sprite.tile_id >= TILE_ARROW && sprite.tile_id <= TILE_ARROW + 7) {
                     const p = sprite.flags; // Owner player index
                     
-                    if (arrowActive[p] && prevArrowX[p] !== undefined && targetArrowX[p] !== undefined) {
-                        const interpX = prevArrowX[p] + (targetArrowX[p] - prevArrowX[p]) * t;
-                        const interpY = prevArrowY[p] + (targetArrowY[p] - prevArrowY[p]) * t;
+                    if (arrowActive[v][p] && prevArrowX[v][p] !== undefined && targetArrowX[v][p] !== undefined) {
+                        const interpX = prevArrowX[v][p] + (targetArrowX[v][p] - prevArrowX[v][p]) * t;
+                        const interpY = prevArrowY[v][p] + (targetArrowY[v][p] - prevArrowY[v][p]) * t;
                         drawX = interpX * 2;
                         drawY = interpY * 2;
                     }
@@ -595,14 +598,10 @@
                 ctx.save();
                 
                 // GameBoy OAM Attributes
-                // Bit 5 (0x20): Horizontal Flip (mirroring)
-                // Bit 6 (0x40): Vertical Flip
-                // Note: For arrows, flags contains the owner index (0..3), so bits 5 and 6 are always 0.
                 const flipX = (sprite.flags & 0x20) !== 0;
                 const flipY = (sprite.flags & 0x40) !== 0;
                 
                 if (flipX || flipY) {
-                    // Translate to center of sprite for flipping
                     ctx.translate(drawX + 8, drawY + 8);
                     ctx.scale(flipX ? -1 : 1, flipY ? -1 : 1);
                     ctx.drawImage(spritesheet, tx, ty, 16, 16, -8, -8, 16, 16);
@@ -796,18 +795,20 @@
         let accumulator = 0;
         const tickRateMs = 1000 / 20; // 50ms per physics tick (20 Hz)
 
-        // Interpolation tracking arrays for Players 1-4 and their Arrows
-        const prevPlayerX = [0, 0, 0, 0];
-        const prevPlayerY = [0, 0, 0, 0];
-        const targetPlayerX = [0, 0, 0, 0];
-        const targetPlayerY = [0, 0, 0, 0];
+        // 2D Interpolation tracking arrays: [viewport_idx][player_idx]
+        // This ensures each local player screen tracks LERP movements relative to its own camera!
+        const prevPlayerX = Array.from({ length: 4 }, () => Array(4).fill(undefined));
+        const prevPlayerY = Array.from({ length: 4 }, () => Array(4).fill(undefined));
+        const targetPlayerX = Array.from({ length: 4 }, () => Array(4).fill(undefined));
+        const targetPlayerY = Array.from({ length: 4 }, () => Array(4).fill(undefined));
 
-        const prevArrowX = [0, 0, 0, 0];
-        const prevArrowY = [0, 0, 0, 0];
-        const targetArrowX = [0, 0, 0, 0];
-        const targetArrowY = [0, 0, 0, 0];
-        const arrowActive = [false, false, false, false];
-        const wasArrowActive = [false, false, false, false];
+        const prevArrowX = Array.from({ length: 4 }, () => Array(4).fill(undefined));
+        const prevArrowY = Array.from({ length: 4 }, () => Array(4).fill(undefined));
+        const targetArrowX = Array.from({ length: 4 }, () => Array(4).fill(undefined));
+        const targetArrowY = Array.from({ length: 4 }, () => Array(4).fill(undefined));
+        
+        const arrowActive = Array.from({ length: 4 }, () => Array(4).fill(false));
+        const wasArrowActive = Array.from({ length: 4 }, () => Array(4).fill(false));
 
         // Initialize Emscripten Module
         var Module = {
@@ -861,17 +862,20 @@
                     drawJoinScreen(i);
                 }
                 
-                // Reset interpolation state
-                prevPlayerX[i] = undefined;
-                prevPlayerY[i] = undefined;
-                targetPlayerX[i] = undefined;
-                targetPlayerY[i] = undefined;
-                
-                prevArrowX[i] = undefined;
-                prevArrowY[i] = undefined;
-                targetArrowX[i] = undefined;
-                targetArrowY[i] = undefined;
-                arrowActive[i] = false;
+                // Reset local viewport-specific 2D interpolation states for all players
+                for (let p = 0; p < 4; ++p) {
+                    prevPlayerX[i][p] = undefined;
+                    prevPlayerY[i][p] = undefined;
+                    targetPlayerX[i][p] = undefined;
+                    targetPlayerY[i][p] = undefined;
+                    
+                    prevArrowX[i][p] = undefined;
+                    prevArrowY[i][p] = undefined;
+                    targetArrowX[i][p] = undefined;
+                    targetArrowY[i][p] = undefined;
+                    arrowActive[i][p] = false;
+                    wasArrowActive[i][p] = false;
+                }
             }
 
             document.getElementById('game-over-banner').style.display = 'none';
@@ -889,25 +893,27 @@
         function runPhysicsTick() {
             if (!isRunning || !wasmModule) return;
 
-            // 1. Save current targets, manage active states, and prepare interpolation
-            for (let p = 0; p < 4; ++p) {
-                prevPlayerX[p] = targetPlayerX[p];
-                prevPlayerY[p] = targetPlayerY[p];
-                prevArrowX[p] = targetArrowX[p];
-                prevArrowY[p] = targetArrowY[p];
-                
-                // Save active state from previous tick to detect spawns
-                wasArrowActive[p] = arrowActive[p];
-                arrowActive[p] = false; // Reset active flag for next sweep
-                
-                // Fallback in case they were undefined
-                if (prevPlayerX[p] === undefined) {
-                    prevPlayerX[p] = targetPlayerX[p];
-                    prevPlayerY[p] = targetPlayerY[p];
-                }
-                if (prevArrowX[p] === undefined) {
-                    prevArrowX[p] = targetArrowX[p];
-                    prevArrowY[p] = targetArrowY[p];
+            // 1. Save current targets, manage active states, and prepare interpolation independently per viewport
+            for (let v = 0; v < 4; ++v) {
+                for (let p = 0; p < 4; ++p) {
+                    prevPlayerX[v][p] = targetPlayerX[v][p];
+                    prevPlayerY[v][p] = targetPlayerY[v][p];
+                    prevArrowX[v][p] = targetArrowX[v][p];
+                    prevArrowY[v][p] = targetArrowY[v][p];
+                    
+                    // Save active state from previous tick to detect spawns
+                    wasArrowActive[v][p] = arrowActive[v][p];
+                    arrowActive[v][p] = false; // Reset active flag for next sweep
+                    
+                    // Fallback in case they were undefined
+                    if (prevPlayerX[v][p] === undefined) {
+                        prevPlayerX[v][p] = targetPlayerX[v][p];
+                        prevPlayerY[v][p] = targetPlayerY[v][p];
+                    }
+                    if (prevArrowX[v][p] === undefined) {
+                        prevArrowX[v][p] = targetArrowX[v][p];
+                        prevArrowY[v][p] = targetArrowY[v][p];
+                    }
                 }
             }
 
