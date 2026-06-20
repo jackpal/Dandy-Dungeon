@@ -1,6 +1,6 @@
 #include "dandy_core.h"
 #include <gb/gb.h>
-#include <font.h>
+#include <gbdk/font.h>
 
 /* ASCII translation table for tiles.
    Maps tile IDs to ASCII character codes.
@@ -54,8 +54,8 @@ void hal_draw_string(uint8_t x, uint8_t y, const char* str) {
     }
 }
 
-/* Tiny custom itoa to avoid sprintf bloat */
-static void u32_to_str(uint32_t val, char* buf, uint8_t digits) {
+/* Tiny custom itoa to avoid sprintf bloat (16-bit to save ROM space) */
+static void u16_to_str(uint16_t val, char* buf, uint8_t digits) {
     for (int8_t i = digits - 1; i >= 0; --i) {
         buf[i] = '0' + (val % 10);
         val /= 10;
@@ -82,6 +82,11 @@ static void s16_to_str(int16_t val, char* buf, uint8_t digits) {
 /* HAL Implementations */
 
 void hal_draw_tile(uint8_t x, uint8_t y, uint8_t tile_id) {
+    // Map player 2, 3, 4 tile IDs back to Player 1's range (24..31)
+    if (tile_id >= TILE_PLAYER1 && tile_id <= TILE_PLAYER1 + 31) {
+        tile_id = TILE_PLAYER1 + ((tile_id - TILE_PLAYER1) & 7);
+    }
+    
     uint8_t ascii = tile_to_ascii[tile_id];
     if (ascii == 0) ascii = ' ';
     
@@ -103,7 +108,7 @@ void hal_update_hud(void) {
     
     // Row 11: Score
     hal_draw_string(1, 11, "SCORE: ");
-    u32_to_str(player_score[p], buf, 6);
+    u16_to_str(player_score[p], buf, 6);
     hal_draw_string(8, 11, buf);
     
     // Row 12: Health
@@ -113,16 +118,16 @@ void hal_update_hud(void) {
     
     // Row 13: Bombs & Keys
     hal_draw_string(1, 13, "BOMBS: ");
-    u32_to_str(player_bombs[p], buf, 2);
+    u16_to_str(player_bombs[p], buf, 2);
     hal_draw_string(8, 13, buf);
     
     hal_draw_string(11, 13, "KEYS: ");
-    u32_to_str(player_keys[p], buf, 2);
+    u16_to_str(player_keys[p], buf, 2);
     hal_draw_string(17, 13, buf);
     
     // Row 14: Level
     hal_draw_string(1, 14, "LEVEL: ");
-    u32_to_str(current_level + 1, buf, 2);
+    u16_to_str(current_level + 1, buf, 2);
     hal_draw_string(8, 14, buf);
     
     // Row 15-17: Controls / Info
@@ -140,6 +145,11 @@ void hal_clear_sprites(uint8_t vp_left, uint8_t vp_top) {
 
 void hal_set_sprite(uint8_t sprite_idx, uint8_t x, uint8_t y, uint8_t tile_id, uint8_t flags) {
     if (sprite_idx >= 40) return;
+    
+    // Map player 2, 3, 4 tile IDs back to Player 1's range (24..31)
+    if (tile_id >= TILE_PLAYER1 && tile_id <= TILE_PLAYER1 + 31) {
+        tile_id = TILE_PLAYER1 + ((tile_id - TILE_PLAYER1) & 7);
+    }
     
     // Resolve tile_id to ASCII character for our text font representation
     uint8_t ascii = tile_to_ascii[tile_id];

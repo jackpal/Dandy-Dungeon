@@ -9,6 +9,27 @@
 #define MAP_SIZE        1800 // 60 * 30
 #define MAX_PLAYERS     4
 
+/* Tile ID Constants */
+#define TILE_SPACE       0
+#define TILE_WALL        1
+#define TILE_DOOR        2
+#define TILE_UP          3
+#define TILE_DOWN        4
+#define TILE_KEY         5
+#define TILE_FOOD        6
+#define TILE_MONEY       7
+#define TILE_BOMB        8
+#define TILE_MONSTER1    9
+#define TILE_MONSTER2    10
+#define TILE_MONSTER3    11
+#define TILE_HEART       12
+#define TILE_GENERATOR1  13
+#define TILE_GENERATOR2  14
+#define TILE_GENERATOR3  15
+#define TILE_ARROW       16
+#define TILE_PLAYER1     24  // TILE_ARROW + 8
+#define IS_PLAYER(tile)  ((tile) >= TILE_PLAYER1 && (tile) <= (TILE_PLAYER1 + 31))
+
 /* Button Masks (Input abstraction) */
 #define BUTTON_LEFT   (1 << 0)
 #define BUTTON_RIGHT  (1 << 1)
@@ -28,7 +49,7 @@ extern uint8_t local_player_idx;
 extern uint8_t player_x[MAX_PLAYERS];
 extern uint8_t player_y[MAX_PLAYERS];
 extern int16_t player_health[MAX_PLAYERS];
-extern uint32_t player_score[MAX_PLAYERS];
+extern uint16_t player_score[MAX_PLAYERS];
 extern uint8_t player_bombs[MAX_PLAYERS];
 extern uint8_t player_keys[MAX_PLAYERS];
 extern int8_t player_dir[MAX_PLAYERS];

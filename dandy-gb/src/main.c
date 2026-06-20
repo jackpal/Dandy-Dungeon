@@ -1,5 +1,5 @@
 #include <gb/gb.h>
-#include <font.h>
+#include <gbdk/font.h>
 #include "dandy_core.h"
 
 /* Maps GBDK joypad bits to our core button masks */

@@ -1,3 +1,4 @@
+#include <gb/gb.h>  // For SWITCH_ROM bank switching
 #include "dandy_core.h"
 #include "levels.h"
 #include <string.h>
@@ -61,7 +62,7 @@ uint8_t local_player_idx;
 uint8_t player_x[MAX_PLAYERS];
 uint8_t player_y[MAX_PLAYERS];
 int16_t player_health[MAX_PLAYERS];
-uint32_t player_score[MAX_PLAYERS];
+uint16_t player_score[MAX_PLAYERS];
 uint8_t player_bombs[MAX_PLAYERS];
 uint8_t player_keys[MAX_PLAYERS];
 int8_t player_dir[MAX_PLAYERS];
@@ -74,13 +75,7 @@ int8_t arrow_dir[MAX_PLAYERS];
 
 bool is_dirty;
 
-/* Player Tile Definitions */
-#define TILE_PLAYER2  (TILE_PLAYER1 + 8)
-#define TILE_PLAYER3  (TILE_PLAYER1 + 16)
-#define TILE_PLAYER4  (TILE_PLAYER1 + 24)
 
-/* Macro to check if a tile is any player (Player 1-4, any of their 8 directions) */
-#define IS_PLAYER(tile) ((tile) >= TILE_PLAYER1 && (tile) <= (TILE_PLAYER4 + 7))
 
 /* Helper to get the correct tile ID for a player index and direction */
 #define GET_PLAYER_TILE(p_idx, dir) (TILE_PLAYER1 + ((p_idx) << 3) + (dir))
@@ -138,6 +133,9 @@ void dandy_init(void) {
 }
 
 void dandy_load_level(uint8_t level_idx) {
+    // Switch to ROM Bank 2 where levels.c is compiled
+    SWITCH_ROM(2);
+    
     // Decompress level data from ROM to RAM map (RLE decoding)
     const uint8_t* src = dandy_levels[level_idx];
     uint16_t dst_idx = 0;
@@ -146,7 +144,7 @@ void dandy_load_level(uint8_t level_idx) {
         if (byte == 0xFF) {
             uint8_t run_len = *src++;
             uint8_t tile_id = *src++;
-            for (uint8_t r = 0; r < run_len; ++r) {
+            while (run_len--) {
                 dandy_map[dst_idx++] = tile_id;
             }
         } else {

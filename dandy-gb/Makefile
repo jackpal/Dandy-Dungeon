@@ -15,12 +15,12 @@ TOOLS_DIR = tools
 
 # Source and Object Files
 SRCS = $(SRC_DIR)/main.c $(SRC_DIR)/dandy_core.c $(SRC_DIR)/gameboy_hal.c
-OBJS = $(OBJ_DIR)/main.o $(OBJ_DIR)/dandy_core.o $(OBJ_DIR)/gameboy_hal.o
+OBJS = $(OBJ_DIR)/main.o $(OBJ_DIR)/dandy_core.o $(OBJ_DIR)/gameboy_hal.o $(OBJ_DIR)/levels.o
 
 # Flags
 # -Wa-l: Generate assembler list file
 # -Wl-m: Generate linker map file
-LCCFLAGS = -Wa-l -Wl-m
+LCCFLAGS = -Wa-l -Wl-m -Wl-yo4
 
 .PHONY: all clean levels sprites setup web
 
@@ -42,7 +42,7 @@ $(BIN_DIR)/$(ROM_NAME): $(OBJS)
 
 # Compile C source files
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.c
-	$(LCC) -c -o $@ $<
+	$(LCC) -Wf--opt-code-size -c -o $@ $<
 
 # Run the level converter tool (requires Python 3)
 levels:
@@ -83,6 +83,9 @@ web: levels
 	fi
 
 # Clean intermediate and output files
+$(OBJ_DIR)/levels.o: $(SRC_DIR)/levels.c
+	$(LCC) -Wf-bo2 -c -o $@ $<
+
 clean:
 	rm -rf $(OBJ_DIR) $(BIN_DIR)
 	rm -f $(WEB_DIR)/*.js $(WEB_DIR)/*.wasm
