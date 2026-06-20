@@ -27,7 +27,7 @@ LCCFLAGS = -Wa-l -Wl-m -Wl-yo2
 .PHONY: all clean levels sprites setup web
 
 # Default target
-all: setup levels $(BIN_DIR)/$(ROM_NAME)
+all: setup levels sprites $(BIN_DIR)/$(ROM_NAME)
 
 # Create necessary directories
 setup:
@@ -51,10 +51,10 @@ levels:
 	@echo "Converting levels from JS to C header..."
 	python3 $(TOOLS_DIR)/convert_levels.py
 
-# Run the sprite extractor tool (requires Python 3)
+# Run the sprite compiler tool (manually decodes BMP to avoid PIL/aliasing)
 sprites:
-	@echo "Extracting original spritesheet..."
-	python3 $(TOOLS_DIR)/extract_sprites.py
+	@echo "Compiling pristine BMP sprite assets..."
+	python3 $(TOOLS_DIR)/compile_bmp_sprites.py
 
 # WebAssembly Emscripten Compiler
 EMCC = emcc
