@@ -138,8 +138,21 @@ void dandy_init(void) {
 }
 
 void dandy_load_level(uint8_t level_idx) {
-    // Copy level data from ROM to RAM map
-    memcpy(dandy_map, dandy_levels[level_idx], MAP_SIZE);
+    // Decompress level data from ROM to RAM map (RLE decoding)
+    const uint8_t* src = dandy_levels[level_idx];
+    uint16_t dst_idx = 0;
+    while (dst_idx < MAP_SIZE) {
+        uint8_t byte = *src++;
+        if (byte == 0xFF) {
+            uint8_t run_len = *src++;
+            uint8_t tile_id = *src++;
+            for (uint8_t r = 0; r < run_len; ++r) {
+                dandy_map[dst_idx++] = tile_id;
+            }
+        } else {
+            dandy_map[dst_idx++] = byte;
+        }
+    }
     
     set_player_start_position();
     
