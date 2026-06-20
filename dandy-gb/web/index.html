@@ -256,7 +256,11 @@
     <div id="game-over-banner">ALL PLAYERS DEFEATED - GAME OVER</div>
 
     <div id="controls-info">
-        <h3>KEYBOARD CO-OP MAPS</h3>
+        <h3>CONTROLS & GAMEPAD MAPS</h3>
+        <div style="color: #aaa; margin-bottom: 15px; font-size: 0.85rem; text-align: center; max-width: 800px; margin-left: auto; margin-right: auto; line-height: 1.4;">
+            🔌 <strong>GAMEPAD SUPPORT ACTIVE:</strong> Connect up to 4 USB/Bluetooth controllers (Xbox, PlayStation, Switch, or Retro).<br>
+            <strong>Gamepad 1</strong> controls Player 1, <strong>Gamepad 2</strong> controls Player 2, etc. Use <strong>D-Pad/Left Stick</strong> to move, <strong>Button A/X</strong> to shoot, and <strong>Button B/Y</strong> to bomb.
+        </div>
         <div class="controls-grid">
             <div class="control-group">
                 <h4 class="p0-text">PLAYER 1</h4>
@@ -360,7 +364,7 @@
         const BUTTON_BOMB   = 1 << 5;
 
         // Map keyboard inputs to GBDK button masks for each player
-        function getPlayerInput(p_idx) {
+        function getKeyboardInput(p_idx) {
             let mask = 0;
             if (p_idx === 0) {
                 if (keyState['KeyW']) mask |= BUTTON_UP;
@@ -393,6 +397,53 @@
             }
             return mask;
         }
+
+        // Map HTML5 Gamepad API inputs to GBDK button masks for each player slot (0..3)
+        function getGamepadInput(p_idx) {
+            const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
+            const gp = gamepads[p_idx];
+            if (!gp) return 0;
+
+            let mask = 0;
+
+            // 1. D-Pad or Left Analog Stick for Movement
+            // Standard mapping: D-pad Up is button 12, Down is 13, Left is 14, Right is 15
+            // Left Stick X is Axis 0, Y is Axis 1
+            const upPressed = (gp.buttons[12] && gp.buttons[12].pressed) || (gp.axes[1] && gp.axes[1] < -0.4);
+            const downPressed = (gp.buttons[13] && gp.buttons[13].pressed) || (gp.axes[1] && gp.axes[1] > 0.4);
+            const leftPressed = (gp.buttons[14] && gp.buttons[14].pressed) || (gp.axes[0] && gp.axes[0] < -0.4);
+            const rightPressed = (gp.buttons[15] && gp.buttons[15].pressed) || (gp.axes[0] && gp.axes[0] > 0.4);
+
+            if (upPressed) mask |= BUTTON_UP;
+            if (downPressed) mask |= BUTTON_DOWN;
+            if (leftPressed) mask |= BUTTON_LEFT;
+            if (rightPressed) mask |= BUTTON_RIGHT;
+
+            // 2. Button A (index 0) or Button X (index 2) to Shoot
+            const firePressed = (gp.buttons[0] && gp.buttons[0].pressed) || (gp.buttons[2] && gp.buttons[2].pressed);
+            
+            // 3. Button B (index 1) or Button Y (index 3) to Trigger Smart Bomb
+            const bombPressed = (gp.buttons[1] && gp.buttons[1].pressed) || (gp.buttons[3] && gp.buttons[3].pressed);
+
+            if (firePressed) mask |= BUTTON_FIRE;
+            if (bombPressed) mask |= BUTTON_BOMB;
+
+            return mask;
+        }
+
+        // Combined input accessor (mix-and-match keyboard and gamepad!)
+        function getPlayerInput(p_idx) {
+            return getKeyboardInput(p_idx) | getGamepadInput(p_idx);
+        }
+
+        // Gamepad Connection Event Listeners
+        window.addEventListener("gamepadconnected", (e) => {
+            console.log(`🎮 Gamepad connected at index ${e.gamepad.index}: ${e.gamepad.id}. Assigned to Player ${e.gamepad.index + 1}.`);
+        });
+
+        window.addEventListener("gamepaddisconnected", (e) => {
+            console.log(`🔌 Gamepad disconnected from index ${e.gamepad.index}: ${e.gamepad.id}.`);
+        });
 
         // JS callbacks defined in C via EM_JS
         window.jsDrawTile = function(player_idx, x, y, tile_id) {
