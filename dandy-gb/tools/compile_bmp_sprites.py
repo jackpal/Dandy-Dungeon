@@ -4,8 +4,8 @@ import struct
 
 def map_bgr_to_gb(b, g, r):
     """
-    Precisely maps the core colors of the original spritesheet to the 4 GameBoy grayscale shades
-    based on the user's requested specification:
+    Precisely maps the raw BGR colors from dandy.bmp to the 4 GameBoy grayscale shades
+    based on the user's specification:
     - Black -> Black (3)
     - Dark Blue -> Dark Gray (2)
     - Gold -> Light Gray (1)
@@ -18,44 +18,46 @@ def map_bgr_to_gb(b, g, r):
         return 3
         
     # 2. Map Dark Blue (B=174, G=55, R=47) to GameBoy Color 2 (Dark Gray)
-    # Allows for +/- 10 units of rounding noise in the deep blue channel
     if b > 150 and g < 100 and r < 100:
         return 2
         
     # 3. Map Gold/Pink/Red (B=98, G=98, R=199) to GameBoy Color 1 (Light Gray)
-    # Allows for +/- 10 units of rounding noise in the red channel
     if r > 180 and g < 120 and b < 120:
         return 1
         
     # 4. Map White (255,255,255) and Light Blue (215,223,240) to GameBoy Color 0 (White)
-    # These represent the light/highlight details and background.
     return 0
 
 def downscale_2x2_block(v00, v01, v10, v11):
     """
     Smart, feature-preserving downscaler for a 2x2 block of GameBoy color indices.
-    Looks at all 4 pixels of the block and prioritizes outlines and vital details
-    (like a 1px border on the last row/column) to prevent character clipping or cutoff bugs.
+    Since the floor is solid Black (3), Black acts as the background/empty space.
+    If a block contains active drawing pixels (Gold/1, Dark Blue/2, or White/0) mixed
+    with Black (3) background, we ignore the background and select the dominant foreground
+    color. This perfectly preserves thin 1px lines (like the bottom of the 'U' stairs tile)
+    from being overwritten by the dark background!
     """
     shades = [v00, v01, v10, v11]
-    counts = {0: 0, 1: 0, 2: 0, 3: 0}
-    for s in shades:
-        counts[s] += 1
-        
-    # If there is a clear majority (>= 3 pixels of the same color), use it
-    if counts[3] >= 3: return 3
-    if counts[2] >= 3: return 2
-    if counts[1] >= 3: return 1
-    if counts[0] >= 3: return 0
     
-    # Detail Preservation:
-    # If any pixel in the 2x2 block is Black (3) or Dark Gray (2) representing an outline
-    # or border (even if it's a 1px line on row 15 or column 15!), we preserve it
-    # to prevent graphical cutoff bugs.
-    if counts[3] >= 1: return 3
-    if counts[2] >= 1: return 2
-    if counts[1] >= 1: return 1
-    return 0
+    # Filter out the background color (Black = 3)
+    non_bg_shades = [s for s in shades if s != 3]
+    
+    # If the block is completely background, return Black (3)
+    if not non_bg_shades:
+        return 3
+        
+    # Count frequencies of the active drawing colors in the block
+    counts = {}
+    for s in non_bg_shades:
+        counts[s] = counts.get(s, 0) + 1
+        
+    # Sort the unique active colors by:
+    # 1. Frequency (descending)
+    # 2. Intensity value (descending: 2 > 1 > 0 to prefer Dark Blue/Gold over White highlights)
+    unique_active = list(set(non_bg_shades))
+    unique_active.sort(key=lambda x: (counts[x], x), reverse=True)
+    
+    return unique_active[0]
 
 def main():
     current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -100,7 +102,7 @@ def main():
     
     gb_tile_bytes = []
     
-    # Extract each 16x16 tile and downscale to 8x8 using smart 2x2 voting
+    # Extract each 16x16 tile and downscale to 8x8 using smart active-pixel voting
     for r in range(rows):
         for c in range(cols):
             t_idx = r * cols + c
@@ -120,7 +122,7 @@ def main():
                 low_byte = 0
                 high_byte = 0
                 for x in range(8):
-                    # Read all 4 pixels in the 2x2 block to protect borders/outlines on odd rows/cols
+                    # Read all 4 pixels in the 2x2 block
                     px0 = tile_left + x * 2
                     px1 = tile_left + x * 2 + 1
                     py0 = tile_top + y * 2
@@ -138,7 +140,7 @@ def main():
                     v10 = map_bgr_to_gb(data[offset_10], data[offset_10 + 1], data[offset_10 + 2])
                     v11 = map_bgr_to_gb(data[offset_11], data[offset_11 + 1], data[offset_11 + 2])
                     
-                    # Apply smart downscaling to select the best representative pixel (protects outlines!)
+                    # Apply smart active-pixel downscaling
                     val = downscale_2x2_block(v00, v01, v10, v11)
                     
                     # Pack bits MSB-first
@@ -201,7 +203,7 @@ def main():
     with open(output_c_path, "w") as f:
         f.write("\n".join(c_content))
         
-    print("Sprite compilation complete! Output: 512 bytes of pristine, unaliased, smart-downscaled GBDK tile data.")
+    print("Sprite compilation complete! Output: 512 bytes of pristine, active-pixel-preserved GBDK tile data.")
 
 if __name__ == "__main__":
     main()
