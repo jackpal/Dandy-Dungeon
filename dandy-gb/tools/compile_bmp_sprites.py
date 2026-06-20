@@ -2,31 +2,62 @@ import os
 import sys
 import struct
 
-def map_bgr_to_gb(b, g, r):
+def map_bgr_to_gb(b, g, r, t_idx):
     """
-    Directly and precisely maps the 4 core colors of the C++ dandy.bmp spritesheet
-    to the 4 GameBoy grayscale shades, matching the user's specification:
+    Tile-dependent color mapping to translate BGR colors from dandy.bmp to GameBoy shades.
     - Black     -> Black (3)
-    - Dark Blue -> Dark Gray (2)
     - Gold      -> Light Gray (1)
-    - White     -> White (0)
+    - White/Light Blue -> White (0)
     
-    Handles minor 1-2 unit rounding noise in the BMP file.
+    For Dark Blue:
+    - If it's a Player tile (24..27), we map it to White (0) to give the player
+      a bright, heroic white body, matching the original 8-bit character design.
+    - Otherwise (e.g. Walls, Monsters), we map it to Dark Gray (2) to maintain
+      a dark, atmospheric dungeon environment.
     """
     # 1. Map Black and near-blacks to GameBoy Color 3 (Black)
     if r < 20 and g < 20 and b < 20:
         return 3
         
-    # 2. Map Dark Blue (B=174, G=55, R=47) to GameBoy Color 2 (Dark Gray)
+    # 2. Map Dark Blue (B=174, G=55, R=47)
     if b > 150 and g < 100 and r < 100:
-        return 2
-        
+        if 24 <= t_idx <= 27:
+            return 0  # Player body -> White!
+        else:
+            return 2  # Wall/Monster body -> Dark Gray!
+            
     # 3. Map Gold/Red/Pink (B=98, G=98, R=199) to GameBoy Color 1 (Light Gray)
     if r > 180 and g < 120 and b < 120:
         return 1
         
     # 4. Map White (255,255,255) and Light Blue (215,223,240) to GameBoy Color 0 (White)
     return 0
+
+def downscale_2x2_block(v00, v01, v10, v11):
+    """
+    Active-pixel downscaler: Ignores the Black (3) background and selects the
+    dominant active drawing color in the 2x2 block. This preserves thin 1px lines
+    (like the bottom of the 'U' stairs tile on Row 15) from being eaten up by the background.
+    """
+    shades = [v00, v01, v10, v11]
+    
+    # Filter out the background color (Black = 3)
+    non_bg_shades = [s for s in shades if s != 3]
+    
+    # If the block is completely background, return Black (3)
+    if not non_bg_shades:
+        return 3
+        
+    # Count frequencies of the active drawing colors
+    counts = {}
+    for s in non_bg_shades:
+        counts[s] = counts.get(s, 0) + 1
+        
+    # Sort unique active colors by frequency (descending), and then by shade value (descending: 2 > 1 > 0)
+    unique_active = list(set(non_bg_shades))
+    unique_active.sort(key=lambda x: (counts[x], x), reverse=True)
+    
+    return unique_active[0]
 
 def main():
     current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -60,7 +91,7 @@ def main():
         
     print(f"BMP verified: {width}x{height} pixels, {bpp}bpp, uncompressed. Decoding raw pixel bytes...")
     
-    # BMP Row width in bytes (must be padded to multiple of 4, but 256*3 = 768 which is already a multiple of 4)
+    # BMP Row width in bytes
     row_width_bytes = 256 * 3
     
     tile_width = 16
@@ -71,13 +102,12 @@ def main():
     
     gb_tile_bytes = []
     
-    # Extract each 16x16 tile and downscale to 8x8 by 2x2 sub-sampling
+    # Extract each 16x16 tile and downscale to 8x8 using active-pixel preservation
     for r in range(rows):
         for c in range(cols):
             t_idx = r * cols + c
             
             # Special Case: Force Tile 0 (Space/Floor) to be completely solid Black (3)
-            # Renders the empty corridors as a dark void, matching original game aesthetics.
             if t_idx == 0:
                 tile_bytes = [0xFF] * 16
                 gb_tile_bytes.append(tile_bytes)
@@ -91,21 +121,26 @@ def main():
                 low_byte = 0
                 high_byte = 0
                 for x in range(8):
-                    # Exact 2x2 sub-sampling: read the pixel at the top-left of the 2x2 block.
-                    # Since the BMP is a perfect, clean 2x2 upscale of the native 8x8 artwork,
-                    # this sub-sampling is mathematically guaranteed to extract the pristine,
-                    # un-aliased native pixels with zero interpolation or rounding artifacts!
-                    px = tile_left + x * 2
-                    py = tile_top + y * 2
+                    # Read all 4 pixels in the 2x2 block
+                    px0 = tile_left + x * 2
+                    px1 = tile_left + x * 2 + 1
+                    py0 = tile_top + y * 2
+                    py1 = tile_top + y * 2 + 1
                     
                     # BMP rows are bottom-to-top in file bytes
-                    offset = pixel_offset + (31 - py) * row_width_bytes + px * 3
-                    b = data[offset]
-                    g = data[offset + 1]
-                    r_val = data[offset + 2]
+                    offset_00 = pixel_offset + (31 - py0) * row_width_bytes + px0 * 3
+                    offset_01 = pixel_offset + (31 - py0) * row_width_bytes + px1 * 3
+                    offset_10 = pixel_offset + (31 - py1) * row_width_bytes + px0 * 3
+                    offset_11 = pixel_offset + (31 - py1) * row_width_bytes + px1 * 3
                     
-                    # Map BGR to GameBoy color index (0..3)
-                    val = map_bgr_to_gb(b, g, r_val)
+                    # Map BGR to GameBoy color index with tile-dependent logic
+                    v00 = map_bgr_to_gb(data[offset_00], data[offset_00 + 1], data[offset_00 + 2], t_idx)
+                    v01 = map_bgr_to_gb(data[offset_01], data[offset_01 + 1], data[offset_01 + 2], t_idx)
+                    v10 = map_bgr_to_gb(data[offset_10], data[offset_10 + 1], data[offset_10 + 2], t_idx)
+                    v11 = map_bgr_to_gb(data[offset_11], data[offset_11 + 1], data[offset_11 + 2], t_idx)
+                    
+                    # Apply active-pixel downscaling to protect 1px outlines
+                    val = downscale_2x2_block(v00, v01, v10, v11)
                     
                     # Pack bits MSB-first
                     bit0 = val & 1
@@ -167,7 +202,7 @@ def main():
     with open(output_c_path, "w") as f:
         f.write("\n".join(c_content))
         
-    print("Sprite compilation complete! Output: 512 bytes of pristine, unaliased, color-precise tile assets.")
+    print("Sprite compilation complete! Output: 512 bytes of active-pixel-preserved, tile-dependent color-mapped GBDK assets.")
 
 if __name__ == "__main__":
     main()
