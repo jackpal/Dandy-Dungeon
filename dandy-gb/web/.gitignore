@@ -1,0 +1,3 @@
+# Ignore compiled WebAssembly build outputs
+dandy_web.js
+dandy_web.wasm

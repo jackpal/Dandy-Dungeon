@@ -22,7 +22,7 @@ OBJS = $(OBJ_DIR)/main.o $(OBJ_DIR)/dandy_core.o $(OBJ_DIR)/gameboy_hal.o
 # -Wl-m: Generate linker map file
 LCCFLAGS = -Wa-l -Wl-m
 
-.PHONY: all clean levels sprites setup
+.PHONY: all clean levels sprites setup web
 
 # Default target
 all: setup levels $(BIN_DIR)/$(ROM_NAME)
@@ -31,6 +31,7 @@ all: setup levels $(BIN_DIR)/$(ROM_NAME)
 setup:
 	@mkdir -p $(OBJ_DIR)
 	@mkdir -p $(BIN_DIR)
+	@mkdir -p $(WEB_DIR)
 
 # Link the ROM
 $(BIN_DIR)/$(ROM_NAME): $(OBJS)
@@ -53,8 +54,37 @@ sprites:
 	@echo "Extracting original spritesheet..."
 	python3 $(TOOLS_DIR)/extract_sprites.py
 
+# WebAssembly Emscripten Compiler
+EMCC = emcc
+WEB_DIR = web
+WEB_OUT = $(WEB_DIR)/dandy_web.js
+
+# Compile Core C engine to WebAssembly
+web: levels
+	@if command -v $(EMCC) >/dev/null 2>&1; then \
+		echo "Compiling WebAssembly core engine..."; \
+		$(EMCC) $(SRC_DIR)/dandy_core.c $(SRC_DIR)/web_main.c \
+			-I$(SRC_DIR) \
+			-s WASM=1 \
+			-s EXPORTED_FUNCTIONS="['_web_init', '_web_step', '_web_draw_viewports', '_web_get_current_level', '_web_get_num_players', '_malloc', '_free']" \
+			-s EXPORTED_RUNTIME_METHODS="['ccall', 'cwrap']" \
+			-O2 \
+			-o $(WEB_OUT); \
+		echo "----------------------------------------"; \
+		echo "WebAssembly compilation successful!"; \
+		echo "Open $(WEB_DIR)/index.html via a local server to play."; \
+		echo "E.g., python3 -m http.server -d $(WEB_DIR)"; \
+		echo "----------------------------------------"; \
+	else \
+		echo "Error: Emscripten compiler '$(EMCC)' not found in PATH."; \
+		echo "Please install Emscripten (emsdk) and source 'emsdk_env.sh'."; \
+		echo "See README.md for detailed instructions."; \
+		exit 1; \
+	fi
+
 # Clean intermediate and output files
 clean:
 	rm -rf $(OBJ_DIR) $(BIN_DIR)
+	rm -f $(WEB_DIR)/*.js $(WEB_DIR)/*.wasm
 	rm -f *.lst *.map *.sym
 	@echo "Clean complete."

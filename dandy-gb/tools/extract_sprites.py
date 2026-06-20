@@ -5,7 +5,7 @@ import re
 # Paths
 current_dir = os.path.dirname(os.path.abspath(__file__))
 strike_js_path = os.path.join(current_dir, "../../dandy-js/strike.js")
-output_png_path = os.path.join(current_dir, "../assets/strike_original.png")
+output_png_path = os.path.join(current_dir, "../web/strike_original.png")
 
 # Create assets directory if it doesn't exist
 os.makedirs(os.path.dirname(output_png_path), exist_ok=True)

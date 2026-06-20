@@ -54,31 +54,43 @@ const int8_t delta_to_dir[3][3] = {
 uint8_t dandy_map[MAP_SIZE];
 uint8_t current_level;
 uint8_t monster_rotor;
+bool player_joined[MAX_PLAYERS];
+uint8_t local_player_idx;
 
-uint8_t player_x;
-uint8_t player_y;
-int16_t player_health;
-uint32_t player_score;
-uint8_t player_bombs;
-uint8_t player_keys;
-int8_t player_dir;
+/* Player State Arrays */
+uint8_t player_x[MAX_PLAYERS];
+uint8_t player_y[MAX_PLAYERS];
+int16_t player_health[MAX_PLAYERS];
+uint32_t player_score[MAX_PLAYERS];
+uint8_t player_bombs[MAX_PLAYERS];
+uint8_t player_keys[MAX_PLAYERS];
+int8_t player_dir[MAX_PLAYERS];
+uint8_t player_move_timer[MAX_PLAYERS];
 
-uint8_t arrow_x;
-uint8_t arrow_y;
-int8_t arrow_dir;
+/* Arrow State Arrays */
+uint8_t arrow_x[MAX_PLAYERS];
+uint8_t arrow_y[MAX_PLAYERS];
+int8_t arrow_dir[MAX_PLAYERS];
 
-uint8_t player_move_timer;
 bool is_dirty;
 
-/* Macro to check if a tile is the player (any of the 8 directions) */
-#define IS_PLAYER(tile) ((tile) >= TILE_PLAYER1 && (tile) <= (TILE_PLAYER1 + 7))
+/* Player Tile Definitions */
+#define TILE_PLAYER2  (TILE_PLAYER1 + 8)
+#define TILE_PLAYER3  (TILE_PLAYER1 + 16)
+#define TILE_PLAYER4  (TILE_PLAYER1 + 24)
+
+/* Macro to check if a tile is any player (Player 1-4, any of their 8 directions) */
+#define IS_PLAYER(tile) ((tile) >= TILE_PLAYER1 && (tile) <= (TILE_PLAYER4 + 7))
+
+/* Helper to get the correct tile ID for a player index and direction */
+#define GET_PLAYER_TILE(p_idx, dir) (TILE_PLAYER1 + ((p_idx) << 3) + (dir))
 
 /* Private function declarations */
-static void do_buttons(uint8_t buttons);
-static void move_arrow(void);
+static void do_player_buttons(uint8_t p_idx, uint8_t buttons);
+static void move_arrows(void);
 static void move_monsters(void);
-static bool move_player(uint8_t dir);
-static void do_bomb(void);
+static bool move_player(uint8_t p_idx, uint8_t dir);
+static void do_bomb(uint8_t p_idx);
 static void set_player_start_position(void);
 static void next_level(void);
 static void end_game(void);
@@ -104,14 +116,22 @@ static void flood_push(uint8_t x, uint8_t y) {
 
 void dandy_init(void) {
     current_level = 0;
-    player_score = 0;
-    player_health = 100;
-    player_bombs = 0;
-    player_keys = 0;
-    player_dir = 0;
+    player_joined[0] = true; // Player 1 is joined by default
+    for (uint8_t p = 1; p < MAX_PLAYERS; ++p) {
+        player_joined[p] = false;
+    }
+    local_player_idx = 0;
     monster_rotor = 0;
-    arrow_dir = -1;
-    player_move_timer = 0;
+    
+    for (uint8_t p = 0; p < MAX_PLAYERS; ++p) {
+        player_score[p] = 0;
+        player_health[p] = 100;
+        player_bombs[p] = 0;
+        player_keys[p] = 0;
+        player_dir[p] = 0;
+        player_move_timer[p] = 0;
+        arrow_dir[p] = -1;
+    }
     
     dandy_load_level(current_level);
 }
@@ -121,26 +141,65 @@ void dandy_load_level(uint8_t level_idx) {
     memcpy(dandy_map, dandy_levels[level_idx], MAP_SIZE);
     
     set_player_start_position();
-    arrow_dir = -1;
+    
+    for (uint8_t p = 0; p < MAX_PLAYERS; ++p) {
+        arrow_dir[p] = -1;
+    }
     is_dirty = true;
 }
 
-void dandy_step(uint8_t buttons) {
-    do_buttons(buttons);
-    move_arrow();
+void dandy_step(const uint8_t player_inputs[MAX_PLAYERS]) {
+    for (uint8_t p = 0; p < MAX_PLAYERS; ++p) {
+        if (player_joined[p] && player_health[p] > 0) {
+            do_player_buttons(p, player_inputs[p]);
+        }
+    }
+    move_arrows();
     move_monsters();
     
-    // Update HUD via HAL
-    hal_update_hud(player_score, player_health, player_bombs, player_keys);
+    // Update HUD (HAL reads globals directly now)
+    hal_update_hud();
     
-    if (player_health <= 0) {
+    // Check if all players are dead (game over)
+    bool all_dead = true;
+    for (uint8_t p = 0; p < MAX_PLAYERS; ++p) {
+        if (player_joined[p] && player_health[p] > 0) {
+            all_dead = false;
+            break;
+        }
+    }
+    
+    if (all_dead) {
         end_game();
     }
 }
 
-void dandy_draw_viewport(void) {
-    int16_t vp_left = clamp((int16_t)player_x - 10, 0, DANDY_LEVEL_WIDTH - 20);
-    int16_t vp_top = clamp((int16_t)player_y - 5, 0, DANDY_LEVEL_HEIGHT - 10);
+void dandy_draw_viewport(uint8_t local_p_idx) {
+    if (local_p_idx >= MAX_PLAYERS || !player_joined[local_p_idx]) local_p_idx = 0;
+    
+    int16_t target_x = player_x[local_p_idx];
+    int16_t target_y = player_y[local_p_idx];
+    
+    // Spectator Mode: If player is dead, center viewport on the centroid of remaining alive players
+    if (player_health[local_p_idx] <= 0) {
+        uint16_t sum_x = 0;
+        uint16_t sum_y = 0;
+        uint8_t alive_count = 0;
+        for (uint8_t p = 0; p < MAX_PLAYERS; ++p) {
+            if (p != local_p_idx && player_joined[p] && player_health[p] > 0) {
+                sum_x += player_x[p];
+                sum_y += player_y[p];
+                alive_count++;
+            }
+        }
+        if (alive_count > 0) {
+            target_x = sum_x / alive_count;
+            target_y = sum_y / alive_count;
+        }
+    }
+    
+    int16_t vp_left = clamp(target_x - 10, 0, DANDY_LEVEL_WIDTH - 20);
+    int16_t vp_top = clamp(target_y - 5, 0, DANDY_LEVEL_HEIGHT - 10);
     
     for (uint8_t sy = 0; sy < 10; ++sy) {
         uint16_t row_offset = row_offsets[vp_top + sy];
@@ -150,6 +209,9 @@ void dandy_draw_viewport(void) {
         }
     }
 }
+
+static const int8_t spawn_offsets_x[4] = { 0, 1, 0, -1 };
+static const int8_t spawn_offsets_y[4] = { -1, 0, 1, 0 };
 
 static void set_player_start_position(void) {
     // Find the first TILE_UP ('u')
@@ -161,17 +223,24 @@ static void set_player_start_position(void) {
         }
     }
     
+    int16_t up_x = 1, up_y = 2; // Fallback defaults
     if (up_pos != 0xFFFF) {
-        // Position player one tile above the ladder
-        player_x = up_pos % DANDY_LEVEL_WIDTH;
-        player_y = (up_pos / DANDY_LEVEL_WIDTH) - 1;
-    } else {
-        // Fallback
-        player_x = 1;
-        player_y = 1;
+        up_x = up_pos % DANDY_LEVEL_WIDTH;
+        up_y = up_pos / DANDY_LEVEL_WIDTH;
     }
     
-    dandy_map[row_offsets[player_y] + player_x] = TILE_PLAYER1 + player_dir;
+    for (uint8_t p = 0; p < MAX_PLAYERS; ++p) {
+        int16_t px = clamp(up_x + spawn_offsets_x[p], 0, DANDY_LEVEL_WIDTH - 1);
+        int16_t py = clamp(up_y + spawn_offsets_y[p], 0, DANDY_LEVEL_HEIGHT - 1);
+        
+        player_x[p] = (uint8_t)px;
+        player_y[p] = (uint8_t)py;
+        
+        // Only place player tile in map if player is active
+        if (player_joined[p]) {
+            dandy_map[row_offsets[player_y[p]] + player_x[p]] = GET_PLAYER_TILE(p, player_dir[p]);
+        }
+    }
 }
 
 static void next_level(void) {
@@ -183,64 +252,70 @@ static void next_level(void) {
 
 static void end_game(void) {
     current_level = 0;
-    player_health = 100;
-    player_keys = 0;
-    player_bombs = 0;
-    player_score = 0;
-    player_dir = 0;
+    player_joined[0] = true;
+    for (uint8_t p = 1; p < MAX_PLAYERS; ++p) {
+        player_joined[p] = false;
+    }
+    for (uint8_t p = 0; p < MAX_PLAYERS; ++p) {
+        player_health[p] = 100;
+        player_keys[p] = 0;
+        player_bombs[p] = 0;
+        player_score[p] = 0;
+        player_dir[p] = 0;
+    }
     dandy_load_level(current_level);
 }
 
-static void do_buttons(uint8_t buttons) {
-    static uint8_t old_buttons = 0;
-    uint8_t delta_down = buttons & ~old_buttons;
-    old_buttons = buttons;
+static void do_player_buttons(uint8_t p_idx, uint8_t buttons) {
+    static uint8_t old_buttons[MAX_PLAYERS] = {0, 0, 0, 0};
+    uint8_t delta_down = buttons & ~old_buttons[p_idx];
+    old_buttons[p_idx] = buttons;
     
     // Smart Bomb (Edge triggered)
     if (delta_down & BUTTON_BOMB) {
-        if (player_bombs > 0) {
-            player_bombs--;
-            do_bomb();
+        if (player_bombs[p_idx] > 0) {
+            player_bombs[p_idx]--;
+            do_bomb(p_idx);
         }
     }
     
     // Fire Arrow (Level triggered)
     if (buttons & BUTTON_FIRE) {
-        if (arrow_dir == -1) {
-            arrow_x = player_x;
-            arrow_y = player_y;
-            arrow_dir = player_dir;
+        if (arrow_dir[p_idx] == -1) {
+            arrow_x[p_idx] = player_x[p_idx];
+            arrow_y[p_idx] = player_y[p_idx];
+            arrow_dir[p_idx] = player_dir[p_idx];
         }
     }
     
     // Movement
-    int8_t d = buttons_to_dir[buttons & 0x0F]; // Use lower 4 bits for direction
+    int8_t d = buttons_to_dir[buttons & 0x0F];
     if (d >= 0) {
-        player_dir = d;
-        // Update player sprite direction immediately in the map
-        dandy_map[row_offsets[player_y] + player_x] = TILE_PLAYER1 + player_dir;
+        player_dir[p_idx] = d;
+        // Update player sprite direction in map immediately
+        dandy_map[row_offsets[player_y[p_idx]] + player_x[p_idx]] = GET_PLAYER_TILE(p_idx, player_dir[p_idx]);
         is_dirty = true;
         
-        if (player_move_timer == 0) {
-            player_move_timer = TICKS_PER_MOVE;
+        if (player_move_timer[p_idx] == 0) {
+            player_move_timer[p_idx] = TICKS_PER_MOVE;
             // Slide mechanics: try main direction, then ±1 direction
             for (uint8_t di = 0; di < 3; ++di) {
-                int8_t dd = (player_dir + search_order[di]) & 7;
-                if (move_player(dd)) {
+                int8_t dd = (player_dir[p_idx] + search_order[di]) & 7;
+                if (move_player(p_idx, dd)) {
                     break;
                 }
             }
         }
     }
     
-    if (player_move_timer > 0) {
-        player_move_timer--;
+    if (player_move_timer[p_idx] > 0) {
+        player_move_timer[p_idx]--;
     }
 }
 
-static bool move_player(uint8_t dir) {
-    int16_t nx = clamp((int16_t)player_x + dir_delta_x[dir], 0, DANDY_LEVEL_WIDTH - 1);
-    int16_t ny = clamp((int16_t)player_y + dir_delta_y[dir], 0, DANDY_LEVEL_HEIGHT - 1);
+static bool move_player(uint8_t p_idx, uint8_t dir) {
+    int16_t nx = clamp((int16_t)player_x[p_idx] + dir_delta_x[dir], 0, DANDY_LEVEL_WIDTH - 1);
+    int16_t ny = clamp((int16_t)player_y[p_idx] + dir_delta_y[dir], 0, DANDY_LEVEL_HEIGHT - 1);
     uint16_t pos = row_offsets[ny] + nx;
     uint8_t tile = dandy_map[pos];
     bool can_move = true;
@@ -249,28 +324,28 @@ static bool move_player(uint8_t dir) {
         case TILE_SPACE:
             break;
         case TILE_DOOR:
-            if (player_keys > 0) {
-                player_keys--;
+            if (player_keys[p_idx] > 0) {
+                player_keys[p_idx]--;
                 iterative_flood_fill(nx, ny, TILE_DOOR, TILE_SPACE);
             } else {
                 can_move = false;
             }
             break;
         case TILE_MONEY:
-            player_score += 100;
+            player_score[p_idx] += 100;
             break;
         case TILE_KEY:
-            player_keys++;
+            player_keys[p_idx]++;
             break;
         case TILE_BOMB:
-            player_bombs++;
+            player_bombs[p_idx]++;
             break;
         case TILE_FOOD:
-            player_health += 100;
+            player_health[p_idx] += 100;
             break;
         case TILE_DOWN:
             next_level();
-            return true; // We changed level, count as moved
+            return true;
         default:
             can_move = false;
             break;
@@ -278,80 +353,74 @@ static bool move_player(uint8_t dir) {
     
     if (can_move) {
         // Clear old position
-        dandy_map[row_offsets[player_y] + player_x] = TILE_SPACE;
+        dandy_map[row_offsets[player_y[p_idx]] + player_x[p_idx]] = TILE_SPACE;
         // Update coordinates
-        player_x = (uint8_t)nx;
-        player_y = (uint8_t)ny;
+        player_x[p_idx] = (uint8_t)nx;
+        player_y[p_idx] = (uint8_t)ny;
         // Set new position with rotated player sprite
-        dandy_map[row_offsets[player_y] + player_x] = TILE_PLAYER1 + player_dir;
+        dandy_map[row_offsets[player_y[p_idx]] + player_x[p_idx]] = GET_PLAYER_TILE(p_idx, player_dir[p_idx]);
         is_dirty = true;
     }
     
     return can_move;
 }
 
-static void move_arrow(void) {
-    if (arrow_dir != -1) {
-        int16_t nx = clamp((int16_t)arrow_x + dir_delta_x[arrow_dir], 0, DANDY_LEVEL_WIDTH - 1);
-        int16_t ny = clamp((int16_t)arrow_y + dir_delta_y[arrow_dir], 0, DANDY_LEVEL_HEIGHT - 1);
-        
-        uint16_t old_pos = row_offsets[arrow_y] + arrow_x;
-        uint16_t new_pos = row_offsets[ny] + nx;
-        
-        uint8_t tile_at_old = dandy_map[old_pos];
-        uint8_t tile_at_new = dandy_map[new_pos];
-        
-        // Clear arrow from old position if it was indeed an arrow
-        if (tile_at_old >= TILE_ARROW && tile_at_old <= TILE_ARROW + 7) {
-            dandy_map[old_pos] = TILE_SPACE;
-        }
-        
-        // Check viewport boundary (arrow dies if it leaves the visible 20x10 screen in the original JS,
-        // but wait, is it visible viewport relative?
-        // Let's implement simple viewport check.
-        // Actually, we can get the viewport bounds.
-        // For simplicity, let's calculate the viewport bounds.
-        int16_t vp_left = clamp((int16_t)player_x - 10, 0, DANDY_LEVEL_WIDTH - 20);
-        int16_t vp_top = clamp((int16_t)player_y - 5, 0, DANDY_LEVEL_HEIGHT - 10);
-        
-        if (nx < vp_left || ny < vp_top || nx >= vp_left + 20 || ny >= vp_top + 10) {
-            // Arrow leaves viewport -> dies
-            arrow_dir = -1;
-            is_dirty = true;
-            return;
-        }
-        
-        if (tile_at_new != TILE_SPACE) {
-            // Hit something! Arrow dies.
-            arrow_dir = -1;
+static void move_arrows(void) {
+    for (uint8_t p = 0; p < MAX_PLAYERS; ++p) {
+        if (player_joined[p] && arrow_dir[p] != -1) {
+            int16_t nx = clamp((int16_t)arrow_x[p] + dir_delta_x[arrow_dir[p]], 0, DANDY_LEVEL_WIDTH - 1);
+            int16_t ny = clamp((int16_t)arrow_y[p] + dir_delta_y[arrow_dir[p]], 0, DANDY_LEVEL_HEIGHT - 1);
             
-            // Check if we hit a destructible target (Monster, Generator, Heart, Bomb)
-            // In JS: if (nv >= kBomb && nv < kArrow)
-            if (tile_at_new >= TILE_BOMB && tile_at_new < TILE_ARROW) {
-                uint8_t replacement = TILE_SPACE;
-                if (tile_at_new == TILE_BOMB) {
-                    do_bomb();
-                } else if (tile_at_new == TILE_HEART) {
-                    replacement = TILE_MONSTER3;
-                } else if (tile_at_new == TILE_MONSTER2 || tile_at_new == TILE_MONSTER3) {
-                    replacement = tile_at_new - 1; // Monster 3 -> 2, Monster 2 -> 1
-                }
-                dandy_map[new_pos] = replacement;
+            uint16_t old_pos = row_offsets[arrow_y[p]] + arrow_x[p];
+            uint16_t new_pos = row_offsets[ny] + nx;
+            
+            uint8_t tile_at_old = dandy_map[old_pos];
+            uint8_t tile_at_new = dandy_map[new_pos];
+            
+            // Clear arrow from old position
+            if (tile_at_old >= TILE_ARROW && tile_at_old <= TILE_ARROW + 7) {
+                dandy_map[old_pos] = TILE_SPACE;
             }
-        } else {
-            // Move arrow forward and rotate its sprite
-            dandy_map[new_pos] = TILE_ARROW + ((arrow_dir - 5) & 7);
-            arrow_x = (uint8_t)nx;
-            arrow_y = (uint8_t)ny;
+            
+            // Viewport boundary check (relative to shooting player p)
+            int16_t vp_left = clamp((int16_t)player_x[p] - 10, 0, DANDY_LEVEL_WIDTH - 20);
+            int16_t vp_top = clamp((int16_t)player_y[p] - 5, 0, DANDY_LEVEL_HEIGHT - 10);
+            
+            if (nx < vp_left || ny < vp_top || nx >= vp_left + 20 || ny >= vp_top + 10) {
+                arrow_dir[p] = -1;
+                is_dirty = true;
+                continue;
+            }
+            
+            if (tile_at_new != TILE_SPACE) {
+                arrow_dir[p] = -1; // Die on hit
+                
+                if (tile_at_new >= TILE_BOMB && tile_at_new < TILE_ARROW) {
+                    uint8_t replacement = TILE_SPACE;
+                    if (tile_at_new == TILE_BOMB) {
+                        do_bomb(p); // Triggered by player p's arrow
+                    } else if (tile_at_new == TILE_HEART) {
+                        replacement = TILE_MONSTER3;
+                    } else if (tile_at_new == TILE_MONSTER2 || tile_at_new == TILE_MONSTER3) {
+                        replacement = tile_at_new - 1;
+                    }
+                    dandy_map[new_pos] = replacement;
+                }
+            } else {
+                // Move arrow and rotate
+                dandy_map[new_pos] = TILE_ARROW + ((arrow_dir[p] - 5) & 7);
+                arrow_x[p] = (uint8_t)nx;
+                arrow_y[p] = (uint8_t)ny;
+            }
+            is_dirty = true;
         }
-        is_dirty = true;
     }
 }
 
-static void do_bomb(void) {
-    // Blow up all monsters and generators in the visible viewport
-    int16_t vp_left = clamp((int16_t)player_x - 10, 0, DANDY_LEVEL_WIDTH - 20);
-    int16_t vp_top = clamp((int16_t)player_y - 5, 0, DANDY_LEVEL_HEIGHT - 10);
+static void do_bomb(uint8_t p_idx) {
+    // Blow up monsters/generators in the visible viewport of player p_idx
+    int16_t vp_left = clamp((int16_t)player_x[p_idx] - 10, 0, DANDY_LEVEL_WIDTH - 20);
+    int16_t vp_top = clamp((int16_t)player_y[p_idx] - 5, 0, DANDY_LEVEL_HEIGHT - 10);
     
     for (uint8_t y = 0; y < 10; ++y) {
         uint16_t row_offset = row_offsets[vp_top + y];
@@ -367,10 +436,24 @@ static void do_bomb(void) {
     is_dirty = true;
 }
 
+/* Helper to find the nearest active player to a monster */
+static uint8_t get_nearest_player(uint8_t mx, uint8_t my) {
+    uint8_t nearest = 0;
+    uint16_t min_dist = 0xFFFF;
+    for (uint8_t p = 0; p < MAX_PLAYERS; ++p) {
+        if (player_joined[p] && player_health[p] > 0) {
+            uint16_t dist = (player_x[p] > mx ? player_x[p] - mx : mx - player_x[p]) +
+                            (player_y[p] > my ? player_y[p] - my : my - player_y[p]);
+            if (dist < min_dist) {
+                min_dist = dist;
+                nearest = p;
+            }
+        }
+    }
+    return nearest;
+}
+
 static void move_monsters(void) {
-    int16_t vp_left = clamp((int16_t)player_x - 10, 0, DANDY_LEVEL_WIDTH - 20);
-    int16_t vp_top = clamp((int16_t)player_y - 5, 0, DANDY_LEVEL_HEIGHT - 10);
-    
     uint8_t dx = 4;
     uint8_t dy = 4;
     
@@ -379,68 +462,64 @@ static void move_monsters(void) {
         monster_rotor = 0;
     }
     
-    // Retro Optimization: Scan only a sparse grid based on rotor
-    uint8_t x_start = vp_left + (monster_rotor % dx);
-    uint8_t y_start = vp_top + (monster_rotor / dx);
-    uint8_t x_end = vp_left + 20;
-    uint8_t y_end = vp_top + 10;
+    // Retro Optimization: Scan entire map on a sparse grid
+    uint8_t x_start = monster_rotor % dx;
+    uint8_t y_start = monster_rotor / dx;
     
-    for (uint8_t my = y_start; my < y_end; my += dy) {
+    for (uint8_t my = y_start; my < DANDY_LEVEL_HEIGHT; my += dy) {
         uint16_t row_offset = row_offsets[my];
-        for (uint8_t mx = x_start; mx < x_end; mx += dx) {
+        for (uint8_t mx = x_start; mx < DANDY_LEVEL_WIDTH; mx += dx) {
             uint16_t pos = row_offset + mx;
             uint8_t tile = dandy_map[pos];
             
             if (tile >= TILE_MONSTER1 && tile <= TILE_MONSTER3) {
-                // Determine direction towards player
-                int8_t p_dy = to_delta(player_y, my);
-                int8_t p_dx = to_delta(player_x, mx);
+                // Target the nearest active player
+                uint8_t target_p = get_nearest_player(mx, my);
+                int8_t p_dy = to_delta(player_y[target_p], my);
+                int8_t p_dx = to_delta(player_x[target_p], mx);
                 int8_t m_dir = delta_to_dir[p_dy + 1][p_dx + 1];
                 
-                // Try moving in main direction, then search neighbors
                 for (uint8_t d = 0; d < 3; ++d) {
                     int8_t dd = (m_dir + search_order[d]) & 7;
                     uint16_t n_pos = row_offsets[my + dir_delta_y[dd]] + (mx + dir_delta_x[dd]);
                     uint8_t n_tile = dandy_map[n_pos];
                     
                     if (IS_PLAYER(n_tile)) {
-                        // Hurt player!
-                        dandy_map[pos] = TILE_SPACE;
-                        player_health -= 10 * (tile - TILE_MONSTER1 + 1);
-                        is_dirty = true;
+                        // Extract player index from tile ID: (n_tile - TILE_PLAYER1) / 8
+                        uint8_t hit_p = (n_tile - TILE_PLAYER1) >> 3;
+                        if (player_joined[hit_p]) {
+                            dandy_map[pos] = TILE_SPACE;
+                            player_health[hit_p] -= 10 * (tile - TILE_MONSTER1 + 1);
+                            if (player_health[hit_p] <= 0) {
+                                player_health[hit_p] = 0;
+                                dandy_map[n_pos] = TILE_SPACE; // Clear player's tile from the map immediately
+                            }
+                            is_dirty = true;
+                        }
                         break;
                     } else if (n_tile == TILE_SPACE) {
-                        // Move monster
                         dandy_map[pos] = TILE_SPACE;
                         dandy_map[n_pos] = tile;
                         is_dirty = true;
                         break;
                     } else if (n_tile >= TILE_ARROW && n_tile <= TILE_ARROW + 7) {
-                        // Blocked by arrow, don't slide
                         break;
                     }
                 }
             } else if (tile >= TILE_GENERATOR1 && tile <= TILE_GENERATOR3) {
-                // Generators spawn monsters randomly (50% chance per check)
-                // In JS: if (Math.random() < 0.5) { spawn... }
-                // On retro hardware, we'll use a simple pseudo-random generator or system clock.
-                // We'll simulate a 50% chance using the rotor/frame count or a simple shift register.
-                // For now, let's use a very simple condition.
                 static uint16_t rand_seed = 0xACE1;
-                // Simple Galois LFSR for 16-bit random numbers
                 uint8_t lsb = rand_seed & 1;
                 rand_seed >>= 1;
                 if (lsb) {
                     rand_seed ^= 0xB400u;
                 }
                 
-                if ((rand_seed & 7) < 4) { // ~50% chance
-                    uint8_t spawn_dir = (rand_seed & 3) * 2; // Diagonal directions (0, 2, 4, 6)
+                if ((rand_seed & 7) < 4) {
+                    uint8_t spawn_dir = (rand_seed & 3) * 2;
                     for (uint8_t dd = 0; dd < 8; dd += 2) {
                         uint8_t check_dir = (spawn_dir + dd) % 8;
                         uint16_t g_pos = row_offsets[my + dir_delta_y[check_dir]] + (mx + dir_delta_x[check_dir]);
                         if (dandy_map[g_pos] == TILE_SPACE) {
-                            // Spawn Monster of corresponding tier (1, 2, or 3)
                             dandy_map[g_pos] = TILE_MONSTER1 + (tile - TILE_GENERATOR1);
                             is_dirty = true;
                             break;
@@ -503,4 +582,30 @@ static int8_t to_delta(int16_t target, int16_t current) {
     if (target > current) return 1;
     if (target < current) return -1;
     return 0;
+}
+
+void dandy_join_player(uint8_t p_idx) {
+    if (p_idx >= MAX_PLAYERS) return;
+    if (!player_joined[p_idx]) {
+        player_joined[p_idx] = true;
+        player_health[p_idx] = 100;
+        player_score[p_idx] = 0;
+        player_bombs[p_idx] = 0;
+        player_keys[p_idx] = 0;
+        player_dir[p_idx] = 0;
+        arrow_dir[p_idx] = -1;
+        
+        // Use the pre-calculated starting coordinates set by set_player_start_position()!
+        uint8_t px = player_x[p_idx];
+        uint8_t py = player_y[p_idx];
+        
+        // Spawn player sprite on the map
+        dandy_map[row_offsets[py] + px] = GET_PLAYER_TILE(p_idx, player_dir[p_idx]);
+        is_dirty = true;
+    }
+}
+
+bool dandy_is_player_joined(uint8_t p_idx) {
+    if (p_idx >= MAX_PLAYERS) return false;
+    return player_joined[p_idx];
 }

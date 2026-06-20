@@ -94,42 +94,33 @@ void hal_draw_tile(uint8_t x, uint8_t y, uint8_t tile_id) {
     set_bkg_tile_xy(x, y, ascii - 32);
 }
 
-void hal_update_hud(uint32_t score, int16_t health, uint8_t bombs, uint8_t keys) {
+void hal_update_hud(void) {
     char buf[10];
-    
-    // Clear HUD area once if needed, or just overwrite.
-    // HUD is rows 10..17. We'll draw a nice border and text.
+    uint8_t p = local_player_idx;
     
     // Row 10: Separator border
-    // "--------------------"
-    // GBDK font '-' is ASCII 45 -> tile 13
-    // We only need to draw this once on level load, but drawing it is cheap.
     hal_draw_string(0, 10, "--------------------");
     
     // Row 11: Score
-    // "SCORE: 000000"
     hal_draw_string(1, 11, "SCORE: ");
-    u32_to_str(score, buf, 6);
+    u32_to_str(player_score[p], buf, 6);
     hal_draw_string(8, 11, buf);
     
     // Row 12: Health
-    // "HP:    100"
     hal_draw_string(1, 12, "HP:    ");
-    s16_to_str(health, buf, 3);
+    s16_to_str(player_health[p], buf, 3);
     hal_draw_string(8, 12, buf);
     
     // Row 13: Bombs & Keys
-    // "BOMBS: 00  KEYS: 00"
     hal_draw_string(1, 13, "BOMBS: ");
-    u32_to_str(bombs, buf, 2);
+    u32_to_str(player_bombs[p], buf, 2);
     hal_draw_string(8, 13, buf);
     
     hal_draw_string(11, 13, "KEYS: ");
-    u32_to_str(keys, buf, 2);
+    u32_to_str(player_keys[p], buf, 2);
     hal_draw_string(17, 13, buf);
     
     // Row 14: Level
-    // "LEVEL: 01"
     hal_draw_string(1, 14, "LEVEL: ");
     u32_to_str(current_level + 1, buf, 2);
     hal_draw_string(8, 14, buf);

@@ -41,12 +41,13 @@ void main(void) {
     // 3. Main Game Loop (60 Hz)
     while (1) {
         // Read input and step game engine
-        uint8_t buttons = get_joypad_buttons();
-        dandy_step(buttons);
+        uint8_t inputs[MAX_PLAYERS] = {0, 0, 0, 0};
+        inputs[0] = get_joypad_buttons();
+        dandy_step(inputs);
         
         // Redraw viewport if anything changed
         if (is_dirty) {
-            dandy_draw_viewport();
+            dandy_draw_viewport(local_player_idx);
             is_dirty = false;
         }
         

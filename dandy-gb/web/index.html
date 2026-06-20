@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Dandy Dungeon - 4-Player Wasm Co-op Demo</title>
+    <style>
+        body {
+            background-color: #121212;
+            color: #e0e0e0;
+            font-family: 'Courier New', Courier, monospace;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        h1 {
+            color: #ffcc00;
+            margin-bottom: 10px;
+            text-shadow: 0 0 10px rgba(255, 204, 0, 0.5);
+        }
+
+        #setup-panel {
+            background: #1a1a1a;
+            border: 2px solid #333;
+            padding: 15px 30px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: flex;
+            gap: 20px;
+            align-items: center;
+        }
+
+        label {
+            font-size: 1.1rem;
+            font-weight: bold;
+        }
+
+        select, button {
+            background: #2a2a2a;
+            color: #fff;
+            border: 2px solid #555;
+            padding: 8px 16px;
+            font-family: inherit;
+            font-size: 1rem;
+            cursor: pointer;
+            border-radius: 4px;
+            outline: none;
+        }
+
+        select:hover, button:hover {
+            border-color: #ffcc00;
+        }
+
+        button:active {
+            background: #ffcc00;
+            color: #000;
+        }
+
+        #screens-container {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+            max-width: 1000px;
+        }
+
+        .player-panel {
+            background: #151515;
+            border: 3px solid #333;
+            border-radius: 6px;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+            transition: border-color 0.3s;
+        }
+
+        /* Player color themes */
+        .player-panel.p0 { border-color: #ff3333; } /* Player 1: Red */
+        .player-panel.p1 { border-color: #3333ff; } /* Player 2: Blue */
+        .player-panel.p2 { border-color: #33ff33; } /* Player 3: Green */
+        .player-panel.p3 { border-color: #ffff33; } /* Player 4: Yellow */
+
+        .player-panel.inactive {
+            opacity: 0.2;
+            border-color: #222 !important;
+        }
+
+        .screen-title {
+            font-size: 1.1rem;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+        .p0 .screen-title { color: #ff5555; }
+        .p1 .screen-title { color: #5555ff; }
+        .p2 .screen-title { color: #55ff55; }
+        .p3 .screen-title { color: #ffff55; }
+
+        canvas {
+            background: #050505;
+            image-rendering: pixelated;
+            border: 2px solid #222;
+            width: 480px; /* 20 * 16 * 1.5 */
+            height: 240px; /* 10 * 16 * 1.5 */
+        }
+
+        .hud-panel {
+            width: 100%;
+            margin-top: 10px;
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 5px;
+            font-size: 0.9rem;
+            background: #0a0a0a;
+            padding: 8px;
+            border-radius: 4px;
+            border: 1px solid #222;
+        }
+
+        .hud-item {
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .hud-val {
+            font-weight: bold;
+            color: #fff;
+        }
+
+        #controls-info {
+            margin-top: 30px;
+            background: #1a1a1a;
+            border: 2px solid #333;
+            padding: 20px;
+            border-radius: 8px;
+            max-width: 800px;
+            width: 100%;
+        }
+
+        #controls-info h3 {
+            margin-top: 0;
+            color: #ffcc00;
+        }
+
+        .controls-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+        }
+
+        .control-group {
+            border-right: 1px solid #333;
+            padding-right: 10px;
+        }
+
+        .control-group:last-child {
+            border-right: none;
+        }
+
+        .control-group h4 {
+            margin: 0 0 8px 0;
+        }
+        .p0-text { color: #ff5555; }
+        .p1-text { color: #5555ff; }
+        .p2-text { color: #55ff55; }
+        .p3-text { color: #ffff55; }
+
+        kbd {
+            background: #333;
+            border: 1px solid #555;
+            border-radius: 3px;
+            padding: 1px 5px;
+            font-size: 0.8rem;
+        }
+
+        #game-over-banner {
+            display: none;
+            color: #ff3333;
+            font-size: 2rem;
+            font-weight: bold;
+            margin-top: 20px;
+            text-shadow: 0 0 10px rgba(255, 51, 51, 0.5);
+            animation: blink 1s infinite;
+        }
+
+        @keyframes blink {
+            0%, 49% { opacity: 1; }
+            50%, 100% { opacity: 0; }
+        }
+    </style>
+</head>
+<body>
+
+    <h1>DANDY DUNGEON</h1>
+    <div style="color: #888; margin-bottom: 20px; font-size: 1.1rem;">4-Player WebAssembly Co-op Terminal</div>
+
+    <div id="setup-panel">
+        <button id="restart-btn">START NEW GAME</button>
+        <span style="margin-left: 20px; color: #aaa; font-size: 0.9rem;">
+            🎮 <strong>PRESS START!</strong> Press any control key on an inactive player's keyboard grid to join the game at any time!
+        </span>
+    </div>
+
+    <div id="screens-container">
+        <!-- Player 1 Screen -->
+        <div class="player-panel p0" id="panel-0">
+            <div class="screen-title">PLAYER 1 (RED)</div>
+            <canvas id="canvas-0" width="320" height="160"></canvas>
+            <div class="hud-panel">
+                <div class="hud-item">HP: <span class="hud-val" id="hp-0">000</span></div>
+                <div class="hud-item">SCORE: <span class="hud-val" id="score-0">000000</span></div>
+                <div class="hud-item">BOMBS: <span class="hud-val" id="bombs-0">00</span></div>
+                <div class="hud-item">KEYS: <span class="hud-val" id="keys-0">00</span></div>
+            </div>
+        </div>
+
+        <!-- Player 2 Screen -->
+        <div class="player-panel p1" id="panel-1">
+            <div class="screen-title">PLAYER 2 (BLUE)</div>
+            <canvas id="canvas-1" width="320" height="160"></canvas>
+            <div class="hud-panel">
+                <div class="hud-item">HP: <span class="hud-val" id="hp-1">000</span></div>
+                <div class="hud-item">SCORE: <span class="hud-val" id="score-1">000000</span></div>
+                <div class="hud-item">BOMBS: <span class="hud-val" id="bombs-1">00</span></div>
+                <div class="hud-item">KEYS: <span class="hud-val" id="keys-1">00</span></div>
+            </div>
+        </div>
+
+        <!-- Player 3 Screen -->
+        <div class="player-panel p2 inactive" id="panel-2">
+            <div class="screen-title">PLAYER 3 (GREEN)</div>
+            <canvas id="canvas-2" width="320" height="160"></canvas>
+            <div class="hud-panel">
+                <div class="hud-item">HP: <span class="hud-val" id="hp-2">000</span></div>
+                <div class="hud-item">SCORE: <span class="hud-val" id="score-2">000000</span></div>
+                <div class="hud-item">BOMBS: <span class="hud-val" id="bombs-2">00</span></div>
+                <div class="hud-item">KEYS: <span class="hud-val" id="keys-2">00</span></div>
+            </div>
+        </div>
+
+        <!-- Player 4 Screen -->
+        <div class="player-panel p3 inactive" id="panel-3">
+            <div class="screen-title">PLAYER 4 (YELLOW)</div>
+            <canvas id="canvas-3" width="320" height="160"></canvas>
+            <div class="hud-panel">
+                <div class="hud-item">HP: <span class="hud-val" id="hp-3">000</span></div>
+                <div class="hud-item">SCORE: <span class="hud-val" id="score-3">000000</span></div>
+                <div class="hud-item">BOMBS: <span class="hud-val" id="bombs-3">00</span></div>
+                <div class="hud-item">KEYS: <span class="hud-val" id="keys-3">00</span></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="game-over-banner">ALL PLAYERS DEFEATED - GAME OVER</div>
+
+    <div id="controls-info">
+        <h3>KEYBOARD CO-OP MAPS</h3>
+        <div class="controls-grid">
+            <div class="control-group">
+                <h4 class="p0-text">PLAYER 1</h4>
+                <div>Move: <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></div>
+                <div style="margin-top:5px;">Shoot: <kbd>Space</kbd></div>
+                <div style="margin-top:5px;">Bomb: <kbd>E</kbd></div>
+            </div>
+            <div class="control-group">
+                <h4 class="p1-text">PLAYER 2</h4>
+                <div>Move: <kbd>▲</kbd><kbd>◀</kbd><kbd>▼</kbd><kbd>▶</kbd></div>
+                <div style="margin-top:5px;">Shoot: <kbd>Period (.)</kbd></div>
+                <div style="margin-top:5px;">Bomb: <kbd>Slash (/)</kbd></div>
+            </div>
+            <div class="control-group">
+                <h4 class="p2-text">PLAYER 3</h4>
+                <div>Move: <kbd>I</kbd><kbd>J</kbd><kbd>K</kbd><kbd>L</kbd></div>
+                <div style="margin-top:5px;">Shoot: <kbd>U</kbd></div>
+                <div style="margin-top:5px;">Bomb: <kbd>O</kbd></div>
+            </div>
+            <div class="control-group">
+                <h4 class="p3-text">PLAYER 4</h4>
+                <div>Move: <kbd>T</kbd><kbd>F</kbd><kbd>G</kbd><kbd>H</kbd></div>
+                <div style="margin-top:5px;">Shoot: <kbd>R</kbd></div>
+                <div style="margin-top:5px;">Bomb: <kbd>Y</kbd></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Emscripten loading script -->
+    <script>
+        // Game Engine Constants
+        const TILE_SPACE = 0;
+        const TILE_WALL = 1;
+        const TILE_DOOR = 2;
+        const TILE_UP = 3;
+        const TILE_DOWN = 4;
+        const TILE_KEY = 5;
+        const TILE_FOOD = 6;
+        const TILE_MONEY = 7;
+        const TILE_BOMB = 8;
+        const TILE_MONSTER1 = 9;
+        const TILE_MONSTER2 = 10;
+        const TILE_MONSTER3 = 11;
+        const TILE_HEART = 12;
+        const TILE_GENERATOR1 = 13;
+        const TILE_GENERATOR2 = 14;
+        const TILE_GENERATOR3 = 15;
+        const TILE_ARROW = 16;
+        const TILE_PLAYER1 = 24;
+
+        // Color mapping for HUD and backgrounds
+        const themeColors = {
+            bg: '#050505',
+            // Player colors (for hud overlays and borders)
+            p0: '#ff5555',
+            p1: '#5555ff',
+            p2: '#55ff55',
+            p3: '#ffff55'
+        };
+
+        // Load the original spritesheet
+        const spritesheet = new Image();
+        let spritesheetLoaded = false;
+        spritesheet.src = 'strike_original.png';
+        spritesheet.onload = () => {
+            spritesheetLoaded = true;
+            console.log("Spritesheet loaded successfully.");
+            if (wasmModule) {
+                startGame();
+            }
+        };
+
+        // Get canvas contexts and HUD elements
+        const canvases = [];
+        const ctxs = [];
+        const panels = [];
+        for (let i = 0; i < 4; ++i) {
+            canvases.push(document.getElementById(`canvas-${i}`));
+            ctxs.push(canvases[i].getContext('2d'));
+            panels.push(document.getElementById(`panel-${i}`));
+        }
+
+        // Input state tracking
+        const keyState = {};
+        window.addEventListener('keydown', e => {
+            keyState[e.code] = true;
+            if (["Space", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].indexOf(e.code) > -1) {
+                e.preventDefault();
+            }
+        });
+        window.addEventListener('keyup', e => {
+            keyState[e.code] = false;
+        });
+
+        // GBDK Button definitions
+        const BUTTON_LEFT   = 1 << 0;
+        const BUTTON_RIGHT  = 1 << 1;
+        const BUTTON_UP     = 1 << 2;
+        const BUTTON_DOWN   = 1 << 3;
+        const BUTTON_FIRE   = 1 << 4;
+        const BUTTON_BOMB   = 1 << 5;
+
+        // Map keyboard inputs to GBDK button masks for each player
+        function getPlayerInput(p_idx) {
+            let mask = 0;
+            if (p_idx === 0) {
+                if (keyState['KeyW']) mask |= BUTTON_UP;
+                if (keyState['KeyS']) mask |= BUTTON_DOWN;
+                if (keyState['KeyA']) mask |= BUTTON_LEFT;
+                if (keyState['KeyD']) mask |= BUTTON_RIGHT;
+                if (keyState['Space']) mask |= BUTTON_FIRE;
+                if (keyState['KeyE']) mask |= BUTTON_BOMB;
+            } else if (p_idx === 1) {
+                if (keyState['ArrowUp']) mask |= BUTTON_UP;
+                if (keyState['ArrowDown']) mask |= BUTTON_DOWN;
+                if (keyState['ArrowLeft']) mask |= BUTTON_LEFT;
+                if (keyState['ArrowRight']) mask |= BUTTON_RIGHT;
+                if (keyState['Period']) mask |= BUTTON_FIRE;
+                if (keyState['Slash']) mask |= BUTTON_BOMB;
+            } else if (p_idx === 2) {
+                if (keyState['KeyI']) mask |= BUTTON_UP;
+                if (keyState['KeyK']) mask |= BUTTON_DOWN;
+                if (keyState['KeyJ']) mask |= BUTTON_LEFT;
+                if (keyState['KeyL']) mask |= BUTTON_RIGHT;
+                if (keyState['KeyU']) mask |= BUTTON_FIRE;
+                if (keyState['KeyO']) mask |= BUTTON_BOMB;
+            } else if (p_idx === 3) {
+                if (keyState['KeyT']) mask |= BUTTON_UP;
+                if (keyState['KeyG']) mask |= BUTTON_DOWN;
+                if (keyState['KeyF']) mask |= BUTTON_LEFT;
+                if (keyState['KeyH']) mask |= BUTTON_RIGHT;
+                if (keyState['KeyR']) mask |= BUTTON_FIRE;
+                if (keyState['KeyY']) mask |= BUTTON_BOMB;
+            }
+            return mask;
+        }
+
+        // JS callbacks defined in C via EM_JS
+        window.jsDrawTile = function(player_idx, x, y, tile_id) {
+            const ctx = ctxs[player_idx];
+            if (!ctx || !spritesheetLoaded) return;
+
+            const tileWidth = 16;
+            const tileHeight = 16;
+            const px = x * tileWidth;
+            const py = y * tileHeight;
+
+            // Clear cell background
+            ctx.fillStyle = themeColors.bg;
+            ctx.fillRect(px, py, tileWidth, tileHeight);
+
+            if (tile_id === TILE_SPACE) {
+                return; // Nothing to draw
+            }
+
+            let draw_tile_id = tile_id;
+            
+            // Map multiplayer player tile IDs (24..55) back to the 4 authentic player sprites (24..27)
+            if (tile_id >= TILE_PLAYER1 && tile_id <= TILE_PLAYER1 + 31) {
+                const offset = tile_id - TILE_PLAYER1;
+                const p = offset >> 3; // Player index (0..3)
+                draw_tile_id = TILE_PLAYER1 + p; // Tile 24 (Player 1), 25 (Player 2), 26 (Player 3), or 27 (Player 4)
+            }
+
+            // Sprite sheet is flat, with 16 columns (each 16x16 pixels)
+            const tx = (draw_tile_id & 15) * 16;
+            const ty = (draw_tile_id >> 4) * 16;
+
+            // Draw the 16x16 pixel sprite
+            ctx.drawImage(spritesheet, tx, ty, 16, 16, px, py, 16, 16);
+        };
+
+        window.jsUpdateHud = function(player_idx, score, health, bombs, keys) {
+            // Update stats
+            const hpEl = document.getElementById(`hp-${player_idx}`);
+            const scoreEl = document.getElementById(`score-${player_idx}`);
+            const bombsEl = document.getElementById(`bombs-${player_idx}`);
+            const keysEl = document.getElementById(`keys-${player_idx}`);
+
+            if (hpEl) hpEl.textContent = health <= 0 ? "DEAD" : health.toString().padStart(3, '0');
+            if (scoreEl) scoreEl.textContent = score.toString().padStart(6, '0');
+            if (bombsEl) bombsEl.textContent = bombs.toString().padStart(2, '0');
+            if (keysEl) keysEl.textContent = keys.toString().padStart(2, '0');
+
+            // If player is dead, overlay game over on their canvas
+            if (health <= 0) {
+                const ctx = ctxs[player_idx];
+                ctx.fillStyle = 'rgba(255, 0, 0, 0.1)';
+                ctx.fillRect(0, 0, canvases[player_idx].width, canvases[player_idx].height);
+                
+                ctx.fillStyle = '#ff3333';
+                ctx.font = 'bold 12px monospace';
+                ctx.textAlign = 'center';
+                ctx.fillText("DEFEATED", canvases[player_idx].width / 2, canvases[player_idx].height / 2 - 6);
+            }
+        };
+
+        // Game Loop Management
+        let isRunning = false;
+        let activePlayers = 2;
+        let wasmModule = null;
+        let gameTickInterval = null;
+
+        // Initialize Emscripten Module
+        var Module = {
+            onRuntimeInitialized: function() {
+                wasmModule = Module;
+                console.log("WebAssembly Engine Initialized.");
+                if (spritesheetLoaded) {
+                    startGame();
+                }
+            }
+        };
+
+        function drawJoinScreen(i) {
+            const ctx = ctxs[i];
+            ctx.fillStyle = '#151515';
+            ctx.fillRect(0, 0, canvases[i].width, canvases[i].height);
+            
+            // "INSERT COIN" marquee in the player's color
+            ctx.fillStyle = themeColors[`p${i}`] || '#888';
+            ctx.font = 'bold 11px monospace';
+            ctx.textAlign = 'center';
+            ctx.fillText("INSERT COIN", canvases[i].width / 2, canvases[i].height / 2 - 10);
+            
+            ctx.fillStyle = '#ffffff';
+            ctx.font = '8px monospace';
+            ctx.fillText("PRESS KEY TO JOIN", canvases[i].width / 2, canvases[i].height / 2 + 8);
+        }
+
+        function startGame() {
+            if (!wasmModule || !spritesheetLoaded) return;
+
+            if (gameTickInterval) {
+                clearInterval(gameTickInterval);
+            }
+
+            // Call C web_init (Initializes with only Player 1 joined)
+            wasmModule._web_init();
+            
+            // Initialize panel classes and render join screens
+            for (let i = 0; i < 4; ++i) {
+                const panel = panels[i];
+                const ctx = ctxs[i];
+                ctx.clearRect(0, 0, canvases[i].width, canvases[i].height);
+                ctx.textAlign = 'left'; // Reset alignment
+                
+                const joined = wasmModule._web_is_player_joined(i);
+                
+                if (joined) {
+                    panel.classList.remove('inactive');
+                } else {
+                    panel.classList.add('inactive');
+                    drawJoinScreen(i);
+                }
+            }
+
+            document.getElementById('game-over-banner').style.display = 'none';
+
+            // Step at ~20 ticks per second (retro game speed)
+            const tickRateMs = 1000 / 20; 
+            gameTickInterval = setInterval(gameLoopStep, tickRateMs);
+            isRunning = true;
+        }
+
+        function gameLoopStep() {
+            if (!isRunning || !wasmModule) return;
+
+            // 1. Check for late joins
+            for (let i = 0; i < 4; ++i) {
+                const joined = wasmModule._web_is_player_joined(i);
+                if (!joined) {
+                    const input = getPlayerInput(i);
+                    if (input > 0) {
+                        // Player pressed a key! Join them!
+                        console.log(`Player ${i + 1} has joined the game!`);
+                        wasmModule._web_join_player(i);
+                        panels[i].classList.remove('inactive');
+                        // Clear their join screen immediately
+                        ctxs[i].clearRect(0, 0, canvases[i].width, canvases[i].height);
+                    }
+                }
+            }
+
+            // Get inputs
+            const p1 = getPlayerInput(0);
+            const p2 = getPlayerInput(1);
+            const p3 = getPlayerInput(2);
+            const p4 = getPlayerInput(3);
+
+            // Call C web_step
+            wasmModule._web_step(p1, p2, p3, p4);
+
+            // Redraw viewports
+            wasmModule._web_draw_viewports();
+
+            // Check if game over (all joined active players dead)
+            let allDead = true;
+            let activeCount = 0;
+            for (let i = 0; i < 4; ++i) {
+                const joined = wasmModule._web_is_player_joined(i);
+                if (joined) {
+                    activeCount++;
+                    const hpText = document.getElementById(`hp-${i}`).textContent;
+                    if (hpText !== "DEAD" && parseInt(hpText) > 0) {
+                        allDead = false;
+                    }
+                }
+            }
+
+            // Game over only if all active players are dead
+            if (activeCount > 0 && allDead) {
+                isRunning = false;
+                clearInterval(gameTickInterval);
+                document.getElementById('game-over-banner').style.display = 'block';
+            }
+        }
+
+        // Setup event handlers
+        document.getElementById('restart-btn').addEventListener('click', () => {
+            startGame();
+        });
+    </script>
+    <!-- Include Emscripten glue JS -->
+    <script src="dandy_web.js"></script>
+</body>
+</html>

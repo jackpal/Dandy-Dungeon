@@ -67,13 +67,62 @@ Run these commands from the `dandy-gb` directory:
 
 ## How to Run
 
+### Option 1: GameBoy ROM (Single Player)
 1.  Compile the ROM using `make` to produce `bin/dandy.gb`.
 2.  Open `bin/dandy.gb` in any GameBoy emulator:
     *   **Desktop**: BGB, SameBoy, mGBA, or RetroArch.
     *   **Web**: Load the ROM into web-based emulators like [WasmBoy](https://wasmboy.app/) or [Binjgb](https://binjgb.net/).
 
-### Game Controls
+#### ROM Game Controls
 *   **D-Pad (Arrow Keys)**: Move Player (and change facing direction)
 *   **Button A (Space / Alt)**: Fire Arrow in facing direction
-*   **Button B (Control / Z / B)**: Trigger Smart Bomb (clears all visible monsters and generators)
-*   **Start**: Pause
+*   **Button B (Control / Z)**: Trigger Smart Bomb (clears all visible monsters and generators)
+
+---
+
+## 4-Player WebAssembly Interactive Demo (Co-op Mode)
+
+We have compiled the **Dandy Dungeon platform-independent core C engine** directly to WebAssembly using Emscripten! This allows running a **4-viewport interactive co-op demo** directly in any modern web browser. It displays 4 scroll-centered screens side-by-side (representing each player's console) running the exact same production C logic!
+
+### How to Build the Wasm Demo
+
+1.  **Prerequisites**: You must have **Emscripten (emsdk)** installed on your system.
+    *   *Quick Installation*:
+        ```bash
+        git clone https://github.com/emscripten-core/emsdk.git
+        cd emsdk
+        ./emsdk install latest
+        ./emsdk activate latest
+        source ./emsdk_env.sh
+        ```
+2.  **Build Command**:
+    From the `dandy-gb` directory, run:
+    ```bash
+    make web
+    ```
+    This compiles the C core and generates `web/dandy_web.js` and `web/dandy_web.wasm`.
+
+### How to Run the Wasm Demo
+
+Because WebAssembly cannot be loaded directly from local file paths (`file://`) due to browser CORS security policies, you must serve the files using a simple local HTTP server:
+
+1.  Start a local server using Python (or any web server):
+    ```bash
+    python3 -m http.server -d web
+    ```
+2.  Open your browser and navigate to:
+    **`http://localhost:8000`**
+3.  Select the active player count (1 to 4) and click **START NEW GAME**!
+
+### Wasm Demo Keyboard Controls
+
+Since all 4 players play locally on the same keyboard, the controls are mapped as follows:
+
+| Action | Player 1 (Red) | Player 2 (Blue) | Player 3 (Green) | Player 4 (Yellow) |
+| :--- | :--- | :--- | :--- | :--- |
+| **Move Up** | <kbd>W</kbd> | <kbd>▲</kbd> | <kbd>I</kbd> | <kbd>T</kbd> |
+| **Move Down**| <kbd>S</kbd> | <kbd>▼</kbd> | <kbd>K</kbd> | <kbd>G</kbd> |
+| **Move Left**| <kbd>A</kbd> | <kbd>◀</kbd> | <kbd>J</kbd> | <kbd>F</kbd> |
+| **Move Right**| <kbd>D</kbd> | <kbd>▶</kbd> | <kbd>L</kbd> | <kbd>H</kbd> |
+| **Shoot** | <kbd>Space</kbd> | <kbd>Period (.)</kbd> | <kbd>U</kbd> | <kbd>R</kbd> |
+| **Smart Bomb**| <kbd>E</kbd> | <kbd>Slash (/)</kbd> | <kbd>O</kbd> | <kbd>Y</kbd> |
