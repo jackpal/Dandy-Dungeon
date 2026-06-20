@@ -512,6 +512,38 @@ static void move_monsters(void) {
         monster_rotor = 0;
     }
     
+    // Calculate the camera viewport boundaries for all joined players once at the start of the tick.
+    int16_t vp_lefts[MAX_PLAYERS];
+    int16_t vp_tops[MAX_PLAYERS];
+    
+    for (uint8_t p = 0; p < MAX_PLAYERS; ++p) {
+        if (player_joined[p]) {
+            int16_t target_x = player_x[p];
+            int16_t target_y = player_y[p];
+            
+            // Spectator mode camera tracking if this player is dead
+            if (player_health[p] <= 0) {
+                uint16_t sum_x = 0;
+                uint16_t sum_y = 0;
+                uint8_t alive_count = 0;
+                for (uint8_t op = 0; op < MAX_PLAYERS; ++op) {
+                    if (op != p && player_joined[op] && player_health[op] > 0) {
+                        sum_x += player_x[op];
+                        sum_y += player_y[op];
+                        alive_count++;
+                    }
+                }
+                if (alive_count > 0) {
+                    target_x = sum_x / alive_count;
+                    target_y = sum_y / alive_count;
+                }
+            }
+            
+            vp_lefts[p] = clamp(target_x - 10, 0, DANDY_LEVEL_WIDTH - 20);
+            vp_tops[p] = clamp(target_y - 5, 0, DANDY_LEVEL_HEIGHT - 10);
+        }
+    }
+    
     // Retro Optimization: Scan entire map on a sparse grid
     uint8_t x_start = monster_rotor % dx;
     uint8_t y_start = monster_rotor / dx;
@@ -521,6 +553,26 @@ static void move_monsters(void) {
         for (uint8_t mx = x_start; mx < DANDY_LEVEL_WIDTH; mx += dx) {
             uint16_t pos = row_offset + mx;
             uint8_t tile = dandy_map[pos];
+            
+            // If it is a monster or a generator, check screen-relative visibility!
+            if ((tile >= TILE_MONSTER1 && tile <= TILE_MONSTER3) ||
+                (tile >= TILE_GENERATOR1 && tile <= TILE_GENERATOR3)) {
+                
+                // Only tick/animate if visible to at least one active player's screen!
+                bool is_visible = false;
+                for (uint8_t p = 0; p < MAX_PLAYERS; ++p) {
+                    if (player_joined[p]) {
+                        if (mx >= vp_lefts[p] && mx < vp_lefts[p] + 20 &&
+                            my >= vp_tops[p] && my < vp_tops[p] + 10) {
+                            is_visible = true;
+                            break;
+                        }
+                    }
+                }
+                if (!is_visible) {
+                    continue; // Freeze this off-screen monster/generator!
+                }
+            }
             
             if (tile >= TILE_MONSTER1 && tile <= TILE_MONSTER3) {
                 // Target the nearest active player
