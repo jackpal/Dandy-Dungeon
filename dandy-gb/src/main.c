@@ -24,6 +24,13 @@ void main(void) {
     // 1. Initialize GameBoy hardware
     DISPLAY_OFF; // Turn off screen during VRAM modifications
     
+    // Explicitly configure standard background and sprite palettes
+    // 0xE4 = 11 10 01 00 (Color 3=Black, 2=Dark Gray, 1=Light Gray, 0=White)
+    BGP_REG = 0xE4;
+    OBP0_REG = 0xE4;
+    OBP1_REG = 0xE4;
+
+    
     // Initialize the GBDK font system and load IBM font
     font_init();
     ibm_font = font_load(font_ibm);
