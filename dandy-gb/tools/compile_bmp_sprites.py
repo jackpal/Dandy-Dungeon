@@ -88,10 +88,11 @@ def main():
         for c in range(cols):
             t_idx = r * cols + c
             
-            # Special Case: Force Tile 0 (Space/Floor) to be completely solid White (0)
-            # This ensures the empty dungeon corridors render as light floor instead of solid black.
+            # Special Case: Force Tile 0 (Space/Floor) to be completely solid Black (3)
+            # This renders the empty dungeon corridors as a dark void, matching the original
+            # game's aesthetic and creating a high-contrast dark dungeon atmosphere.
             if t_idx == 0:
-                tile_bytes = [0] * 16
+                tile_bytes = [0xFF] * 16
                 gb_tile_bytes.append(tile_bytes)
                 continue
                 
