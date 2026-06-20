@@ -98,7 +98,7 @@ static int8_t to_delta(int16_t a, int16_t b);
 #define FLOOD_STACK_SIZE 64
 static uint8_t flood_stack_x[FLOOD_STACK_SIZE];
 static uint8_t flood_stack_y[FLOOD_STACK_SIZE];
-static int16_t flood_stack_ptr = 0;
+static int8_t flood_stack_ptr = 0;
 
 static void flood_push(uint8_t x, uint8_t y) {
     if (flood_stack_ptr < FLOOD_STACK_SIZE) {

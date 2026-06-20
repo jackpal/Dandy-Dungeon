@@ -1,1 +1,23 @@
+# GBDK Build Artifacts
+bin/
+obj/
+*.lst
+*.map
+*.sym
+*.ihx
+
+# Host Testing Artifacts
+libdandy_test.so
+tests/mock_gb/gb/gb.h
 tests/.temp_envs/
+
+# Python & Environment Artifacts
+.venv/
+__pycache__/
+*.pyc
+tools/__pycache__/
+tests/__pycache__/
+
+# Intermediate Analysis Outputs
+tools/analysis_results.json
+tools/modeling_results.json

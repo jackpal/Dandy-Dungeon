@@ -114,3 +114,19 @@ test_lib: levels
 test: test_lib
 	python3 -m unittest discover -s tests -p "test_*.py"
 
+# --- Programmatic GameBoy ROM Emulator Testing (PyBoy) ---
+.PHONY: test_emu
+
+test_emu: all
+	@if [ ! -d ".venv" ]; then \
+		echo "----------------------------------------"; \
+		echo "Creating virtual environment and installing PyBoy..."; \
+		echo "----------------------------------------"; \
+		/usr/local/google/home/jackpal/.local/bin/uv venv && \
+		/usr/local/google/home/jackpal/.local/bin/uv pip install --index-url https://pypi.org/simple --python .venv/bin/python pyboy numpy pillow; \
+	fi
+	@echo "----------------------------------------"
+	@echo "Running PyBoy automated emulator E2E tests..."
+	@echo "----------------------------------------"
+	.venv/bin/python -m unittest tests/verify_emulator.py
+
