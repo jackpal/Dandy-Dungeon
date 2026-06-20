@@ -1,8 +1,10 @@
-# Dandy Dungeon GameBoy Makefile
-# Requires GBDK-2020 (lcc compiler) in PATH
+# Default GBDKDIR to the user's local path if not set in the environment.
+# GBDK-2020 requires GBDKDIR to end with a trailing slash to resolve sdcc correctly.
+GBDKDIR ?= $(HOME)/Developer/gbdk/
+export GBDKDIR
 
 # Compiler and Linker
-LCC = lcc
+LCC = $(GBDKDIR)bin/lcc
 
 # Target ROM Name
 ROM_NAME = dandy.gb
