@@ -536,11 +536,6 @@
                     prevArrowY[v][p] = y;
                     wasArrowActive[v][p] = true; // Lock warp for subsequent sweeps
                 }
-                
-                if (prevArrowX[v][p] === undefined) {
-                    prevArrowX[v][p] = x;
-                    prevArrowY[v][p] = y;
-                }
             }
         };
 
@@ -1000,15 +995,7 @@
                     wasArrowActive[v][p] = arrowActive[v][p];
                     arrowActive[v][p] = false; // Reset active flag for next sweep
                     
-                    // Fallback in case they were undefined
-                    if (prevPlayerX[v][p] === undefined) {
-                        prevPlayerX[v][p] = targetPlayerX[v][p];
-                        prevPlayerY[v][p] = targetPlayerY[v][p];
-                    }
-                    if (prevArrowX[v][p] === undefined) {
-                        prevArrowX[v][p] = targetArrowX[v][p];
-                        prevArrowY[v][p] = targetArrowY[v][p];
-                    }
+
                 }
             }
             

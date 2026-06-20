@@ -89,6 +89,7 @@ bool is_dirty;
 static void do_player_buttons(uint8_t p_idx, uint8_t buttons);
 static void move_arrows(void);
 static void move_monsters(void);
+static void get_camera_target(uint8_t p_idx, int16_t* out_x, int16_t* out_y);
 static bool move_player(uint8_t p_idx, uint8_t dir);
 static void do_bomb(uint8_t p_idx);
 static void set_player_start_position(void);
@@ -174,19 +175,17 @@ void dandy_step(const uint8_t player_inputs[MAX_PLAYERS]) {
     }
 }
 
-void dandy_draw_viewport(uint8_t local_p_idx) {
-    if (local_p_idx >= MAX_PLAYERS || !player_joined[local_p_idx]) local_p_idx = 0;
-    
-    int16_t target_x = player_x[local_p_idx];
-    int16_t target_y = player_y[local_p_idx];
+static void get_camera_target(uint8_t p_idx, int16_t* out_x, int16_t* out_y) {
+    int16_t target_x = player_x[p_idx];
+    int16_t target_y = player_y[p_idx];
     
     // Spectator Mode: If player is dead, center viewport on the centroid of remaining alive players
-    if (player_health[local_p_idx] <= 0) {
+    if (player_health[p_idx] <= 0) {
         uint16_t sum_x = 0;
         uint16_t sum_y = 0;
         uint8_t alive_count = 0;
         for (uint8_t p = 0; p < MAX_PLAYERS; ++p) {
-            if (p != local_p_idx && player_joined[p] && player_health[p] > 0) {
+            if (p != p_idx && player_joined[p] && player_health[p] > 0) {
                 sum_x += player_x[p];
                 sum_y += player_y[p];
                 alive_count++;
@@ -197,6 +196,15 @@ void dandy_draw_viewport(uint8_t local_p_idx) {
             target_y = sum_y / alive_count;
         }
     }
+    *out_x = target_x;
+    *out_y = target_y;
+}
+
+void dandy_draw_viewport(uint8_t local_p_idx) {
+    if (local_p_idx >= MAX_PLAYERS || !player_joined[local_p_idx]) local_p_idx = 0;
+    
+    int16_t target_x, target_y;
+    get_camera_target(local_p_idx, &target_x, &target_y);
     
     int16_t vp_left = clamp(target_x - 10, 0, DANDY_LEVEL_WIDTH - 20);
     int16_t vp_top = clamp(target_y - 5, 0, DANDY_LEVEL_HEIGHT - 10);
@@ -518,26 +526,8 @@ static void move_monsters(void) {
     
     for (uint8_t p = 0; p < MAX_PLAYERS; ++p) {
         if (player_joined[p]) {
-            int16_t target_x = player_x[p];
-            int16_t target_y = player_y[p];
-            
-            // Spectator mode camera tracking if this player is dead
-            if (player_health[p] <= 0) {
-                uint16_t sum_x = 0;
-                uint16_t sum_y = 0;
-                uint8_t alive_count = 0;
-                for (uint8_t op = 0; op < MAX_PLAYERS; ++op) {
-                    if (op != p && player_joined[op] && player_health[op] > 0) {
-                        sum_x += player_x[op];
-                        sum_y += player_y[op];
-                        alive_count++;
-                    }
-                }
-                if (alive_count > 0) {
-                    target_x = sum_x / alive_count;
-                    target_y = sum_y / alive_count;
-                }
-            }
+            int16_t target_x, target_y;
+            get_camera_target(p, &target_x, &target_y);
             
             vp_lefts[p] = clamp(target_x - 10, 0, DANDY_LEVEL_WIDTH - 20);
             vp_tops[p] = clamp(target_y - 5, 0, DANDY_LEVEL_HEIGHT - 10);
