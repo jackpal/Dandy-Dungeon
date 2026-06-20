@@ -112,3 +112,8 @@ EMSCRIPTEN_KEEPALIVE
 bool web_is_player_joined(uint8_t p_idx) {
     return dandy_is_player_joined(p_idx);
 }
+
+EMSCRIPTEN_KEEPALIVE
+uint8_t* web_get_map(void) {
+    return dandy_map;
+}

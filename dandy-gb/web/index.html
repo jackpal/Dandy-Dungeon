@@ -446,38 +446,8 @@
         });
 
         // JS callbacks defined in C via EM_JS
-        window.jsDrawTile = function(player_idx, x, y, tile_id) {
-            const ctx = ctxs[player_idx];
-            if (!ctx || !spritesheetLoaded) return;
-
-            const tileWidth = 16;
-            const tileHeight = 16;
-            const px = x * tileWidth;
-            const py = y * tileHeight;
-
-            // Clear cell background
-            ctx.fillStyle = themeColors.bg;
-            ctx.fillRect(px, py, tileWidth, tileHeight);
-
-            if (tile_id === TILE_SPACE) {
-                return; // Nothing to draw
-            }
-
-            let draw_tile_id = tile_id;
-            
-            // Map multiplayer player tile IDs (24..55) back to the 4 authentic player sprites (24..27)
-            if (tile_id >= TILE_PLAYER1 && tile_id <= TILE_PLAYER1 + 31) {
-                const offset = tile_id - TILE_PLAYER1;
-                const p = offset >> 3; // Player index (0..3)
-                draw_tile_id = TILE_PLAYER1 + p; // Tile 24 (Player 1), 25 (Player 2), 26 (Player 3), or 27 (Player 4)
-            }
-
-            // Sprite sheet is flat, with 16 columns (each 16x16 pixels)
-            const tx = (draw_tile_id & 15) * 16;
-            const ty = (draw_tile_id >> 4) * 16;
-
-            // Draw the 16x16 pixel sprite
-            ctx.drawImage(spritesheet, tx, ty, 16, 16, px, py, 16, 16);
+                window.jsDrawTile = function(player_idx, x, y, tile_id) {
+            // No-op! Background tiles are drawn with pixel-perfect smoothness in the high-frequency render loop.
         };
 
         window.jsUpdateHud = function(player_idx, score, health, bombs, keys) {
@@ -560,6 +530,60 @@
             }
         };
 
+        function renderViewportBackground(player_idx, t) {
+            const ctx = ctxs[player_idx];
+            if (!ctx || !spritesheetLoaded || !wasmModule) return;
+            
+            const v = player_idx; // Viewport/screen index (0..3)
+            
+            // Get map pointer from WASM memory
+            const mapPtr = wasmModule._web_get_map();
+            const mapArray = new Uint8Array(wasmModule.HEAPU8.buffer, mapPtr, 1800);
+            
+            // Calculate smooth, sub-pixel camera scroll position in pixels!
+            const camX = (prevVpLeft[v] + (targetVpLeft[v] - prevVpLeft[v]) * t) * 16;
+            const camY = (prevVpTop[v] + (targetVpTop[v] - prevVpTop[v]) * t) * 16;
+            
+            // Clear viewport canvas with theme background
+            ctx.fillStyle = themeColors.bg;
+            ctx.fillRect(0, 0, canvases[v].width, canvases[v].height);
+            
+            // Sweep a 21x11 tile grid to cover the 320x160 canvas with 1-tile scroll padding
+            const startCol = Math.floor(camX / 16);
+            const endCol = Math.ceil((camX + 320) / 16);
+            const startRow = Math.floor(camY / 16);
+            const endRow = Math.ceil((camY + 160) / 16);
+            
+            for (let r = startRow; r <= endRow; ++r) {
+                for (let c = startCol; c <= endCol; ++c) {
+                    // Clamp to map boundaries (60x30 tiles)
+                    const clampedCol = Math.max(0, Math.min(59, c));
+                    const clampedRow = Math.max(0, Math.min(29, r));
+                    const tile_id = mapArray[clampedRow * 60 + clampedCol];
+                    
+                    if (tile_id === TILE_SPACE) continue;
+                    
+                    let draw_tile_id = tile_id;
+                    
+                    // Map multiplayer player tile IDs (24..55) back to the 4 authentic player sprites (24..27)
+                    if (tile_id >= TILE_PLAYER1 && tile_id <= TILE_PLAYER1 + 31) {
+                        const offset = tile_id - TILE_PLAYER1;
+                        const p = offset >> 3; // Player index (0..3)
+                        draw_tile_id = TILE_PLAYER1 + p;
+                    }
+                    
+                    const tx = (draw_tile_id & 15) * 16;
+                    const ty = (draw_tile_id >> 4) * 16;
+                    
+                    // Draw tile at world position translated by smooth camera offset
+                    const drawX = c * 16 - camX;
+                    const drawY = r * 16 - camY;
+                    
+                    ctx.drawImage(spritesheet, tx, ty, 16, 16, drawX, drawY, 16, 16);
+                }
+            }
+        }
+
         function renderViewportSprites(player_idx, t) {
             const ctx = ctxs[player_idx];
             if (!ctx || !spritesheetLoaded) return;
@@ -570,36 +594,25 @@
                 let drawX = sprite.x * 2;
                 let drawY = sprite.y * 2;
                 
-                // Interpolate Player and Arrow coordinates relative to this local viewport camera!
-                // To prevent wobbling against a snapped background, we incorporate the camera scroll delta.
+                // Interpolate Player and Arrow coordinates with simple LERP.
+                // Because the background scrolls smoothly using the exact same camera timeline,
+                // the simple LERP naturally remains perfectly aligned with the world!
                 if (sprite.tile_id >= TILE_PLAYER1 && sprite.tile_id <= TILE_PLAYER1 + 31) {
                     const offset = sprite.tile_id - TILE_PLAYER1;
                     const p = offset >> 3; // Player index (0..3)
                     
-                    if (prevPlayerX[v][p] !== undefined && targetPlayerX[v][p] !== undefined &&
-                        prevVpLeft[v] !== undefined && targetVpLeft[v] !== undefined) {
-                        
-                        const dx = (targetVpLeft[v] - prevVpLeft[v]) * 8;
-                        const dy = (targetVpTop[v] - prevVpTop[v]) * 8;
-                        
-                        const interpX = prevPlayerX[v][p] - dx * (1 - t) + (targetPlayerX[v][p] - prevPlayerX[v][p]) * t;
-                        const interpY = prevPlayerY[v][p] - dy * (1 - t) + (targetPlayerY[v][p] - prevPlayerY[v][p]) * t;
-                        
+                    if (prevPlayerX[v][p] !== undefined && targetPlayerX[v][p] !== undefined) {
+                        const interpX = prevPlayerX[v][p] + (targetPlayerX[v][p] - prevPlayerX[v][p]) * t;
+                        const interpY = prevPlayerY[v][p] + (targetPlayerY[v][p] - prevPlayerY[v][p]) * t;
                         drawX = interpX * 2;
                         drawY = interpY * 2;
                     }
                 } else if (sprite.tile_id >= TILE_ARROW && sprite.tile_id <= TILE_ARROW + 7) {
                     const p = sprite.flags; // Owner player index
                     
-                    if (arrowActive[v][p] && prevArrowX[v][p] !== undefined && targetArrowX[v][p] !== undefined &&
-                        prevVpLeft[v] !== undefined && targetVpLeft[v] !== undefined) {
-                        
-                        const dx = (targetVpLeft[v] - prevVpLeft[v]) * 8;
-                        const dy = (targetVpTop[v] - prevVpTop[v]) * 8;
-                        
-                        const interpX = prevArrowX[v][p] - dx * (1 - t) + (targetArrowX[v][p] - prevArrowX[v][p]) * t;
-                        const interpY = prevArrowY[v][p] - dy * (1 - t) + (targetArrowY[v][p] - prevArrowY[v][p]) * t;
-                        
+                    if (arrowActive[v][p] && prevArrowX[v][p] !== undefined && targetArrowX[v][p] !== undefined) {
+                        const interpX = prevArrowX[v][p] + (targetArrowX[v][p] - prevArrowX[v][p]) * t;
+                        const interpY = prevArrowY[v][p] + (targetArrowY[v][p] - prevArrowY[v][p]) * t;
                         drawX = interpX * 2;
                         drawY = interpY * 2;
                     }
@@ -1026,14 +1039,30 @@
             // web_draw_viewports redrafts static backgrounds and populates sprite buffers
             wasmModule._web_draw_viewports();
 
-            // Draw buffered sprites with linear interpolation!
+            // Render smooth backgrounds and sprites at 60Hz+ refresh rate!
             for (let i = 0; i < 4; ++i) {
                 if (wasmModule._web_is_player_joined(i)) {
+                    // 1. Draw smooth, pixel-perfect scrolling background
+                    renderViewportBackground(i, t);
+                    
+                    // 2. Draw smooth, interpolated player and arrow sprites
                     renderViewportSprites(i, t);
+                    
+                    // 3. Draw DEFEATED overlay if player is dead (avoids frame-clear flicker)
+                    const hpText = document.getElementById(`hp-${i}`).textContent;
+                    if (hpText === "DEAD" || parseInt(hpText) <= 0) {
+                        const ctx = ctxs[i];
+                        ctx.fillStyle = 'rgba(255, 0, 0, 0.1)';
+                        ctx.fillRect(0, 0, canvases[i].width, canvases[i].height);
+                        
+                        ctx.fillStyle = '#ff3333';
+                        ctx.font = 'bold 12px monospace';
+                        ctx.textAlign = 'center';
+                        ctx.fillText("DEFEATED", canvases[i].width / 2, canvases[i].height / 2 - 6);
+                    }
                 }
             }
-
-            // Continue loop
+            
             requestAnimationFrame(mainRenderLoop);
         }
 
