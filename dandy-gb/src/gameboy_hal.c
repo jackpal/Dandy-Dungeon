@@ -128,3 +128,87 @@ void hal_update_hud(void) {
     // Row 15-17: Controls / Info
     hal_draw_string(1, 16, "DANDY GB PROTOTYPE");
 }
+
+void hal_clear_sprites(void) {
+    // Hide all 40 hardware sprites by moving them off-screen (0, 0)
+    for (uint8_t i = 0; i < 40; ++i) {
+        move_sprite(i, 0, 0);
+    }
+}
+
+void hal_set_sprite(uint8_t sprite_idx, uint8_t x, uint8_t y, uint8_t tile_id, uint8_t flags) {
+    if (sprite_idx >= 40) return;
+    
+    // Resolve tile_id to ASCII character for our text font representation
+    uint8_t ascii = tile_to_ascii[tile_id];
+    if (ascii == 0) ascii = ' ';
+    
+    // Font tiles are shifted by 32 in VRAM
+    set_sprite_tile(sprite_idx, ascii - 32);
+    
+    // GBDK hardware sprite coordinates are offset by (8, 16)
+    move_sprite(sprite_idx, x + 8, y + 16);
+    
+    // Set sprite properties (OAM flags for flipping/palettes)
+    set_sprite_prop(sprite_idx, flags);
+}
+
+static bool sound_initialized = false;
+
+void hal_play_sound(uint8_t sound_id) {
+    if (!sound_initialized) {
+        NR52_REG = 0x80; // Turn on Sound chip
+        NR50_REG = 0x77; // Max volume on left/right channels
+        NR51_REG = 0xFF; // Route all 4 channels to left/right speakers
+        sound_initialized = true;
+    }
+    
+    switch (sound_id) {
+        case SOUND_SHOOT:
+            NR10_REG = 0x1E;
+            NR11_REG = 0x80;
+            NR12_REG = 0xF3;
+            NR13_REG = 0x00;
+            NR14_REG = 0xC7;
+            break;
+        case SOUND_HIT:
+            NR21_REG = 0x80;
+            NR22_REG = 0xF1;
+            NR23_REG = 0x80;
+            NR24_REG = 0xC4;
+            break;
+        case SOUND_FOOD:
+            NR10_REG = 0x16;
+            NR11_REG = 0x80;
+            NR12_REG = 0xF2;
+            NR13_REG = 0x00;
+            NR14_REG = 0xC6;
+            break;
+        case SOUND_BOMB:
+            NR41_REG = 0x1F;
+            NR42_REG = 0xF7;
+            NR43_REG = 0x57;
+            NR44_REG = 0xC0;
+            break;
+        case SOUND_KEY:
+            NR21_REG = 0x80;
+            NR22_REG = 0xF2;
+            NR23_REG = 0xF0;
+            NR24_REG = 0xC6;
+            break;
+        case SOUND_DIE:
+            NR10_REG = 0x3F;
+            NR11_REG = 0x80;
+            NR12_REG = 0xF5;
+            NR13_REG = 0x50;
+            NR14_REG = 0xC3;
+            break;
+        case SOUND_WARP:
+            NR10_REG = 0x0E;
+            NR11_REG = 0x40;
+            NR12_REG = 0xF3;
+            NR13_REG = 0x00;
+            NR14_REG = 0xC7;
+            break;
+    }
+}

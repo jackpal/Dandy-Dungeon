@@ -28,10 +28,9 @@ void main(void) {
     ibm_font = font_load(font_ibm);
     font_set(ibm_font);
     
-    // Set up background map
-    // We don't need sprites for this ASCII prototype since everything is background tiles!
-    // Turn on Background display
+    // Set up background map and hardware sprites
     SHOW_BKG;
+    SHOW_SPRITES;
     
     DISPLAY_ON; // Turn screen back on
     

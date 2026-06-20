@@ -2,11 +2,12 @@
 #include "levels.h"
 #include <string.h>
 
-/* Retro-optimized Lookup Table for row offsets: y * 60 */
+/* Retro-optimized Lookup Table for row offsets: y * 64 */
 const uint16_t row_offsets[DANDY_LEVEL_HEIGHT] = {
-    0, 60, 120, 180, 240, 300, 360, 420, 480, 540,
-    600, 660, 720, 780, 840, 900, 960, 1020, 1080, 1140,
-    1200, 1260, 1320, 1380, 1440, 1500, 1560, 1620, 1680, 1740
+    0, 64, 128, 192, 256, 320, 384, 448, 512, 576,
+    640, 704, 768, 832, 896, 960, 1024, 1088, 1152, 1216,
+    1280, 1344, 1408, 1472, 1536, 1600, 1664, 1728, 1792, 1856,
+    1920, 1984
 };
 
 /* Direction Deltas (8-way)
@@ -201,11 +202,38 @@ void dandy_draw_viewport(uint8_t local_p_idx) {
     int16_t vp_left = clamp(target_x - 10, 0, DANDY_LEVEL_WIDTH - 20);
     int16_t vp_top = clamp(target_y - 5, 0, DANDY_LEVEL_HEIGHT - 10);
     
+    // 1. Clear sprites for this viewport
+    hal_clear_sprites();
+    uint8_t sprite_count = 0;
+    
+    // 2. Draw viewport grid
     for (uint8_t sy = 0; sy < 10; ++sy) {
         uint16_t row_offset = row_offsets[vp_top + sy];
         for (uint8_t sx = 0; sx < 20; ++sx) {
             uint8_t tile = dandy_map[row_offset + (vp_left + sx)];
-            hal_draw_tile(sx, sy, tile);
+            
+            // Check if the tile is a dynamic entity that should be drawn as a hardware sprite
+            bool is_sprite = false;
+            if (tile >= 24 && tile <= 55) {
+                is_sprite = true; // Players
+            } else if (tile >= TILE_MONSTER1 && tile <= TILE_MONSTER3) {
+                is_sprite = true; // Monsters
+            } else if (tile >= TILE_ARROW && tile <= TILE_ARROW + 7) {
+                is_sprite = true; // Arrows
+            }
+            
+            if (is_sprite) {
+                // Draw background behind the sprite
+                hal_draw_tile(sx, sy, TILE_SPACE);
+                
+                // Register a hardware sprite (8x8 pixel coordinates in viewport space)
+                if (sprite_count < 40) {
+                    hal_set_sprite(sprite_count++, sx * 8, sy * 8, tile, 0);
+                }
+            } else {
+                // Static tile (wall, door, items, generator, etc.)
+                hal_draw_tile(sx, sy, tile);
+            }
         }
     }
 }
@@ -276,6 +304,7 @@ static void do_player_buttons(uint8_t p_idx, uint8_t buttons) {
         if (player_bombs[p_idx] > 0) {
             player_bombs[p_idx]--;
             do_bomb(p_idx);
+            hal_play_sound(SOUND_BOMB);
         }
     }
     
@@ -285,6 +314,7 @@ static void do_player_buttons(uint8_t p_idx, uint8_t buttons) {
             arrow_x[p_idx] = player_x[p_idx];
             arrow_y[p_idx] = player_y[p_idx];
             arrow_dir[p_idx] = player_dir[p_idx];
+            hal_play_sound(SOUND_SHOOT);
         }
     }
     
@@ -327,23 +357,29 @@ static bool move_player(uint8_t p_idx, uint8_t dir) {
             if (player_keys[p_idx] > 0) {
                 player_keys[p_idx]--;
                 iterative_flood_fill(nx, ny, TILE_DOOR, TILE_SPACE);
+                hal_play_sound(SOUND_KEY);
             } else {
                 can_move = false;
             }
             break;
         case TILE_MONEY:
             player_score[p_idx] += 100;
+            hal_play_sound(SOUND_KEY);
             break;
         case TILE_KEY:
             player_keys[p_idx]++;
+            hal_play_sound(SOUND_KEY);
             break;
         case TILE_BOMB:
             player_bombs[p_idx]++;
+            hal_play_sound(SOUND_KEY);
             break;
         case TILE_FOOD:
             player_health[p_idx] += 100;
+            hal_play_sound(SOUND_FOOD);
             break;
         case TILE_DOWN:
+            hal_play_sound(SOUND_WARP);
             next_level();
             return true;
         default:
@@ -405,6 +441,7 @@ static void move_arrows(void) {
                         replacement = tile_at_new - 1;
                     }
                     dandy_map[new_pos] = replacement;
+                    hal_play_sound(SOUND_HIT);
                 }
             } else {
                 // Move arrow and rotate
@@ -493,6 +530,9 @@ static void move_monsters(void) {
                             if (player_health[hit_p] <= 0) {
                                 player_health[hit_p] = 0;
                                 dandy_map[n_pos] = TILE_SPACE; // Clear player's tile from the map immediately
+                                hal_play_sound(SOUND_DIE);
+                            } else {
+                                hal_play_sound(SOUND_HIT);
                             }
                             is_dirty = true;
                         }

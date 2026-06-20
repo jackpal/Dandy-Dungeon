@@ -505,6 +505,236 @@
             }
         };
 
+        // Sprite Buffering & Rendering for Hardware Sprite Emulation
+        const viewportSprites = [[], [], [], []];
+
+        window.jsClearSprites = function(player_idx) {
+            viewportSprites[player_idx] = [];
+        };
+
+        window.jsSetSprite = function(player_idx, sprite_idx, x, y, tile_id, flags) {
+            viewportSprites[player_idx].push({ x, y, tile_id, flags });
+        };
+
+        function renderViewportSprites(player_idx) {
+            const ctx = ctxs[player_idx];
+            if (!ctx || !spritesheetLoaded) return;
+            
+            const sprites = viewportSprites[player_idx];
+            for (const sprite of sprites) {
+                // Scale GameBoy pixel coordinates (8x8 grid) to our 16x16 canvas pixels (multiply by 2)
+                const drawX = sprite.x * 2;
+                const drawY = sprite.y * 2;
+                
+                let draw_tile_id = sprite.tile_id;
+                
+                // Map multiplayer player tile IDs (24..55) back to the 4 authentic player sprites (24..27)
+                if (sprite.tile_id >= TILE_PLAYER1 && sprite.tile_id <= TILE_PLAYER1 + 31) {
+                    const offset = sprite.tile_id - TILE_PLAYER1;
+                    const p = offset >> 3; // Player index (0..3)
+                    draw_tile_id = TILE_PLAYER1 + p;
+                }
+                
+                // Calculate spritesheet coordinates (16x16 tiles in flat sheet)
+                const tx = (draw_tile_id & 15) * 16;
+                const ty = (draw_tile_id >> 4) * 16;
+                
+                ctx.save();
+                
+                // Handle GameBoy OAM Attributes:
+                // Bit 5 (0x20): Horizontal Flip (mirroring)
+                // Bit 6 (0x40): Vertical Flip
+                const flipX = (sprite.flags & 0x20) !== 0;
+                const flipY = (sprite.flags & 0x40) !== 0;
+                
+                if (flipX || flipY) {
+                    // Translate to center of sprite for flipping
+                    ctx.translate(drawX + 8, drawY + 8);
+                    ctx.scale(flipX ? -1 : 1, flipY ? -1 : 1);
+                    ctx.drawImage(spritesheet, tx, ty, 16, 16, -8, -8, 16, 16);
+                } else {
+                    ctx.drawImage(spritesheet, tx, ty, 16, 16, drawX, drawY, 16, 16);
+                }
+                
+                ctx.restore();
+            }
+        }
+
+        // Web Audio API Retro Chiptune Synthesizer
+        let audioCtx = null;
+
+        function initAudio() {
+            if (audioCtx) return;
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+
+        let noiseBuffer = null;
+        function getNoiseBuffer() {
+            if (noiseBuffer) return noiseBuffer;
+            if (!audioCtx) return null;
+            
+            const bufferSize = audioCtx.sampleRate * 0.5; // 0.5 seconds
+            noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+            const data = noiseBuffer.getChannelData(0);
+            for (let i = 0; i < bufferSize; i++) {
+                data[i] = Math.random() * 2 - 1;
+            }
+            return noiseBuffer;
+        }
+
+        window.jsPlaySound = function(sound_id) {
+            initAudio();
+            if (!audioCtx) return;
+            
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+                if (audioCtx.state === 'suspended') return;
+            }
+
+            const now = audioCtx.currentTime;
+
+            switch (sound_id) {
+                case 0: // SOUND_SHOOT (Laser sweep down)
+                    {
+                        const osc = audioCtx.createOscillator();
+                        const gain = audioCtx.createGain();
+                        osc.type = 'square';
+                        osc.frequency.setValueAtTime(800, now);
+                        osc.frequency.exponentialRampToValueAtTime(150, now + 0.12);
+                        
+                        gain.gain.setValueAtTime(0.08, now);
+                        gain.gain.linearRampToValueAtTime(0.001, now + 0.12);
+                        
+                        osc.connect(gain);
+                        gain.connect(audioCtx.destination);
+                        osc.start(now);
+                        osc.stop(now + 0.12);
+                    }
+                    break;
+                    
+                case 1: // SOUND_HIT (Sawtooth pitch crunch)
+                    {
+                        const osc = audioCtx.createOscillator();
+                        const gain = audioCtx.createGain();
+                        osc.type = 'sawtooth';
+                        osc.frequency.setValueAtTime(160, now);
+                        osc.frequency.linearRampToValueAtTime(40, now + 0.08);
+                        
+                        gain.gain.setValueAtTime(0.12, now);
+                        gain.gain.linearRampToValueAtTime(0.001, now + 0.08);
+                        
+                        osc.connect(gain);
+                        gain.connect(audioCtx.destination);
+                        osc.start(now);
+                        osc.stop(now + 0.08);
+                    }
+                    break;
+                    
+                case 2: // SOUND_FOOD (Triangle health sweep up)
+                    {
+                        const osc = audioCtx.createOscillator();
+                        const gain = audioCtx.createGain();
+                        osc.type = 'triangle';
+                        osc.frequency.setValueAtTime(320, now);
+                        osc.frequency.exponentialRampToValueAtTime(960, now + 0.18);
+                        
+                        gain.gain.setValueAtTime(0.15, now);
+                        gain.gain.linearRampToValueAtTime(0.001, now + 0.18);
+                        
+                        osc.connect(gain);
+                        gain.connect(audioCtx.destination);
+                        osc.start(now);
+                        osc.stop(now + 0.18);
+                    }
+                    break;
+                    
+                case 3: // SOUND_BOMB (Noise lowpass explosion)
+                    {
+                        const buffer = getNoiseBuffer();
+                        if (!buffer) return;
+                        
+                        const noiseNode = audioCtx.createBufferSource();
+                        noiseNode.buffer = buffer;
+                        
+                        const filter = audioCtx.createBiquadFilter();
+                        filter.type = 'lowpass';
+                        filter.frequency.setValueAtTime(350, now);
+                        filter.frequency.exponentialRampToValueAtTime(10, now + 0.5);
+                        
+                        const gain = audioCtx.createGain();
+                        gain.gain.setValueAtTime(0.3, now);
+                        gain.gain.linearRampToValueAtTime(0.001, now + 0.5);
+                        
+                        noiseNode.connect(filter);
+                        filter.connect(gain);
+                        gain.connect(audioCtx.destination);
+                        
+                        noiseNode.start(now);
+                        noiseNode.stop(now + 0.5);
+                    }
+                    break;
+                    
+                case 4: // SOUND_KEY (High square ting)
+                    {
+                        const osc = audioCtx.createOscillator();
+                        const gain = audioCtx.createGain();
+                        osc.type = 'square';
+                        osc.frequency.setValueAtTime(1300, now);
+                        
+                        gain.gain.setValueAtTime(0.1, now);
+                        gain.gain.linearRampToValueAtTime(0.001, now + 0.05);
+                        
+                        osc.connect(gain);
+                        gain.connect(audioCtx.destination);
+                        osc.start(now);
+                        osc.stop(now + 0.05);
+                    }
+                    break;
+                    
+                case 5: // SOUND_DIE (Slow descending sawtooth)
+                    {
+                        const osc = audioCtx.createOscillator();
+                        const gain = audioCtx.createGain();
+                        osc.type = 'sawtooth';
+                        osc.frequency.setValueAtTime(440, now);
+                        osc.frequency.exponentialRampToValueAtTime(55, now + 0.4);
+                        
+                        gain.gain.setValueAtTime(0.2, now);
+                        gain.gain.linearRampToValueAtTime(0.001, now + 0.4);
+                        
+                        osc.connect(gain);
+                        gain.connect(audioCtx.destination);
+                        osc.start(now);
+                        osc.stop(now + 0.4);
+                    }
+                    break;
+                    
+                case 6: // SOUND_WARP (Rising level complete arpeggio)
+                    {
+                        const osc = audioCtx.createOscillator();
+                        const gain = audioCtx.createGain();
+                        osc.type = 'square';
+                        
+                        const duration = 0.28;
+                        const step = duration / 4;
+                        
+                        osc.frequency.setValueAtTime(523.25, now); // C5
+                        osc.frequency.setValueAtTime(659.25, now + step); // E5
+                        osc.frequency.setValueAtTime(783.99, now + step * 2); // G5
+                        osc.frequency.setValueAtTime(1046.50, now + step * 3); // C6
+                        
+                        gain.gain.setValueAtTime(0.1, now);
+                        gain.gain.linearRampToValueAtTime(0.001, now + duration);
+                        
+                        osc.connect(gain);
+                        gain.connect(audioCtx.destination);
+                        osc.start(now);
+                        osc.stop(now + duration);
+                    }
+                    break;
+            }
+        };
+
         // Game Loop Management
         let isRunning = false;
         let activePlayers = 2;
@@ -540,6 +770,9 @@
 
         function startGame() {
             if (!wasmModule || !spritesheetLoaded) return;
+
+            // Unlock and initialize browser Web Audio context on user gesture
+            initAudio();
 
             if (gameTickInterval) {
                 clearInterval(gameTickInterval);
@@ -601,8 +834,15 @@
             // Call C web_step
             wasmModule._web_step(p1, p2, p3, p4);
 
-            // Redraw viewports
+            // Redraw viewports (WASM draws backgrounds and buffers sprites)
             wasmModule._web_draw_viewports();
+
+            // Render buffered hardware sprites on top of their backgrounds!
+            for (let i = 0; i < 4; ++i) {
+                if (wasmModule._web_is_player_joined(i)) {
+                    renderViewportSprites(i);
+                }
+            }
 
             // Check if game over (all joined active players dead)
             let allDead = true;

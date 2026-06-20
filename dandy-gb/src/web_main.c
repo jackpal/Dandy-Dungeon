@@ -15,6 +15,24 @@ EM_JS(void, js_update_hud, (uint8_t player_idx, uint32_t score, int16_t health, 
     }
 });
 
+EM_JS(void, js_clear_sprites, (uint8_t player_idx), {
+    if (window.jsClearSprites) {
+        window.jsClearSprites(player_idx);
+    }
+});
+
+EM_JS(void, js_set_sprite, (uint8_t player_idx, uint8_t sprite_idx, uint8_t x, uint8_t y, uint8_t tile_id, uint8_t flags), {
+    if (window.jsSetSprite) {
+        window.jsSetSprite(player_idx, sprite_idx, x, y, tile_id, flags);
+    }
+});
+
+EM_JS(void, js_play_sound, (uint8_t sound_id), {
+    if (window.jsPlaySound) {
+        window.jsPlaySound(sound_id);
+    }
+});
+
 // Keep track of which player's viewport is currently rendering
 static uint8_t rendering_player_idx = 0;
 
@@ -29,6 +47,18 @@ void hal_update_hud(void) {
             js_update_hud(p, player_score[p], player_health[p], player_bombs[p], player_keys[p]);
         }
     }
+}
+
+void hal_clear_sprites(void) {
+    js_clear_sprites(rendering_player_idx);
+}
+
+void hal_set_sprite(uint8_t sprite_idx, uint8_t x, uint8_t y, uint8_t tile_id, uint8_t flags) {
+    js_set_sprite(rendering_player_idx, sprite_idx, x, y, tile_id, flags);
+}
+
+void hal_play_sound(uint8_t sound_id) {
+    js_play_sound(sound_id);
 }
 
 // Exported WebAssembly API for the JS frontend
