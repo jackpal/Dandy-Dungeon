@@ -10,5 +10,6 @@
 
 /* Extern declaration of pointer array to all compressed levels in ROM */
 extern const uint8_t* const dandy_levels[DANDY_NUM_LEVELS];
+extern const uint16_t dandy_level_sizes[DANDY_NUM_LEVELS];
 
 #endif /* DANDY_LEVELS_H */

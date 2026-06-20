@@ -20,7 +20,7 @@ OBJS = $(OBJ_DIR)/main.o $(OBJ_DIR)/dandy_core.o $(OBJ_DIR)/gameboy_hal.o $(OBJ_
 # Flags
 # -Wa-l: Generate assembler list file
 # -Wl-m: Generate linker map file
-LCCFLAGS = -Wa-l -Wl-m -Wl-yo4
+LCCFLAGS = -Wa-l -Wl-m -Wl-yo2
 
 .PHONY: all clean levels sprites setup web
 
@@ -84,10 +84,33 @@ web: levels
 
 # Clean intermediate and output files
 $(OBJ_DIR)/levels.o: $(SRC_DIR)/levels.c
-	$(LCC) -Wf-bo2 -c -o $@ $<
+	$(LCC) -Wf-bo1 -c -o $@ $<
 
 clean:
 	rm -rf $(OBJ_DIR) $(BIN_DIR)
 	rm -f $(WEB_DIR)/*.js $(WEB_DIR)/*.wasm
 	rm -f *.lst *.map *.sym
+	rm -rf tests/mock_gb tests/.temp_envs
+	rm -f libdandy_test.so
 	@echo "Clean complete."
+
+# --- Host Compilation and Testing for Offline E2E Harness ---
+.PHONY: test_lib test
+
+test_lib: levels
+	@mkdir -p tests/mock_gb/gb
+	@echo "#ifndef MOCK_GB_H" > tests/mock_gb/gb/gb.h
+	@echo "#define MOCK_GB_H" >> tests/mock_gb/gb/gb.h
+	@echo "#define SWITCH_ROM(bank) ((void)0)" >> tests/mock_gb/gb/gb.h
+	@echo "#endif" >> tests/mock_gb/gb/gb.h
+	gcc -fPIC -shared -O2 -Isrc -Itests/mock_gb -o libdandy_test.so \
+		src/dandy_core.c \
+		src/levels.c \
+		tests/mock_hal.c
+	@echo "----------------------------------------"
+	@echo "Test library compiled successfully: libdandy_test.so"
+	@echo "----------------------------------------"
+
+test: test_lib
+	python3 -m unittest discover -s tests -p "test_*.py"
+

@@ -44,6 +44,7 @@ extern uint8_t current_level;
 extern uint8_t monster_rotor;
 extern bool player_joined[MAX_PLAYERS];
 extern uint8_t local_player_idx;
+extern const uint8_t dandy_num_levels;
 
 /* Player State Arrays */
 extern uint8_t player_x[MAX_PLAYERS];

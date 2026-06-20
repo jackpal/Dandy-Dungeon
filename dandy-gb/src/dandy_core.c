@@ -1,4 +1,3 @@
-#include <gb/gb.h>  // For SWITCH_ROM bank switching
 #include "dandy_core.h"
 #include "levels.h"
 #include <string.h>
@@ -57,6 +56,7 @@ uint8_t current_level;
 uint8_t monster_rotor;
 bool player_joined[MAX_PLAYERS];
 uint8_t local_player_idx;
+const uint8_t dandy_num_levels = DANDY_NUM_LEVELS;
 
 /* Player State Arrays */
 uint8_t player_x[MAX_PLAYERS];
@@ -98,7 +98,7 @@ static int8_t to_delta(int16_t a, int16_t b);
 #define FLOOD_STACK_SIZE 64
 static uint8_t flood_stack_x[FLOOD_STACK_SIZE];
 static uint8_t flood_stack_y[FLOOD_STACK_SIZE];
-static int8_t flood_stack_ptr = 0;
+static int16_t flood_stack_ptr = 0;
 
 static void flood_push(uint8_t x, uint8_t y) {
     if (flood_stack_ptr < FLOOD_STACK_SIZE) {
@@ -133,25 +133,91 @@ void dandy_init(void) {
 }
 
 void dandy_load_level(uint8_t level_idx) {
-    // Switch to ROM Bank 2 where levels.c is compiled
-    SWITCH_ROM(2);
-    
-    // Decompress level data from ROM to RAM map (RLE decoding)
+    if (level_idx >= DANDY_NUM_LEVELS) {
+        level_idx = DANDY_NUM_LEVELS - 1;
+    }
+
+    // 1. Initialize the entire 1,800-byte map buffer with Wall tiles (ID 1)
+    // This is extremely fast as it uses the platform's assembly-optimized memset.
+    memset(dandy_map, TILE_WALL, MAP_SIZE);
+
+    // 2. Setup bitstream decoder pointers and cache
     const uint8_t* src = dandy_levels[level_idx];
-    uint16_t dst_idx = 0;
-    while (dst_idx < MAP_SIZE) {
-        uint8_t byte = *src++;
-        if (byte == 0xFF) {
-            uint8_t run_len = *src++;
-            uint8_t tile_id = *src++;
-            while (run_len--) {
-                dandy_map[dst_idx++] = tile_id;
+    const uint8_t* src_end = src + dandy_level_sizes[level_idx];
+    uint8_t bit_cache = 0;
+    uint8_t bit_count = 0;
+
+    // 3. Decode into the inner 58x28 grid
+    // Outer border (row 0, row 29, col 0, col 59) remains TILE_WALL (1).
+    for (uint8_t y = 1; y <= 28; ++y) {
+        // Use row_offsets table to avoid slow 16-bit multiplication (y * 60)
+        // Set dst to point to column 1 of the current row
+        uint8_t* dst = &dandy_map[row_offsets[y] + 1];
+
+        for (uint8_t x = 1; x <= 58; ++x) {
+            // Read 1st bit
+            if (bit_count == 0) {
+                bit_cache = (src < src_end) ? *src++ : 0;
+                bit_count = 8;
             }
-        } else {
-            dandy_map[dst_idx++] = byte;
+            
+            // Check if 1st bit is 0
+            if ((bit_cache & 0x80) == 0) {
+                // '0' -> Space (ID 0)
+                *dst = TILE_SPACE;
+                bit_cache <<= 1;
+                bit_count--;
+            } else {
+                // 1st bit is 1, consume it and read 2nd bit
+                bit_cache <<= 1;
+                bit_count--;
+                
+                if (bit_count == 0) {
+                    bit_cache = (src < src_end) ? *src++ : 0;
+                    bit_count = 8;
+                }
+                
+                // Check if 2nd bit is 0
+                if ((bit_cache & 0x80) == 0) {
+                    // '10' -> Wall (ID 1)
+                    // Skip-write optimization: the buffer is already pre-filled with TILE_WALL (1).
+                    // We do not write anything to *dst, saving a RAM write.
+                    bit_cache <<= 1;
+                    bit_count--;
+                } else {
+                    // '11' -> Other tile (ID 2 to 15), consume 2nd bit
+                    bit_cache <<= 1;
+                    bit_count--;
+                    
+                    // Decode 4-bit tile ID (fully unrolled for maximum Z80 speed)
+                    uint8_t tile_id = 0;
+                    
+                    // Bit 3
+                    if (bit_count == 0) { bit_cache = (src < src_end) ? *src++ : 0; bit_count = 8; }
+                    tile_id <<= 1; if (bit_cache & 0x80) tile_id |= 1; bit_cache <<= 1; bit_count--;
+                    
+                    // Bit 2
+                    if (bit_count == 0) { bit_cache = (src < src_end) ? *src++ : 0; bit_count = 8; }
+                    tile_id <<= 1; if (bit_cache & 0x80) tile_id |= 1; bit_cache <<= 1; bit_count--;
+                    
+                    // Bit 1
+                    if (bit_count == 0) { bit_cache = (src < src_end) ? *src++ : 0; bit_count = 8; }
+                    tile_id <<= 1; if (bit_cache & 0x80) tile_id |= 1; bit_cache <<= 1; bit_count--;
+                    
+                    // Bit 0
+                    if (bit_count == 0) { bit_cache = (src < src_end) ? *src++ : 0; bit_count = 8; }
+                    tile_id <<= 1; if (bit_cache & 0x80) tile_id |= 1; bit_cache <<= 1; bit_count--;
+                    
+                    *dst = tile_id;
+                }
+            }
+            
+            // Advance destination pointer to the next column in the row
+            dst++;
         }
     }
-    
+
+    // 4. Post-decompression setup (standard engine logic)
     set_player_start_position();
     
     for (uint8_t p = 0; p < MAX_PLAYERS; ++p) {
@@ -161,6 +227,13 @@ void dandy_load_level(uint8_t level_idx) {
 }
 
 void dandy_step(const uint8_t player_inputs[MAX_PLAYERS]) {
+    // Bounds check player positions to prevent out-of-bounds memory access
+    for (uint8_t p = 0; p < MAX_PLAYERS; ++p) {
+        if (player_joined[p]) {
+            if (player_x[p] >= DANDY_LEVEL_WIDTH) player_x[p] = DANDY_LEVEL_WIDTH - 1;
+            if (player_y[p] >= DANDY_LEVEL_HEIGHT) player_y[p] = DANDY_LEVEL_HEIGHT - 1;
+        }
+    }
     for (uint8_t p = 0; p < MAX_PLAYERS; ++p) {
         if (player_joined[p] && player_health[p] > 0) {
             do_player_buttons(p, player_inputs[p]);
