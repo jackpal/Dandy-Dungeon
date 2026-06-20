@@ -1011,6 +1011,13 @@
                     }
                 }
             }
+            
+            // Invalidate the background canvas caches to force a redraw, ensuring any tile changes
+            // (e.g. food eaten, doors opened, explosions) are instantly captured in the next render frame.
+            for (let v = 0; v < 4; ++v) {
+                bgLastTileX[v] = -1;
+                bgLastTileY[v] = -1;
+            }
 
             // 3. Check for late joins
             for (let i = 0; i < 4; ++i) {
