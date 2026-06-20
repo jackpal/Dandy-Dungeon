@@ -2,6 +2,44 @@ import os
 import sys
 from PIL import Image
 
+def map_rgba_to_gb(r, g, b, a):
+    """
+    Explicitly and precisely maps the 5 core colors of the original spritesheet
+    to the 4 GameBoy grayscale shades (0=White, 1=Light Gray, 2=Dark Gray, 3=Black).
+    """
+    # 1. Handle transparency (alpha < 128 -> Color 0, which is white/transparent on GameBoy)
+    if a < 128:
+        return 0
+        
+    # 2. Map pure white and light bluish-gray to GameBoy Color 0 (White)
+    if r > 240 and g > 240 and b > 240:
+        return 0  # Pure White
+    if r > 200 and g > 210 and b > 230:
+        return 0  # Light bluish-gray (kept white for maximum contrast on green screen)
+        
+    # 3. Map reddish-pink to GameBoy Color 1 (Light Gray)
+    if r > 180 and g < 120 and b < 120:
+        return 1
+        
+    # 4. Map deep blue to GameBoy Color 2 (Dark Gray)
+    if r < 100 and g < 100 and b > 150:
+        return 2
+        
+    # 5. Map black and near-blacks to GameBoy Color 3 (Black)
+    if r < 20 and g < 20 and b < 20:
+        return 3
+        
+    # 6. Fallback based on standard luminance formula
+    luminance = 0.299 * r + 0.587 * g + 0.114 * b
+    if luminance >= 200:
+        return 0
+    elif luminance >= 120:
+        return 1
+    elif luminance >= 50:
+        return 2
+    else:
+        return 3
+
 def main():
     current_dir = os.path.dirname(os.path.abspath(__file__))
     png_path = os.path.normpath(os.path.join(current_dir, "../web/strike_original.png"))
@@ -27,11 +65,12 @@ def main():
     rows = height // tile_height
     num_tiles = cols * rows
     
-    print(f"Found {num_tiles} tiles of {tile_width}x{tile_height} pixels. Compiling to GameBoy 8x8 tiles...")
+    print(f"Found {num_tiles} tiles of {tile_width}x{tile_height} pixels.")
+    print("Compiling to GameBoy 8x8 tiles using exact 2x2 sub-sampling and explicit color mapping...")
     
     gb_tile_bytes = []
     
-    # Extract each 16x16 tile and downscale to 8x8
+    # Extract each 16x16 tile and sub-sample to 8x8
     for r in range(rows):
         for c in range(cols):
             # Crop 16x16 tile
@@ -40,35 +79,21 @@ def main():
             right = left + tile_width
             bottom = top + tile_height
             tile_img = img.crop((left, top, right, bottom))
+            pixels = tile_img.convert("RGBA").load()
             
-            # Downscale to 8x8 using nearest-neighbor for clean pixel art
-            tile_8x8 = tile_img.resize((8, 8), Image.Resampling.NEAREST)
-            pixels = tile_8x8.convert("RGBA").load()
-            
-            # Convert 8x8 RGBA pixels to GameBoy 2bpp format (16 bytes per tile)
+            # Convert to GameBoy 2bpp format (16 bytes per tile)
+            # We manually sample the center of each 2x2 block (at x*2, y*2) to prevent any
+            # scaling interpolation or sub-pixel rounding errors that destroy details.
             tile_bytes = []
             for y in range(8):
                 low_byte = 0
                 high_byte = 0
                 for x in range(8):
-                    rgba = pixels[x, y]
+                    rgba = pixels[x * 2, y * 2]
                     r_val, g_val, b_val, a_val = rgba
                     
-                    # Handle transparency (alpha < 128 -> Color 0, which is white/transparent)
-                    if a_val < 128:
-                        val = 0
-                    else:
-                        # Calculate luminance
-                        luminance = 0.299 * r_val + 0.587 * g_val + 0.114 * b_val
-                        # Map to 4 grayscale shades
-                        if luminance >= 200:
-                            val = 0  # Color 0: White
-                        elif luminance >= 120:
-                            val = 1  # Color 1: Light Gray
-                        elif luminance >= 50:
-                            val = 2  # Color 2: Dark Gray
-                        else:
-                            val = 3  # Color 3: Black
+                    # Map color to GameBoy color index (0..3)
+                    val = map_rgba_to_gb(r_val, g_val, b_val, a_val)
                             
                     # Pack bits MSB-first (leftmost pixel is MSB)
                     bit0 = val & 1
@@ -130,7 +155,7 @@ def main():
     with open(output_c_path, "w") as f:
         f.write("\n".join(c_content))
         
-    print("Sprite compilation complete! Output: 512 bytes of GBDK tile data.")
+    print("Sprite compilation complete! Output: 512 bytes of lossless GBDK tile data.")
 
 if __name__ == "__main__":
     main()

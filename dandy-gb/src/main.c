@@ -33,6 +33,20 @@ void main(void) {
     set_bkg_data(128, DANDY_NUM_TILES, dandy_tiles);
     set_sprite_data(128, DANDY_NUM_TILES, dandy_tiles);
     
+    // Programmatically generate the inverted font in background VRAM at index 160 (0xA0)
+    // Read each of the 96 standard font tiles, invert their 2bpp bytes, and save them at 160+i.
+    // This provides a light-on-dark font for the scoreboard with zero additional ROM storage!
+    {
+        unsigned char tile_buf[16];
+        for (uint16_t i = 0; i < 96; ++i) {
+            get_bkg_data(i, 1, tile_buf);
+            for (uint8_t j = 0; j < 16; ++j) {
+                tile_buf[j] = ~tile_buf[j];
+            }
+            set_bkg_data(160 + i, 1, tile_buf);
+        }
+    }
+    
     // Set up background map and hardware sprites
     SHOW_BKG;
     SHOW_SPRITES;

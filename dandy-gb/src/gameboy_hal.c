@@ -14,6 +14,16 @@ void hal_draw_string(uint8_t x, uint8_t y, const char* str) {
     }
 }
 
+/* Helper to draw a string using the inverted (light-on-dark) font tiles */
+static void hal_draw_string_inverted(uint8_t x, uint8_t y, const char* str) {
+    uint8_t i = 0;
+    while (str[i] != '\0') {
+        // Inverted font starts at index 160 in VRAM
+        set_bkg_tile_xy(x + i, y, 160 + (str[i] - 32));
+        i++;
+    }
+}
+
 /* Tiny custom itoa to avoid sprintf bloat (16-bit to save ROM space) */
 static void u16_to_str(uint16_t val, char* buf, uint8_t digits) {
     for (int8_t i = digits - 1; i >= 0; --i) {
@@ -55,34 +65,34 @@ void hal_update_hud(void) {
     char buf[10];
     uint8_t p = local_player_idx;
     
-    // Row 10: Separator border
-    hal_draw_string(0, 10, "--------------------");
+    // Fill the entire HUD scoreboard area (columns 0..19, rows 10..17)
+    // with the inverted space tile (160), creating a solid dark background block.
+    fill_bkg_rect(0, 10, 20, 8, 160);
     
+    // Draw scoreboard elements using the inverted light-on-dark font
     // Row 11: Score
-    hal_draw_string(1, 11, "SCORE: ");
+    hal_draw_string_inverted(1, 11, "SCORE: ");
     u16_to_str(player_score[p], buf, 6);
-    hal_draw_string(8, 11, buf);
+    hal_draw_string_inverted(8, 11, buf);
     
     // Row 12: Health
-    hal_draw_string(1, 12, "HP:    ");
+    hal_draw_string_inverted(1, 12, "HP:    ");
     s16_to_str(player_health[p], buf, 3);
-    hal_draw_string(8, 12, buf);
+    hal_draw_string_inverted(8, 12, buf);
     
     // Row 13: Bombs & Keys
-    hal_draw_string(1, 13, "BOMBS: ");
+    hal_draw_string_inverted(1, 13, "BOMBS: ");
     u16_to_str(player_bombs[p], buf, 2);
-    hal_draw_string(8, 13, buf);
+    hal_draw_string_inverted(8, 13, buf);
     
-    hal_draw_string(11, 13, "KEYS: ");
+    hal_draw_string_inverted(11, 13, "KEYS: ");
     u16_to_str(player_keys[p], buf, 2);
-    hal_draw_string(17, 13, buf);
+    hal_draw_string_inverted(17, 13, buf);
     
     // Row 14: Level
-    hal_draw_string(1, 14, "LEVEL: ");
+    hal_draw_string_inverted(1, 14, "LEVEL: ");
     u16_to_str(current_level + 1, buf, 2);
-    hal_draw_string(8, 14, buf);
-    
-    // Row 15-17: Info
+    hal_draw_string_inverted(8, 14, buf);
 }
 
 void hal_clear_sprites(uint8_t vp_left, uint8_t vp_top) {
