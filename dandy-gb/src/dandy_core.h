@@ -52,7 +52,7 @@ bool dandy_is_player_joined(uint8_t p_idx);
 // These must be implemented by the platform-specific HAL (e.g., gameboy_hal.c)
 extern void hal_draw_tile(uint8_t x, uint8_t y, uint8_t tile_id);
 extern void hal_update_hud(void);
-extern void hal_clear_sprites(void);
+extern void hal_clear_sprites(uint8_t vp_left, uint8_t vp_top);
 extern void hal_set_sprite(uint8_t sprite_idx, uint8_t x, uint8_t y, uint8_t tile_id, uint8_t flags);
 extern void hal_play_sound(uint8_t sound_id);
 

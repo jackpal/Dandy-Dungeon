@@ -508,8 +508,18 @@
         // Sprite Buffering & Rendering for Hardware Sprite Emulation
         const viewportSprites = [[], [], [], []];
 
-        window.jsClearSprites = function(player_idx) {
+        window.jsClearSprites = function(player_idx, vp_left, vp_top) {
             viewportSprites[player_idx] = [];
+            
+            const v = player_idx; // Viewport index (0..3)
+            targetVpLeft[v] = vp_left;
+            targetVpTop[v] = vp_top;
+            
+            // Initialize previous camera position on first viewport draw
+            if (prevVpLeft[v] === undefined) {
+                prevVpLeft[v] = vp_left;
+                prevVpTop[v] = vp_top;
+            }
         };
 
         window.jsSetSprite = function(player_idx, sprite_idx, x, y, tile_id, flags) {
@@ -561,22 +571,35 @@
                 let drawY = sprite.y * 2;
                 
                 // Interpolate Player and Arrow coordinates relative to this local viewport camera!
+                // To prevent wobbling against a snapped background, we incorporate the camera scroll delta.
                 if (sprite.tile_id >= TILE_PLAYER1 && sprite.tile_id <= TILE_PLAYER1 + 31) {
                     const offset = sprite.tile_id - TILE_PLAYER1;
                     const p = offset >> 3; // Player index (0..3)
                     
-                    if (prevPlayerX[v][p] !== undefined && targetPlayerX[v][p] !== undefined) {
-                        const interpX = prevPlayerX[v][p] + (targetPlayerX[v][p] - prevPlayerX[v][p]) * t;
-                        const interpY = prevPlayerY[v][p] + (targetPlayerY[v][p] - prevPlayerY[v][p]) * t;
+                    if (prevPlayerX[v][p] !== undefined && targetPlayerX[v][p] !== undefined &&
+                        prevVpLeft[v] !== undefined && targetVpLeft[v] !== undefined) {
+                        
+                        const dx = (targetVpLeft[v] - prevVpLeft[v]) * 8;
+                        const dy = (targetVpTop[v] - prevVpTop[v]) * 8;
+                        
+                        const interpX = prevPlayerX[v][p] - dx * (1 - t) + (targetPlayerX[v][p] - prevPlayerX[v][p]) * t;
+                        const interpY = prevPlayerY[v][p] - dy * (1 - t) + (targetPlayerY[v][p] - prevPlayerY[v][p]) * t;
+                        
                         drawX = interpX * 2;
                         drawY = interpY * 2;
                     }
                 } else if (sprite.tile_id >= TILE_ARROW && sprite.tile_id <= TILE_ARROW + 7) {
                     const p = sprite.flags; // Owner player index
                     
-                    if (arrowActive[v][p] && prevArrowX[v][p] !== undefined && targetArrowX[v][p] !== undefined) {
-                        const interpX = prevArrowX[v][p] + (targetArrowX[v][p] - prevArrowX[v][p]) * t;
-                        const interpY = prevArrowY[v][p] + (targetArrowY[v][p] - prevArrowY[v][p]) * t;
+                    if (arrowActive[v][p] && prevArrowX[v][p] !== undefined && targetArrowX[v][p] !== undefined &&
+                        prevVpLeft[v] !== undefined && targetVpLeft[v] !== undefined) {
+                        
+                        const dx = (targetVpLeft[v] - prevVpLeft[v]) * 8;
+                        const dy = (targetVpTop[v] - prevVpTop[v]) * 8;
+                        
+                        const interpX = prevArrowX[v][p] - dx * (1 - t) + (targetArrowX[v][p] - prevArrowX[v][p]) * t;
+                        const interpY = prevArrowY[v][p] - dy * (1 - t) + (targetArrowY[v][p] - prevArrowY[v][p]) * t;
+                        
                         drawX = interpX * 2;
                         drawY = interpY * 2;
                     }
@@ -802,6 +825,12 @@
         const targetPlayerX = Array.from({ length: 4 }, () => Array(4).fill(undefined));
         const targetPlayerY = Array.from({ length: 4 }, () => Array(4).fill(undefined));
 
+        // Camera Scroll Tracking (one set per viewport/screen v)
+        const prevVpLeft = [0, 0, 0, 0];
+        const prevVpTop = [0, 0, 0, 0];
+        const targetVpLeft = [0, 0, 0, 0];
+        const targetVpTop = [0, 0, 0, 0];
+
         const prevArrowX = Array.from({ length: 4 }, () => Array(4).fill(undefined));
         const prevArrowY = Array.from({ length: 4 }, () => Array(4).fill(undefined));
         const targetArrowX = Array.from({ length: 4 }, () => Array(4).fill(undefined));
@@ -862,6 +891,12 @@
                     drawJoinScreen(i);
                 }
                 
+                // Reset local camera tracking
+                prevVpLeft[i] = undefined;
+                prevVpTop[i] = undefined;
+                targetVpLeft[i] = undefined;
+                targetVpTop[i] = undefined;
+                
                 // Reset local viewport-specific 2D interpolation states for all players
                 for (let p = 0; p < 4; ++p) {
                     prevPlayerX[i][p] = undefined;
@@ -895,6 +930,9 @@
 
             // 1. Save current targets, manage active states, and prepare interpolation independently per viewport
             for (let v = 0; v < 4; ++v) {
+                prevVpLeft[v] = targetVpLeft[v];
+                prevVpTop[v] = targetVpTop[v];
+                
                 for (let p = 0; p < 4; ++p) {
                     prevPlayerX[v][p] = targetPlayerX[v][p];
                     prevPlayerY[v][p] = targetPlayerY[v][p];

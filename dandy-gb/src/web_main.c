@@ -15,9 +15,9 @@ EM_JS(void, js_update_hud, (uint8_t player_idx, uint32_t score, int16_t health, 
     }
 });
 
-EM_JS(void, js_clear_sprites, (uint8_t player_idx), {
+EM_JS(void, js_clear_sprites, (uint8_t player_idx, uint8_t vp_left, uint8_t vp_top), {
     if (window.jsClearSprites) {
-        window.jsClearSprites(player_idx);
+        window.jsClearSprites(player_idx, vp_left, vp_top);
     }
 });
 
@@ -49,8 +49,8 @@ void hal_update_hud(void) {
     }
 }
 
-void hal_clear_sprites(void) {
-    js_clear_sprites(rendering_player_idx);
+void hal_clear_sprites(uint8_t vp_left, uint8_t vp_top) {
+    js_clear_sprites(rendering_player_idx, vp_left, vp_top);
 }
 
 void hal_set_sprite(uint8_t sprite_idx, uint8_t x, uint8_t y, uint8_t tile_id, uint8_t flags) {

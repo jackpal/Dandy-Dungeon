@@ -201,8 +201,8 @@ void dandy_draw_viewport(uint8_t local_p_idx) {
     int16_t vp_left = clamp(target_x - 10, 0, DANDY_LEVEL_WIDTH - 20);
     int16_t vp_top = clamp(target_y - 5, 0, DANDY_LEVEL_HEIGHT - 10);
     
-    // 1. Clear sprites for this viewport
-    hal_clear_sprites();
+    // 1. Clear sprites for this viewport, passing camera scroll offsets
+    hal_clear_sprites((uint8_t)vp_left, (uint8_t)vp_top);
     uint8_t sprite_count = 0;
     
     // 2. Draw viewport grid

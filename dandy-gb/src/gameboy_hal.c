@@ -129,7 +129,9 @@ void hal_update_hud(void) {
     hal_draw_string(1, 16, "DANDY GB PROTOTYPE");
 }
 
-void hal_clear_sprites(void) {
+void hal_clear_sprites(uint8_t vp_left, uint8_t vp_top) {
+    (void)vp_left;
+    (void)vp_top;
     // Hide all 40 hardware sprites by moving them off-screen (0, 0)
     for (uint8_t i = 0; i < 40; ++i) {
         move_sprite(i, 0, 0);
