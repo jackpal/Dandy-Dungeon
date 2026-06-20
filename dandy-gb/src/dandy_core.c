@@ -2,12 +2,11 @@
 #include "levels.h"
 #include <string.h>
 
-/* Retro-optimized Lookup Table for row offsets: y * 64 */
+/* Retro-optimized Lookup Table for row offsets: y * 60 */
 const uint16_t row_offsets[DANDY_LEVEL_HEIGHT] = {
-    0, 64, 128, 192, 256, 320, 384, 448, 512, 576,
-    640, 704, 768, 832, 896, 960, 1024, 1088, 1152, 1216,
-    1280, 1344, 1408, 1472, 1536, 1600, 1664, 1728, 1792, 1856,
-    1920, 1984
+    0, 60, 120, 180, 240, 300, 360, 420, 480, 540,
+    600, 660, 720, 780, 840, 900, 960, 1020, 1080, 1140,
+    1200, 1260, 1320, 1380, 1440, 1500, 1560, 1620, 1680, 1740
 };
 
 /* Direction Deltas (8-way)

@@ -42,8 +42,8 @@ h_content.append("#define DANDY_LEVELS_H")
 h_content.append("")
 h_content.append("#include <stdint.h>")
 h_content.append("")
-h_content.append(f"#define DANDY_LEVEL_WIDTH  64")
-h_content.append(f"#define DANDY_LEVEL_HEIGHT 32")
+h_content.append(f"#define DANDY_LEVEL_WIDTH  60")
+h_content.append(f"#define DANDY_LEVEL_HEIGHT 30")
 h_content.append(f"#define DANDY_NUM_LEVELS   {len(levels)}")
 h_content.append("")
 
@@ -77,12 +77,11 @@ for l_idx, lvl in enumerate(levels):
     h_content.append("    {")
     for r_idx, row in enumerate(lvl):
         tile_ids = [str(char_to_tile_id(c)) for c in row]
-        while len(tile_ids) < 64:
+        while len(tile_ids) < 60:
             tile_ids.append("0")
         row_str = ", ".join(tile_ids)
-        h_content.append(f"        {row_str}, /* Row {r_idx} */")
-    h_content.append("        " + ", ".join(["0"]*64) + ", /* Row 30 padding */")
-    h_content.append("        " + ", ".join(["0"]*64) + " /* Row 31 padding */")
+        comma = "," if r_idx < len(lvl) - 1 else ""
+        h_content.append(f"        {row_str}{comma} /* Row {r_idx} */")
     comma = "," if l_idx < len(levels) - 1 else ""
     h_content.append(f"    }}{comma}")
 

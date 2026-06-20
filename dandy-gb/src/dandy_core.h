@@ -6,7 +6,7 @@
 
 /* Game Constants */
 #define TICKS_PER_MOVE  4
-#define MAP_SIZE        2048 // 64 * 32
+#define MAP_SIZE        1800 // 60 * 30
 #define MAX_PLAYERS     4
 
 /* Button Masks (Input abstraction) */
