@@ -17,7 +17,7 @@ TOOLS_DIR = tools
 
 # Source and Object Files
 SRCS = $(SRC_DIR)/main.c $(SRC_DIR)/dandy_core.c $(SRC_DIR)/gameboy_hal.c
-OBJS = $(OBJ_DIR)/main.o $(OBJ_DIR)/dandy_core.o $(OBJ_DIR)/gameboy_hal.o $(OBJ_DIR)/levels.o
+OBJS = $(OBJ_DIR)/main.o $(OBJ_DIR)/dandy_core.o $(OBJ_DIR)/gameboy_hal.o $(OBJ_DIR)/levels.o $(OBJ_DIR)/tiles.o
 
 # Flags
 # -Wa-l: Generate assembler list file

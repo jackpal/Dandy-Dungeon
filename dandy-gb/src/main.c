@@ -1,6 +1,7 @@
 #include <gb/gb.h>
 #include <gbdk/font.h>
 #include "dandy_core.h"
+#include "tiles.h"
 
 /* Maps GBDK joypad bits to our core button masks */
 uint8_t get_joypad_buttons(void) {
@@ -27,6 +28,10 @@ void main(void) {
     font_init();
     ibm_font = font_load(font_ibm);
     font_set(ibm_font);
+    
+    // Load custom game tiles starting at background and sprite tile index 128 (0x80)
+    set_bkg_data(128, DANDY_NUM_TILES, dandy_tiles);
+    set_sprite_data(128, DANDY_NUM_TILES, dandy_tiles);
     
     // Set up background map and hardware sprites
     SHOW_BKG;

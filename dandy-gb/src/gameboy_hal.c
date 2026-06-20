@@ -2,47 +2,7 @@
 #include <gb/gb.h>
 #include <gbdk/font.h>
 
-/* ASCII translation table for tiles.
-   Maps tile IDs to ASCII character codes.
-*/
-const uint8_t tile_to_ascii[32] = {
-    [TILE_SPACE]      = ' ',
-    [TILE_WALL]       = '*',
-    [TILE_DOOR]       = 'D',
-    [TILE_UP]         = 'U',
-    [TILE_DOWN]       = 'v',
-    [TILE_KEY]        = 'K',
-    [TILE_FOOD]       = 'F',
-    [TILE_MONEY]      = '$',
-    [TILE_BOMB]       = 'B',
-    [TILE_MONSTER1]   = '1',
-    [TILE_MONSTER2]   = '2',
-    [TILE_MONSTER3]   = '3',
-    [TILE_HEART]      = 'H',
-    [TILE_GENERATOR1] = 'g',
-    [TILE_GENERATOR2] = 'o',
-    [TILE_GENERATOR3] = 'q',
-    
-    // Arrows in 8 directions (Up, Up-Right, Right, Down-Right, Down, Down-Left, Left, Up-Left)
-    [TILE_ARROW + 0]  = '^',
-    [TILE_ARROW + 1]  = '/',
-    [TILE_ARROW + 2]  = '>',
-    [TILE_ARROW + 3]  = '\\',
-    [TILE_ARROW + 4]  = 'v',
-    [TILE_ARROW + 5]  = '/',
-    [TILE_ARROW + 6]  = '<',
-    [TILE_ARROW + 7]  = '\\',
-    
-    // Player in 8 directions (Up, Up-Right, Right, Down-Right, Down, Down-Left, Left, Up-Left)
-    [TILE_PLAYER1 + 0] = '^',
-    [TILE_PLAYER1 + 1] = '/',
-    [TILE_PLAYER1 + 2] = '>',
-    [TILE_PLAYER1 + 3] = '\\',
-    [TILE_PLAYER1 + 4] = 'v',
-    [TILE_PLAYER1 + 5] = '/',
-    [TILE_PLAYER1 + 6] = '<',
-    [TILE_PLAYER1 + 7] = '\\'
-};
+
 
 /* Tiny helper to draw a string directly to VRAM background map */
 void hal_draw_string(uint8_t x, uint8_t y, const char* str) {
@@ -87,16 +47,8 @@ void hal_draw_tile(uint8_t x, uint8_t y, uint8_t tile_id) {
         tile_id = TILE_PLAYER1 + ((tile_id - TILE_PLAYER1) & 7);
     }
     
-    uint8_t ascii = tile_to_ascii[tile_id];
-    if (ascii == 0) ascii = ' ';
-    
-    // In our ASCII prototype, player and arrow directions are represented by their characters.
-    // If it's a player tile, we want to make it stand out!
-    // But since this is text, it just draws the character.
-    // Later, when we have custom tiles, tile_id will map directly to the 8x8 sprite indices.
-    
-    // Viewport is at top of screen (y: 0..9)
-    set_bkg_tile_xy(x, y, ascii - 32);
+    // Draw custom background tile loaded starting at index 128 (0x80)
+    set_bkg_tile_xy(x, y, 128 + tile_id);
 }
 
 void hal_update_hud(void) {
@@ -130,8 +82,7 @@ void hal_update_hud(void) {
     u16_to_str(current_level + 1, buf, 2);
     hal_draw_string(8, 14, buf);
     
-    // Row 15-17: Controls / Info
-    hal_draw_string(1, 16, "DANDY GB PROTOTYPE");
+    // Row 15-17: Info
 }
 
 void hal_clear_sprites(uint8_t vp_left, uint8_t vp_top) {
@@ -151,12 +102,8 @@ void hal_set_sprite(uint8_t sprite_idx, uint8_t x, uint8_t y, uint8_t tile_id, u
         tile_id = TILE_PLAYER1 + ((tile_id - TILE_PLAYER1) & 7);
     }
     
-    // Resolve tile_id to ASCII character for our text font representation
-    uint8_t ascii = tile_to_ascii[tile_id];
-    if (ascii == 0) ascii = ' ';
-    
-    // Font tiles are shifted by 32 in VRAM
-    set_sprite_tile(sprite_idx, ascii - 32);
+    // Use custom sprite tile loaded starting at index 128 (0x80)
+    set_sprite_tile(sprite_idx, 128 + tile_id);
     
     // GBDK hardware sprite coordinates are offset by (8, 16)
     move_sprite(sprite_idx, x + 8, y + 16);
