@@ -242,19 +242,22 @@ static const int8_t spawn_offsets_x[4] = { 0, 1, 0, -1 };
 static const int8_t spawn_offsets_y[4] = { -1, 0, 1, 0 };
 
 static void set_player_start_position(void) {
-    // Find the first TILE_UP ('u')
-    uint16_t up_pos = 0xFFFF;
-    for (uint16_t i = 0; i < MAP_SIZE; ++i) {
-        if (dandy_map[i] == TILE_UP) {
-            up_pos = i;
-            break;
-        }
-    }
-    
     int16_t up_x = 1, up_y = 2; // Fallback defaults
-    if (up_pos != 0xFFFF) {
-        up_x = up_pos % DANDY_LEVEL_WIDTH;
-        up_y = up_pos / DANDY_LEVEL_WIDTH;
+    bool found = false;
+    
+    // Sweep map using nested loops to get x and y coordinates directly,
+    // completely avoiding slow 16-bit division, modulo, and bit-shifts!
+    for (uint8_t y = 0; y < DANDY_LEVEL_HEIGHT; ++y) {
+        uint16_t row_offset = row_offsets[y];
+        for (uint8_t x = 0; x < DANDY_LEVEL_WIDTH; ++x) {
+            if (dandy_map[row_offset + x] == TILE_UP) {
+                up_x = x;
+                up_y = y;
+                found = true;
+                break;
+            }
+        }
+        if (found) break;
     }
     
     for (uint8_t p = 0; p < MAX_PLAYERS; ++p) {
