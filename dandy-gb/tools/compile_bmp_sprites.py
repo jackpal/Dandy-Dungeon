@@ -4,41 +4,58 @@ import struct
 
 def map_bgr_to_gb(b, g, r):
     """
-    Precisely maps the raw BGR colors from dandy.bmp to the 4 GameBoy grayscale shades
-    (0=White, 1=Light Gray, 2=Dark Gray, 3=Black).
+    Precisely maps the core colors of the original spritesheet to the 4 GameBoy grayscale shades
+    based on the user's requested specification:
+    - Black -> Black (3)
+    - Dark Blue -> Dark Gray (2)
+    - Gold -> Light Gray (1)
+    - White -> White (0)
+    
     Handles minor 1-2 unit rounding noise in the BMP file.
     """
-    # 1. Map pure white to GameBoy Color 0 (White)
-    if r > 240 and g > 240 and b > 240:
-        return 0
-        
-    # 2. Map Light Blue (B=240, G=223, R=215) to GameBoy Color 1 (Light Gray)
-    # Allows for +/- 5 units of rounding noise
-    if b > 210 and g > 200 and r > 190 and b > r:
-        return 1
-        
-    # 3. Map Reddish-Pink (B=98, G=98, R=199) to GameBoy Color 1 (Light Gray)
-    if r > 180 and g < 120 and b < 120:
-        return 1
-        
-    # 4. Map Deep Blue (B=174, G=55, R=47) to GameBoy Color 2 (Dark Gray)
-    if b > 150 and g < 100 and r < 100:
-        return 2
-        
-    # 5. Map Black and near-blacks to GameBoy Color 3 (Black)
+    # 1. Map Black and near-blacks to GameBoy Color 3 (Black)
     if r < 20 and g < 20 and b < 20:
         return 3
         
-    # Fallback based on standard luminance
-    luminance = 0.299 * r + 0.587 * g + 0.114 * b
-    if luminance >= 200:
-        return 0
-    elif luminance >= 120:
-        return 1
-    elif luminance >= 50:
+    # 2. Map Dark Blue (B=174, G=55, R=47) to GameBoy Color 2 (Dark Gray)
+    # Allows for +/- 10 units of rounding noise in the deep blue channel
+    if b > 150 and g < 100 and r < 100:
         return 2
-    else:
-        return 3
+        
+    # 3. Map Gold/Pink/Red (B=98, G=98, R=199) to GameBoy Color 1 (Light Gray)
+    # Allows for +/- 10 units of rounding noise in the red channel
+    if r > 180 and g < 120 and b < 120:
+        return 1
+        
+    # 4. Map White (255,255,255) and Light Blue (215,223,240) to GameBoy Color 0 (White)
+    # These represent the light/highlight details and background.
+    return 0
+
+def downscale_2x2_block(v00, v01, v10, v11):
+    """
+    Smart, feature-preserving downscaler for a 2x2 block of GameBoy color indices.
+    Looks at all 4 pixels of the block and prioritizes outlines and vital details
+    (like a 1px border on the last row/column) to prevent character clipping or cutoff bugs.
+    """
+    shades = [v00, v01, v10, v11]
+    counts = {0: 0, 1: 0, 2: 0, 3: 0}
+    for s in shades:
+        counts[s] += 1
+        
+    # If there is a clear majority (>= 3 pixels of the same color), use it
+    if counts[3] >= 3: return 3
+    if counts[2] >= 3: return 2
+    if counts[1] >= 3: return 1
+    if counts[0] >= 3: return 0
+    
+    # Detail Preservation:
+    # If any pixel in the 2x2 block is Black (3) or Dark Gray (2) representing an outline
+    # or border (even if it's a 1px line on row 15 or column 15!), we preserve it
+    # to prevent graphical cutoff bugs.
+    if counts[3] >= 1: return 3
+    if counts[2] >= 1: return 2
+    if counts[1] >= 1: return 1
+    return 0
 
 def main():
     current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -72,7 +89,7 @@ def main():
         
     print(f"BMP verified: {width}x{height} pixels, {bpp}bpp, uncompressed. Decoding raw pixel bytes...")
     
-    # BMP Row width in bytes (must be padded to multiple of 4, but 256*3 = 768 which is already a multiple of 4)
+    # BMP Row width in bytes
     row_width_bytes = 256 * 3
     
     tile_width = 16
@@ -83,14 +100,13 @@ def main():
     
     gb_tile_bytes = []
     
-    # Extract each 16x16 tile and sub-sample to 8x8
+    # Extract each 16x16 tile and downscale to 8x8 using smart 2x2 voting
     for r in range(rows):
         for c in range(cols):
             t_idx = r * cols + c
             
             # Special Case: Force Tile 0 (Space/Floor) to be completely solid Black (3)
-            # This renders the empty dungeon corridors as a dark void, matching the original
-            # game's aesthetic and creating a high-contrast dark dungeon atmosphere.
+            # Renders the empty corridors as a dark void, matching original game aesthetics.
             if t_idx == 0:
                 tile_bytes = [0xFF] * 16
                 gb_tile_bytes.append(tile_bytes)
@@ -104,19 +120,26 @@ def main():
                 low_byte = 0
                 high_byte = 0
                 for x in range(8):
-                    # Manual 2x2 sub-sampling: read the pixel at the top-left of the 2x2 block.
-                    # Since the BMP contains bottom-to-top rows, we map row 'tile_top + y * 2'
-                    # to '31 - (tile_top + y * 2)' in the raw file bytes.
-                    px = tile_left + x * 2
-                    py = tile_top + y * 2
+                    # Read all 4 pixels in the 2x2 block to protect borders/outlines on odd rows/cols
+                    px0 = tile_left + x * 2
+                    px1 = tile_left + x * 2 + 1
+                    py0 = tile_top + y * 2
+                    py1 = tile_top + y * 2 + 1
                     
-                    offset = pixel_offset + (31 - py) * row_width_bytes + px * 3
-                    b = data[offset]
-                    g = data[offset + 1]
-                    r_val = data[offset + 2]
+                    # BMP rows are bottom-to-top in file bytes
+                    offset_00 = pixel_offset + (31 - py0) * row_width_bytes + px0 * 3
+                    offset_01 = pixel_offset + (31 - py0) * row_width_bytes + px1 * 3
+                    offset_10 = pixel_offset + (31 - py1) * row_width_bytes + px0 * 3
+                    offset_11 = pixel_offset + (31 - py1) * row_width_bytes + px1 * 3
                     
-                    # Map BGR to GameBoy color index (0..3)
-                    val = map_bgr_to_gb(b, g, r_val)
+                    # Map BGR to GameBoy color index for all 4 pixels
+                    v00 = map_bgr_to_gb(data[offset_00], data[offset_00 + 1], data[offset_00 + 2])
+                    v01 = map_bgr_to_gb(data[offset_01], data[offset_01 + 1], data[offset_01 + 2])
+                    v10 = map_bgr_to_gb(data[offset_10], data[offset_10 + 1], data[offset_10 + 2])
+                    v11 = map_bgr_to_gb(data[offset_11], data[offset_11 + 1], data[offset_11 + 2])
+                    
+                    # Apply smart downscaling to select the best representative pixel (protects outlines!)
+                    val = downscale_2x2_block(v00, v01, v10, v11)
                     
                     # Pack bits MSB-first
                     bit0 = val & 1
@@ -178,7 +201,7 @@ def main():
     with open(output_c_path, "w") as f:
         f.write("\n".join(c_content))
         
-    print("Sprite compilation complete! Output: 512 bytes of pristine, unaliased GBDK tile data.")
+    print("Sprite compilation complete! Output: 512 bytes of pristine, unaliased, smart-downscaled GBDK tile data.")
 
 if __name__ == "__main__":
     main()
