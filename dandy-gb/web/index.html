@@ -1059,16 +1059,22 @@
                 const cam0_x = ((prevVpLeft[0] || 0) + ((targetVpLeft[0] || 0) - (prevVpLeft[0] || 0)) * t) * 16;
                 const p1_0_x = ((prevPlayerX[0][0] || 0) + ((targetPlayerX[0][0] || 0) - (prevPlayerX[0][0] || 0)) * t) * 2;
                 
-                // Add current state to history
-                window.debug_history.push({
-                    fps: window.debug_fps,
-                    t: t.toFixed(3),
-                    acc: accumulator.toFixed(1),
-                    cam: `(${prevVpLeft[0]}, ${targetVpLeft[0]})`,
-                    camX: cam0_x.toFixed(1),
-                    player: `(${prevPlayerX[0][0]}, ${targetPlayerX[0][0]})`,
-                    drawX: p1_0_x.toFixed(1)
-                });
+                // Only record to history when there is active movement (prev !== target)
+                // This freezes the last active frames on the screen when you stop moving!
+                const isMoving = prevVpLeft[0] !== targetVpLeft[0] || 
+                                 (prevPlayerX[0][0] !== undefined && prevPlayerX[0][0] !== targetPlayerX[0][0]);
+                
+                if (isMoving) {
+                    window.debug_history.push({
+                        fps: window.debug_fps,
+                        t: t.toFixed(3),
+                        acc: accumulator.toFixed(1),
+                        cam: `(${prevVpLeft[0]}, ${targetVpLeft[0]})`,
+                        camX: cam0_x.toFixed(1),
+                        player: `(${prevPlayerX[0][0]}, ${targetPlayerX[0][0]})`,
+                        drawX: p1_0_x.toFixed(1)
+                    });
+                }
                 
                 // Keep last 8 frames
                 if (window.debug_history.length > 8) {
