@@ -15,8 +15,9 @@ class TestTier4(unittest.TestCase):
         self.env.assert_outer_border_walls(self)
 
     def tearDown(self):
-        if hasattr(self, "env"):
-            del self.env
+        if hasattr(self, "env") and self.env is not None:
+            self.env.close()
+            self.env = None
 
     def setup_scenario_map(self, player_positions, custom_tiles):
         """

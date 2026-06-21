@@ -37,8 +37,9 @@ class TestAdversarialCompression(unittest.TestCase):
             raise RuntimeError(f"mprotect failed to make dandy_level_sizes writable: {res_sizes}")
 
     def tearDown(self):
-        if hasattr(self, "env"):
-            del self.env
+        if hasattr(self, "env") and self.env is not None:
+            self.env.close()
+            self.env = None
 
     def compress_map(self, tile_ids):
         """Python helper to compress a 60x30 map using Edge Wall Elision + Scheme B2."""

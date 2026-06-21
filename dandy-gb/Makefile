@@ -6,12 +6,24 @@ export GBDKDIR
 # Compiler and Linker
 LCC = $(GBDKDIR)bin/lcc
 
-# Target ROM Name
+# Target ROM Name & Directories configuration based on mode
+ifeq ($(USE_BLACK_FLOOR),1)
+ROM_NAME = dandy_dark.gb
+OBJ_DIR = obj_dark
+CFLAGS_MODE = -DUSE_BLACK_FLOOR
+TILES_SRC = src/tiles_dark.c
+TILES_HDR = src/tiles_dark.h
+else
 ROM_NAME = dandy.gb
+OBJ_DIR = obj
+CFLAGS_MODE =
+TILES_SRC = src/tiles_light.c
+TILES_HDR = src/tiles_light.h
+endif
+
 
 # Directories
 SRC_DIR = src
-OBJ_DIR = obj
 BIN_DIR = bin
 TOOLS_DIR = tools
 
@@ -24,37 +36,62 @@ OBJS = $(OBJ_DIR)/main.o $(OBJ_DIR)/dandy_core.o $(OBJ_DIR)/gameboy_hal.o $(OBJ_
 # -Wl-m: Generate linker map file
 LCCFLAGS = -Wa-l -Wl-m -Wl-yo2
 
-.PHONY: all clean levels sprites setup web
+.PHONY: all clean levels sprites setup web dark
 
 # Default target
-all: setup levels sprites $(BIN_DIR)/$(ROM_NAME)
+all: setup $(BIN_DIR)/$(ROM_NAME)
 
-# Create necessary directories
-setup:
-	@mkdir -p $(OBJ_DIR)
-	@mkdir -p $(BIN_DIR)
-	@mkdir -p $(WEB_DIR)
+# Dedicated target for Atmospheric Dark Mode
+dark:
+	$(MAKE) USE_BLACK_FLOOR=1 all
 
-# Link the ROM
-$(BIN_DIR)/$(ROM_NAME): $(OBJS)
+# Create necessary directories as actual file targets (parallel-safe)
+$(OBJ_DIR) $(BIN_DIR) $(WEB_DIR):
+	@mkdir -p $@
+
+# Phony target for convenience
+setup: $(OBJ_DIR) $(BIN_DIR) $(WEB_DIR)
+
+# Link the ROM, ensuring bin directory exists
+$(BIN_DIR)/$(ROM_NAME): $(OBJS) | $(BIN_DIR)
 	$(LCC) $(LCCFLAGS) -o $@ $(OBJS)
 	@echo "----------------------------------------"
 	@echo "Build successful: $@"
 	@echo "----------------------------------------"
 
-# Compile C source files
+# Compile C source files, ensuring object directory exists first
+$(OBJS): | $(OBJ_DIR)
+
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.c
-	$(LCC) -Wf--opt-code-size -c -o $@ $<
+	$(LCC) -Wf--opt-code-size $(CFLAGS_MODE) -c -o $@ $<
+
 
 # Run the level converter tool (requires Python 3)
-levels:
+src/levels.c src/levels.h &: $(TOOLS_DIR)/convert_levels.py ../dandy-js/levels.js
 	@echo "Converting levels from JS to C header..."
-	python3 $(TOOLS_DIR)/convert_levels.py
+	flock .levels.lock python3 $(TOOLS_DIR)/convert_levels.py
 
-# Run the sprite compiler tool (manually decodes BMP to avoid PIL/aliasing)
-sprites:
-	@echo "Compiling pristine BMP sprite assets..."
-	python3 $(TOOLS_DIR)/compile_bmp_sprites.py
+levels: src/levels.c src/levels.h
+
+# Bootstrap virtual environment for Python tools
+.venv:
+	@if [ ! -d ".venv" ]; then \
+		echo "Creating virtual environment..."; \
+		/usr/local/google/home/jackpal/.local/bin/uv venv && \
+		/usr/local/google/home/jackpal/.local/bin/uv pip install --index-url https://pypi.org/simple --python .venv/bin/python numpy pillow pyboy; \
+	fi
+
+# Run the clean PNG sprite compiler for both light and dark assets (parallel-safe grouped targets)
+src/tiles_light.c src/tiles_light.h &: teamwork_graphics/tiles_light.png | .venv
+	@echo "Compiling light sprite assets..."
+	flock .sprites.lock .venv/bin/python $(TOOLS_DIR)/compile_png_tiles.py --input $< --output-c src/tiles_light.c --output-h src/tiles_light.h --name dandy_tiles_light
+
+src/tiles_dark.c src/tiles_dark.h &: teamwork_graphics/tiles_dark.png | .venv
+	@echo "Compiling dark sprite assets..."
+	flock .sprites.lock .venv/bin/python $(TOOLS_DIR)/compile_png_tiles.py --input $< --output-c src/tiles_dark.c --output-h src/tiles_dark.h --name dandy_tiles_dark
+
+sprites: src/tiles_light.c src/tiles_dark.c
+
 
 # WebAssembly Emscripten Compiler
 EMCC = emcc
@@ -84,51 +121,48 @@ web: levels
 		exit 1; \
 	fi
 
-# Clean intermediate and output files
-$(OBJ_DIR)/levels.o: $(SRC_DIR)/levels.c
-	$(LCC) -Wf-bo1 -c -o $@ $<
+$(OBJ_DIR)/levels.o: src/levels.c src/levels.h
+	$(LCC) -Wf-bo1 $(CFLAGS_MODE) -c -o $@ $<
+
+$(OBJ_DIR)/tiles.o: $(TILES_SRC) $(TILES_HDR)
+	$(LCC) -Wf--opt-code-size $(CFLAGS_MODE) -c -o $@ $<
+
+$(OBJ_DIR)/main.o: $(TILES_HDR)
+$(OBJ_DIR)/dandy_core.o: src/levels.h
+
 
 clean:
-	rm -rf $(OBJ_DIR) $(BIN_DIR)
-	rm -f $(WEB_DIR)/*.js $(WEB_DIR)/*.wasm
+	rm -rf obj obj_dark bin
+	rm -f src/levels.c src/levels.h src/tiles_light.c src/tiles_light.h src/tiles_dark.c src/tiles_dark.h
 	rm -f *.lst *.map *.sym
-	rm -rf tests/mock_gb tests/.temp_envs
+	rm -rf tests/.temp_envs
 	rm -f libdandy_test.so
+	rm -f teamwork_graphics/graphics_audit.png teamwork_graphics/graphics_audit_dark.png
+	rm -f .levels.lock .sprites.lock
 	@echo "Clean complete."
 
 # --- Host Compilation and Testing for Offline E2E Harness ---
 .PHONY: test_lib test
 
-test_lib: levels
-	@mkdir -p tests/mock_gb/gb
-	@echo "#ifndef MOCK_GB_H" > tests/mock_gb/gb/gb.h
-	@echo "#define MOCK_GB_H" >> tests/mock_gb/gb/gb.h
-	@echo "#define SWITCH_ROM(bank) ((void)0)" >> tests/mock_gb/gb/gb.h
-	@echo "#endif" >> tests/mock_gb/gb/gb.h
+test_lib: levels sprites
 	gcc -fPIC -shared -O2 -Isrc -Itests/mock_gb -o libdandy_test.so \
 		src/dandy_core.c \
 		src/levels.c \
 		tests/mock_hal.c
-	@echo "----------------------------------------"
-	@echo "Test library compiled successfully: libdandy_test.so"
-	@echo "----------------------------------------"
 
-test: test_lib
-	python3 -m unittest discover -s tests -p "test_*.py"
+test: all test_lib | .venv
+	.venv/bin/python -m unittest discover -s tests -p "test_*.py"
 
 # --- Programmatic GameBoy ROM Emulator Testing (PyBoy) ---
 .PHONY: test_emu
 
-test_emu: all
-	@if [ ! -d ".venv" ]; then \
-		echo "----------------------------------------"; \
-		echo "Creating virtual environment and installing PyBoy..."; \
-		echo "----------------------------------------"; \
-		/usr/local/google/home/jackpal/.local/bin/uv venv && \
-		/usr/local/google/home/jackpal/.local/bin/uv pip install --index-url https://pypi.org/simple --python .venv/bin/python pyboy numpy pillow; \
-	fi
+test_emu: all dark | .venv
 	@echo "----------------------------------------"
-	@echo "Running PyBoy automated emulator E2E tests..."
+	@echo "Running PyBoy automated emulator E2E tests: Classic DMG..."
 	@echo "----------------------------------------"
-	.venv/bin/python -m unittest tests/verify_emulator.py
+	ROM_PATH=bin/dandy.gb .venv/bin/python -m unittest tests/verify_emulator.py
+	@echo "----------------------------------------"
+	@echo "Running PyBoy automated emulator E2E tests: Atmospheric Dark..."
+	@echo "----------------------------------------"
+	ROM_PATH=bin/dandy_dark.gb .venv/bin/python -m unittest tests/verify_emulator.py
 

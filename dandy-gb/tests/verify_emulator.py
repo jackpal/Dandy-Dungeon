@@ -8,8 +8,9 @@ class TestEmulator(unittest.TestCase):
     def setUpClass(cls):
         # Resolve absolute paths
         cls.current_dir = os.path.dirname(os.path.abspath(__file__))
-        cls.rom_path = os.path.normpath(os.path.join(cls.current_dir, "../bin/dandy.gb"))
-        cls.map_path = os.path.normpath(os.path.join(cls.current_dir, "../bin/dandy.map"))
+        # Resolve ROM path, allowing override via environment variable
+        cls.rom_path = os.environ.get("ROM_PATH", os.path.normpath(os.path.join(cls.current_dir, "../bin/dandy.gb")))
+        cls.map_path = os.path.splitext(cls.rom_path)[0] + ".map"
         
         # Ensure the ROM and map files exist
         if not os.path.exists(cls.rom_path):

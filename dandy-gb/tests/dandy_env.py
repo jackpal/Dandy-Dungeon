@@ -1,6 +1,7 @@
 import ctypes
 import os
 import shutil
+import sys
 import tempfile
 import _ctypes
 
@@ -180,8 +181,11 @@ class DandyEnv:
         self._arrow_y = (ctypes.c_uint8 * self.MAX_PLAYERS).in_dll(self._lib, "arrow_y")
         self._arrow_dir = (ctypes.c_int8 * self.MAX_PLAYERS).in_dll(self._lib, "arrow_dir")
 
-    def __del__(self):
-        # Force unloading of shared library and deletion of temp directory
+    def close(self):
+        """
+        Explicitly unloads the shared library and deletes the temporary directory,
+        handling exceptions gracefully.
+        """
         if hasattr(self, "_lib"):
             try:
                 _ctypes.dlclose(self._lib._handle)
@@ -189,7 +193,19 @@ class DandyEnv:
                 pass
             del self._lib
         if hasattr(self, "_temp_dir") and os.path.exists(self._temp_dir):
-            shutil.rmtree(self._temp_dir)
+            try:
+                shutil.rmtree(self._temp_dir)
+            except Exception as e:
+                print(f"Warning: Failed to remove temp directory {self._temp_dir}: {e}", file=sys.stderr)
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.close()
+
+    def __del__(self):
+        self.close()
 
     # --- Live Global Property Accessors ---
     @property

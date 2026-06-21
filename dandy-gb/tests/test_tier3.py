@@ -14,8 +14,9 @@ class TestTier3(unittest.TestCase):
         self.env.init()
 
     def tearDown(self):
-        if hasattr(self, "env"):
-            del self.env
+        if hasattr(self, "env") and self.env is not None:
+            self.env.close()
+            self.env = None
 
     def helper_setup_clean_map(self, player_x=10, player_y=10, p_idx=0):
         """Helper to initialize a completely empty map with player 0 at a given position."""

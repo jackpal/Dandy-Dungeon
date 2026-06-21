@@ -2,19 +2,28 @@
 
 This directory contains a retro port and demake of **Dandy Dungeon** for the Nintendo GameBoy, written in highly optimized, portable C using the GBDK-2020 toolchain.
 
-## Current State: Playable ASCII Prototype
-To facilitate immediate testing of the core game engine without waiting for custom 8x8 pixel artwork, this prototype renders the game viewport using the GameBoy's built-in font as **ASCII art**:
-*   **Walls** render as `*`
-*   **Doors** render as `D` (which open recursively when you use a key!)
-*   **Keys** render as `K`
-*   **Food** (Health) renders as `F`
-*   **Money** (Score) renders as `$`
-*   **Smart Bombs** render as `B`
-*   **Monsters** render as `1`, `2`, and `3` (representing different difficulty tiers)
-*   **Generators** render as `g`, `o`, and `q` (which spawn monsters randomly)
-*   **Player & Arrows** render as directional arrow characters (`^`, `>`, `v`, `<`) showing exactly which way you are facing!
+## Current State: Complete 8x8 Grayscale Graphics Engine
+
+The game features a fully realized retro 8x8 tile-graphics engine, drawing 32 custom game tiles directly to background and sprite memory (VRAM):
+*   **Walls (Tile 1)**: Renders a highly faithful 8x8 reduction of the original game's cross-hatch wall pattern (no bricks!).
+*   **Doors (Tile 2)**: Symmetrical opening wooden door tiles.
+*   **Stairs Up / Down (Tiles 3, 4)**: Exit and entry stairways.
+*   **Keys (Tile 5)**: Symmetrical key silhouette.
+*   **Food / Potion (Tile 6)**: Classic flask item.
+*   **Money / Gold (Tile 7)**: Perfectly centered, symmetrical gold dollar sign (`$`)!
+*   **Smart Bombs (Tile 8)**: Bomb sprite with fuse details.
+*   **Monsters (Tiles 9, 10, 11)**: Three distinct monster visage sprites (Goblins, Golems, Hearts).
+*   **Generators (Tiles 13, 14, 15)**: Spawning portals.
+*   **8-Directional Arrows (Tiles 16..23)**: Flying arrows beautifully aligned to all 8 cardinal and diagonal shooting directions (Down-Left, Left, Up-Left, Up, Up-Right, Right, Down-Right, Down).
+*   **Player Character (Tiles 24..27)**: Symmetrical player sprites oriented in 4 directions (Down, Up, Left, Right) to show exactly which way the player is facing!
 
 A fully detailed HUD is displayed at the bottom of the screen showing your Score, Health, Keys, Bombs, and current Level.
+
+### Dual-Palette Hardware Display Modes
+The engine supports two distinct display modes selectable at build time:
+1.  **Classic DMG Mode (Default - Light Floor)**: Compiles to `bin/dandy.gb`. Uses palette register mapping (`BGP = 0xE4`, `OBP0/1 = 0xD8`) to render bright White floor corridors with grid-crack details. Sprites render as dark gray silhouettes with bold black outlines. Optimized for the original DMG-01's slow passive STN screen to completely eliminate motion ghosting and smear.
+2.  **Atmospheric Dark Mode (Optional - Black Floor)**: Compiles to `bin/dandy_dark.gb` (using `make dark`). Renders the floor corridors in solid, pitch-black void (`BGP = 0x1B`, `OBP0/1 = 0xE0`), and character sprites in brilliant bright White with bold black outlines for high-contrast visibility.
+
 
 ---
 
@@ -60,11 +69,12 @@ Run these commands from the `dandy-gb` directory:
     ```
     Parses `dandy-js/levels.js` and compiles them using Scheme B2 compression into `src/levels.c`.
     
-*   **Extract Sprites**:
+*   **Compile Sprite Sheets**:
     ```bash
     make sprites
     ```
-    Decodes the base64 spritesheet from the JS version and saves it as a PNG reference at `assets/strike_original.png`.
+    Compiles the 8x8 grayscale PNG sheets (`teamwork_graphics/tiles_light.png` and `tiles_dark.png`) into planar 2bpp GBDK C source files (`src/tiles_light.c` and `src/tiles_dark.c`).
+
     
 *   **Clean Build Files**:
     ```bash
@@ -73,6 +83,29 @@ Run these commands from the `dandy-gb` directory:
     Deletes the temporary object files, compiled ROM, and testing libraries.
 
 ---
+
+## 🎨 Artist Customization Guide
+
+The graphics pipeline is designed to be extremely friendly for artists. There are **zero downscaling steps** and zero complex algorithms; the compiler reads 8x8 pixel art directly from PNGs.
+
+### How to Redraw the Graphics:
+1.  Open the placeholder sheets in any pixel editor (Aseprite, Photoshop, Piskel, etc.):
+    *   Light Sheet: **[tiles_light.png](file:///usr/local/google/home/jackpal/Developer/Dandy-Dungeon/dandy-gb/teamwork_graphics/tiles_light.png)** (used for Classic DMG mode)
+    *   Dark Sheet: **[tiles_dark.png](file:///usr/local/google/home/jackpal/Developer/Dandy-Dungeon/dandy-gb/teamwork_graphics/tiles_dark.png)** (used for Atmospheric Dark mode)
+2.  Each sheet is exactly **256 pixels wide and 8 pixels high**, containing exactly **32 tiles of 8x8 pixels** laid out horizontally from left to right.
+3.  Draw your pixel art directly onto the canvas using **exactly 4 shades of grayscale**:
+    *   **White (`#FFFFFF`)** $\rightarrow$ Renders as Color 0 (Transparent on sprites, Floor color on background).
+    *   **Light Gray (`#A8A8A8` / `#A0A0A0`)** $\rightarrow$ Renders as Color 1.
+    *   **Dark Gray (`#545454` / `#505050`)** $\rightarrow$ Renders as Color 2.
+    *   **Black (`#000000`)** $\rightarrow$ Renders as Color 3 (Outlines, Text, HUD blocks).
+4.  Save the files and run:
+    ```bash
+    make clean && make
+    ```
+    The build system will instantly compile, pack, and link your new artwork into the GameBoy ROMs!
+
+---
+
 
 ## Automated Verification & Test Suites
 
@@ -88,15 +121,16 @@ Compiles the core engine (`src/dandy_core.c`) as a shared library (`libdandy_tes
     ```
 
 ### Track 2: Programmatic GameBoy ROM Emulator Verification (`make test_emu`)
-Runs programmatic E2E integration tests against the **actual compiled GameBoy Z80 machine code** running inside a simulated GameBoy CPU:
-*   Boots the compiled ROM **`bin/dandy.gb`** in a headless **PyBoy emulator**.
-*   Dynamically parses the compiler/linker map file **`bin/dandy.map`** to resolve the exact WRAM addresses of global variables (e.g. `_player_x`, `_player_y`, `_player_health`, `_current_level`), ensuring the tests never break due to memory address shifts.
-*   Simulates physical joypad button presses, runs the emulation, and asserts that coordinates, health, and map states update correctly in WRAM.
+Runs programmatic E2E integration tests in parallel against **both** compiled GameBoy machine code binaries (`bin/dandy.gb` and `bin/dandy_dark.gb`) running inside a simulated GameBoy CPU:
+*   Boots both ROMs in a headless **PyBoy emulator**.
+*   Dynamically parses their respective linker map files (`bin/dandy.map` and `bin/dandy_dark.map`) to resolve the exact WRAM addresses of global variables, ensuring address-shift resilience.
+*   Simulates physical joypad button presses, runs the emulation, and asserts that coordinates, health, and map states update correctly in WRAM for both Light and Dark Floor modes.
 *   Runs via:
     ```bash
     make test_emu
     ```
     *(Note: This target will automatically check for, create, and configure a Python virtual environment `.venv` and install `pyboy`, `numpy`, and `pillow` using `uv` if not already set up!)*
+
 
 ---
 

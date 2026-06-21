@@ -68,10 +68,9 @@ class TestInfraStress(unittest.TestCase):
         
         # Warm up with 5 runs to let ctypes/libc stabilize their internal caches
         for _ in range(5):
-            env = DandyEnv()
-            env.init()
-            env.step([0, 0, 0, 0])
-            del env
+            with DandyEnv() as env:
+                env.init()
+                env.step([0, 0, 0, 0])
         for _ in range(3):
             gc.collect()
             time.sleep(0.005)
@@ -84,10 +83,9 @@ class TestInfraStress(unittest.TestCase):
         
         # Run 1000 iterations
         for i in range(1000):
-            env = DandyEnv()
-            env.init()
-            env.step([0, 0, 0, 0])
-            del env
+            with DandyEnv() as env:
+                env.init()
+                env.step([0, 0, 0, 0])
             # Periodic GC to keep memory clean
             if i % 100 == 0:
                 gc.collect()
@@ -123,68 +121,74 @@ class TestInfraStress(unittest.TestCase):
         print("\n--- Starting Parallel State Isolation Test ---")
         
         envs = [DandyEnv() for _ in range(5)]
-        for env in envs:
-            env.init()
-            
-        # Write unique states to each environment
-        for idx, env in enumerate(envs):
-            env.current_level = idx + 10
-            env.set_player_health(0, 100 + idx * 10)
-            
-            # Create a unique map
-            custom_map = [env.TILE_SPACE] * env.MAP_SIZE
-            custom_map[0] = env.TILE_WALL + idx
-            env.dandy_map = custom_map
-            
-        # Verify isolation
-        for idx, env in enumerate(envs):
-            self.assertEqual(env.current_level, idx + 10)
-            self.assertEqual(env.get_player_health(0), 100 + idx * 10)
-            self.assertEqual(env.dandy_map[0], env.TILE_WALL + idx)
-            
-        # Delete envs one by one and check the remaining ones
-        for i in range(4):
-            envs.pop(0) # Pop the first one correctly (this triggers deletion)
-            gc.collect()
-            
-            # Verify the remaining envs still have their correct isolated state
+        try:
+            for env in envs:
+                env.init()
+                
+            # Write unique states to each environment
             for idx, env in enumerate(envs):
-                # The remaining envs are originally at index i+1+idx
-                orig_idx = i + 1 + idx
-                self.assertEqual(env.current_level, orig_idx + 10)
-                self.assertEqual(env.get_player_health(0), 100 + orig_idx * 10)
-                self.assertEqual(env.dandy_map[0], env.TILE_WALL + orig_idx)
+                env.current_level = idx + 10
+                env.set_player_health(0, 100 + idx * 10)
+                
+                # Create a unique map
+                custom_map = [env.TILE_SPACE] * env.MAP_SIZE
+                custom_map[0] = env.TILE_WALL + idx
+                env.dandy_map = custom_map
+                
+            # Verify isolation
+            for idx, env in enumerate(envs):
+                self.assertEqual(env.current_level, idx + 10)
+                self.assertEqual(env.get_player_health(0), 100 + idx * 10)
+                self.assertEqual(env.dandy_map[0], env.TILE_WALL + idx)
+                
+            # Delete envs one by one and check the remaining ones
+            for i in range(4):
+                # Pop the first one, and explicitly close it to trigger immediate cleanup
+                old_env = envs.pop(0)
+                old_env.close()
+                gc.collect()
+                
+                # Verify the remaining envs still have their correct isolated state
+                for idx, env in enumerate(envs):
+                    # The remaining envs are originally at index i+1+idx
+                    orig_idx = i + 1 + idx
+                    self.assertEqual(env.current_level, orig_idx + 10)
+                    self.assertEqual(env.get_player_health(0), 100 + orig_idx * 10)
+                    self.assertEqual(env.dandy_map[0], env.TILE_WALL + orig_idx)
+        finally:
+            for env in envs:
+                env.close()
 
     def test_robustness_extreme_inputs_direct(self):
         """Test extreme and boundary inputs directly on DandyEnv python wrapper without crashing."""
         print("\n--- Starting Direct Robustness Tests ---")
-        env = DandyEnv()
-        env.init()
-        
-        # 1. Invalid player indices on safe Python accessors
-        # env.get_player(idx) should raise IndexError on invalid index
-        with self.assertRaises(IndexError):
-            env.get_player(-1)
-        with self.assertRaises(IndexError):
-            env.get_player(4)
-        with self.assertRaises(IndexError):
-            env.get_player(100)
+        with DandyEnv() as env:
+            env.init()
             
-        # 2. Invalid inputs size to step
-        with self.assertRaises(ValueError):
-            env.step([])
-        with self.assertRaises(ValueError):
-            env.step([1, 2])
-        with self.assertRaises(ValueError):
-            env.step([0, 0, 0, 0, 0])
-            
-        # 3. Extreme health values (signed 16-bit integer, should handle large and negative)
-        env.set_player_health(0, -32768)
-        self.assertEqual(env.get_player_health(0), -32768)
-        env.set_player_health(0, 32767)
-        self.assertEqual(env.get_player_health(0), 32767)
-        env.set_player_health(0, 0)
-        self.assertEqual(env.get_player_health(0), 0)
+            # 1. Invalid player indices on safe Python accessors
+            # env.get_player(idx) should raise IndexError on invalid index
+            with self.assertRaises(IndexError):
+                env.get_player(-1)
+            with self.assertRaises(IndexError):
+                env.get_player(4)
+            with self.assertRaises(IndexError):
+                env.get_player(100)
+                
+            # 2. Invalid inputs size to step
+            with self.assertRaises(ValueError):
+                env.step([])
+            with self.assertRaises(ValueError):
+                env.step([1, 2])
+            with self.assertRaises(ValueError):
+                env.step([0, 0, 0, 0, 0])
+                
+            # 3. Extreme health values (signed 16-bit integer, should handle large and negative)
+            env.set_player_health(0, -32768)
+            self.assertEqual(env.get_player_health(0), -32768)
+            env.set_player_health(0, 32767)
+            self.assertEqual(env.get_player_health(0), 32767)
+            env.set_player_health(0, 0)
+            self.assertEqual(env.get_player_health(0), 0)
 
     def test_robustness_out_of_bounds_level_crash(self):
         """Verify that loading an invalid level index triggers an out-of-bounds read and crashes (SIGSEGV)."""
@@ -197,9 +201,9 @@ class TestInfraStress(unittest.TestCase):
 import sys
 sys.path.insert(0, "{test_dir}")
 from dandy_env import DandyEnv
-env = DandyEnv()
-env.init()
-env.load_level(100) # Out of bounds (only 26 levels exist)
+with DandyEnv() as env:
+    env.init()
+    env.load_level(100) # Out of bounds (only 26 levels exist)
 print("SUCCESS")
 """
         
@@ -231,35 +235,35 @@ import sys
 sys.path.insert(0, "{test_dir}")
 import ctypes
 from dandy_env import DandyEnv
-env = DandyEnv()
-env.init()
+with DandyEnv() as env:
+    env.init()
 
-# Cast dandy_map to a larger pointer to observe out-of-bounds memory
-map_ptr = ctypes.cast(ctypes.addressof(env._dandy_map), ctypes.POINTER(ctypes.c_uint8))
+    # Cast dandy_map to a larger pointer to observe out-of-bounds memory
+    map_ptr = ctypes.cast(ctypes.addressof(env._dandy_map), ctypes.POINTER(ctypes.c_uint8))
 
-# Set the memory at 2314 (which corresponds to row_offsets[255] + player_x[0] = 2304 + 10 = 2314)
-# to a known value to verify if it gets overwritten during the step
-map_ptr[2314] = 99
-print(f"BEFORE - Memory at 2314: {{map_ptr[2314]}}")
+    # Set the memory at 2314 (which corresponds to row_offsets[255] + player_x[0] = 2304 + 10 = 2314)
+    # to a known value to verify if it gets overwritten during the step
+    map_ptr[2314] = 99
+    print(f"BEFORE - Memory at 2314: {{map_ptr[2314]}}")
 
-# Force player 0 y-coordinate out of bounds (row_offsets only has 30 elements)
-env.set_player_position(0, 10, 255)
+    # Force player 0 y-coordinate out of bounds (row_offsets only has 30 elements)
+    env.set_player_position(0, 10, 255)
 
-# Step the environment with player 0 moving. This will trigger do_player_buttons(),
-# which attempts to write the player tile to dandy_map[row_offsets[255] + 10] (out of bounds),
-# causing silent memory corruption of whatever lies at index 2314!
-env.step([env.BUTTON_RIGHT, 0, 0, 0])
+    # Step the environment with player 0 moving. This will trigger do_player_buttons(),
+    # which attempts to write the player tile to dandy_map[row_offsets[255] + 10] (out of bounds),
+    # causing silent memory corruption of whatever lies at index 2314!
+    env.step([env.BUTTON_RIGHT, 0, 0, 0])
 
-after_val = map_ptr[2314]
-print(f"AFTER - Memory at 2314: {{after_val}}")
+    after_val = map_ptr[2314]
+    print(f"AFTER - Memory at 2314: {{after_val}}")
 
-# If the out-of-bounds write occurred, the value at 2314 should have been overwritten
-# to either 0 (TILE_SPACE, if cleared) or 26 (GET_PLAYER_TILE, if not cleared/failed move).
-# In either case, it should NOT be 99!
-if after_val in (0, 26):
-    print("CORRUPTION_DETECTED")
-else:
-    print("NO_CORRUPTION")
+    # If the out-of-bounds write occurred, the value at 2314 should have been overwritten
+    # to either 0 (TILE_SPACE, if cleared) or 26 (GET_PLAYER_TILE, if not cleared/failed move).
+    # In either case, it should NOT be 99!
+    if after_val in (0, 26):
+        print("CORRUPTION_DETECTED")
+    else:
+        print("NO_CORRUPTION")
 """
         
         p = subprocess.Popen(

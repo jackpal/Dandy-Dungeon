@@ -21,3 +21,9 @@ tests/__pycache__/
 # Intermediate Analysis Outputs
 tools/analysis_results.json
 tools/modeling_results.json
+
+# Dark Mode and Lock Artifacts
+obj_dark/
+*.lock
+*.log
+

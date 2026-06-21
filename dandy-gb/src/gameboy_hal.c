@@ -18,8 +18,13 @@ void hal_draw_string(uint8_t x, uint8_t y, const char* str) {
 static void hal_draw_string_inverted(uint8_t x, uint8_t y, const char* str) {
     uint8_t i = 0;
     while (str[i] != '\0') {
+#ifdef USE_BLACK_FLOOR
+        // Under USE_BLACK_FLOOR, normal font is already white-on-black (Index 3 on Index 0)
+        set_bkg_tile_xy(x + i, y, str[i] - 32);
+#else
         // Inverted font starts at index 160 in VRAM
         set_bkg_tile_xy(x + i, y, 160 + (str[i] - 32));
+#endif
         i++;
     }
 }
@@ -66,8 +71,14 @@ void hal_update_hud(void) {
     uint8_t p = local_player_idx;
     
     // Fill the entire HUD scoreboard area (columns 0..19, rows 10..17)
-    // with the inverted space tile (160), creating a solid dark background block.
+    // creating a solid dark background block.
+#ifdef USE_BLACK_FLOOR
+    // Space tile 0 is Index 0 (Black) under USE_BLACK_FLOOR
+    fill_bkg_rect(0, 10, 20, 8, 0);
+#else
+    // Inverted Space tile 160 is Index 3 (Black) under normal BGP
     fill_bkg_rect(0, 10, 20, 8, 160);
+#endif
     
     // Draw scoreboard elements using the inverted light-on-dark font
     // Row 11: Score
