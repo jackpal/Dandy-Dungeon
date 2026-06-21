@@ -96,17 +96,18 @@ GLYPHS = {
         "00000000",
         "00000000"
     ],
-    # 7: TILE_MONEY (Iconic Gold Dollar Sign '$' in Light Gray)
+    # 7: TILE_MONEY (Iconic Gold Dollar Sign '$' in Light Gray - Perfectly Symmetrical!)
     7: [
-        "00020000", #     |
-        "00222200", #    $$$$
-        "02202000", #   $$ |
-        "00222000", #    $$$
-        "00002200", #      $$
-        "02202200", #   $$  $$
-        "00222000", #    $$$
-        "00020000"  #     |
+        "00002000", #     $     (Line top)
+        "00222200", #   $$$$    (S top curve, perfectly centered)
+        "00202000", #   $ $     (S left side + vertical line)
+        "00022200", #    $$$    (S middle crossover)
+        "00002020", #     $ $   (Vertical line + S right side)
+        "00222200", #   $$$$    (S bottom curve, perfectly centered)
+        "00002000", #     $     (Line bottom)
+        "00002000"  #     $     (Line bottom tail)
     ],
+
     # 8: TILE_BOMB (Round bomb with lit, sparkling White fuse)
     8: [
         "00000030", # Spark (White 3)
