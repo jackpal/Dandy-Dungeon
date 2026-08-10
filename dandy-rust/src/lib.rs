@@ -42,6 +42,11 @@ impl Default for DandyApp {
     }
 }
 
+#[wasm_bindgen(start)]
+pub fn wasm_start() {
+    console_error_panic_hook::set_once();
+}
+
 #[wasm_bindgen]
 impl DandyApp {
     #[wasm_bindgen(constructor)]
@@ -66,6 +71,16 @@ impl DandyApp {
         app.update_stats_buffer();
         app.render_framebuffer(); // Initial render
         app
+    }
+
+    pub fn get_build_info(&self) -> String {
+        "dandy-rust v0.1.0 (wasm32; bulk-memory; zero-copy ABI)".to_string()
+    }
+
+    pub fn bench_tick(&mut self, frames: u32) {
+        for _ in 0..frames {
+            self.tick();
+        }
     }
 
     pub fn tick(&mut self) {
@@ -124,16 +139,20 @@ impl DandyApp {
         let (offset_x, offset_y) = self.game.get_camera_offsets();
         let active = self.game.get_active_rect();
 
+        let base_x = (offset_x + (active.left * TILE_SIZE) as f64) as i32;
+        let base_y = (offset_y + (active.top * TILE_SIZE) as f64) as i32;
+        let tile_size = TILE_SIZE as i32;
+
         // Render viewport active grid
         for y in 0..active.height {
             let dy = active.top + y;
+            let dest_y = base_y + (y as i32) * tile_size;
             for x in 0..active.width {
                 let dx = active.left + x;
                 let tile_val = self.game.map.get(dx, dy);
 
                 // Calculate pixel coordinate on retro screen
-                let dest_x = (offset_x + (dx * TILE_SIZE) as f64) as i32;
-                let dest_y = (offset_y + (dy * TILE_SIZE) as f64) as i32;
+                let dest_x = base_x + (x as i32) * tile_size;
 
                 // Blit tile from spritesheet into framebuffer
                 self.framebuffer.blit_tile(&self.spritesheet, tile_val, dest_x, dest_y);

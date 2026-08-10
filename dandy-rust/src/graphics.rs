@@ -14,11 +14,18 @@ impl Framebuffer {
     }
 
     pub fn clear(&mut self, r: u8, g: u8, b: u8) {
-        for i in (0..self.pixels.len()).step_by(4) {
-            self.pixels[i] = r;
-            self.pixels[i+1] = g;
-            self.pixels[i+2] = b;
-            self.pixels[i+3] = 255; // Fully opaque
+        // Safety: Casting u8 slice to u32 slice is safe since u32 has no invalid bit representations.
+        let (prefix, words, suffix) = unsafe { self.pixels.align_to_mut::<u32>() };
+        let color = u32::from_ne_bytes([r, g, b, 255]);
+        if prefix.is_empty() && suffix.is_empty() {
+            words.fill(color);
+        } else {
+            for chunk in self.pixels.chunks_exact_mut(4) {
+                chunk[0] = r;
+                chunk[1] = g;
+                chunk[2] = b;
+                chunk[3] = 255;
+            }
         }
     }
 

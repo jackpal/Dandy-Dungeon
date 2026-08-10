@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Dandy Dungeon - Rust WebAssembly</title>
     <style>
         :root {
@@ -14,6 +14,10 @@
             --border-color: #333;
         }
 
+        * {
+            box-sizing: border-box;
+        }
+
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             background-color: var(--bg-color);
@@ -22,8 +26,12 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            padding: 2rem 1rem;
+            padding: 1.5rem 1rem;
             line-height: 1.6;
+            touch-action: manipulation;
+            overscroll-behavior: none;
+            -webkit-user-select: none;
+            user-select: none;
         }
 
         .container {
@@ -36,34 +44,36 @@
 
         header {
             text-align: center;
-            margin-bottom: 2rem;
+            margin-bottom: 1.5rem;
         }
 
         h1 {
             color: var(--accent-color);
-            margin: 0 0 0.5rem 0;
-            font-size: 2.5rem;
+            margin: 0 0 0.25rem 0;
+            font-size: 2.2rem;
             letter-spacing: -0.02em;
         }
 
         p.subtitle {
             color: var(--text-secondary);
-            font-size: 1.1rem;
+            font-size: 1rem;
             margin: 0;
         }
 
         .canvas-wrapper {
             position: relative;
             background: #000;
-            padding: 10px;
+            padding: 8px;
             border-radius: 8px;
             border: 2px solid var(--border-color);
-            box-shadow: 0 20px 40px rgba(0,0,0,0.6);
+            box-shadow: 0 16px 32px rgba(0,0,0,0.6);
             line-height: 0;
             display: flex;
             flex-direction: column;
             align-items: center;
-            width: 640px;
+            max-width: 640px;
+            width: 100%;
+            touch-action: none;
         }
 
         #hud {
@@ -74,20 +84,19 @@
             color: var(--accent-color);
             font-family: 'Courier New', Courier, monospace;
             font-weight: bold;
-            font-size: 0.95rem;
+            font-size: 0.9rem;
             border-bottom: 2px solid #222;
-            margin-bottom: 5px;
+            margin-bottom: 4px;
             line-height: normal;
         }
 
         #hud th, #hud td {
-            padding: 0.5rem 0.25rem;
-            box-sizing: border-box;
+            padding: 0.4rem 0.2rem;
         }
 
         #hud th {
             width: 20%;
-            font-size: 0.8rem;
+            font-size: 0.75rem;
             text-transform: uppercase;
             color: var(--text-secondary);
             font-weight: normal;
@@ -110,17 +119,120 @@
 
         canvas {
             image-rendering: pixelated;
+            image-rendering: crisp-edges;
+            max-width: 100%;
             width: 640px;
-            height: 320px;
+            height: auto;
+            aspect-ratio: 2 / 1;
             border-radius: 2px;
+            display: block;
+            touch-action: none;
+        }
+
+        /* Mobile Touch Controls */
+        #touch-controls {
+            display: none;
+            width: 100%;
+            max-width: 640px;
+            margin-top: 1rem;
+            padding: 0.5rem;
+            justify-content: space-between;
+            align-items: center;
+            touch-action: none;
+        }
+
+        @media (pointer: coarse), (max-width: 800px) {
+            #touch-controls {
+                display: flex;
+            }
+        }
+
+        .dpad {
+            display: grid;
+            grid-template-columns: repeat(3, 56px);
+            grid-template-rows: repeat(3, 56px);
+            gap: 6px;
+            touch-action: none;
+        }
+
+        .dpad-btn {
+            background: rgba(255, 255, 255, 0.12);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            color: #fff;
+            font-size: 1.4rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: none;
+            cursor: pointer;
+            transition: background 0.1s;
+        }
+
+        .dpad-btn:active, .dpad-btn.active {
+            background: var(--accent-color);
+            color: #000;
+        }
+
+        .dpad-up { grid-column: 2; grid-row: 1; }
+        .dpad-left { grid-column: 1; grid-row: 2; }
+        .dpad-right { grid-column: 3; grid-row: 2; }
+        .dpad-down { grid-column: 2; grid-row: 3; }
+
+        .action-btns {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            touch-action: none;
+        }
+
+        .act-btn {
+            width: 64px;
+            height: 64px;
+            border-radius: 50%;
+            background: rgba(255, 167, 38, 0.2);
+            border: 2px solid var(--accent-color);
+            color: var(--accent-color);
+            font-size: 0.9rem;
+            font-weight: bold;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: none;
+            cursor: pointer;
+            transition: background 0.1s, transform 0.05s;
+        }
+
+        .act-btn:active, .act-btn.active {
+            background: var(--accent-color);
+            color: #000;
+            transform: scale(0.95);
+        }
+
+        .act-btn-bomb {
+            width: 54px;
+            height: 54px;
+            background: rgba(239, 83, 80, 0.2);
+            border-color: #ef5350;
+            color: #ef5350;
+        }
+
+        .act-btn-bomb:active, .act-btn-bomb.active {
+            background: #ef5350;
+            color: #fff;
         }
 
         section {
             width: 100%;
-            max-width: 664px;
-            margin-top: 2rem;
+            max-width: 640px;
+            margin-top: 1.5rem;
             background: var(--surface-color);
-            padding: 1.5rem;
+            padding: 1.25rem;
             border-radius: 12px;
             box-sizing: border-box;
             box-shadow: 0 4px 6px rgba(0,0,0,0.3);
@@ -128,9 +240,9 @@
 
         h2 {
             border-bottom: 1px solid var(--border-color);
-            padding-bottom: 0.75rem;
+            padding-bottom: 0.5rem;
             margin-top: 0;
-            font-size: 1.25rem;
+            font-size: 1.15rem;
             color: var(--accent-color);
             text-transform: uppercase;
             letter-spacing: 0.05em;
@@ -138,14 +250,14 @@
 
         .controls-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 1.5rem;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 1.2rem;
         }
 
         .control-item {
             display: flex;
             align-items: center;
-            gap: 12px;
+            gap: 10px;
         }
 
         .keys {
@@ -170,17 +282,17 @@
 
         .control-label {
             color: var(--text-secondary);
-            font-size: 0.95rem;
+            font-size: 0.9rem;
         }
 
         footer {
-            margin-top: 4rem;
+            margin-top: 3rem;
             font-size: 0.85rem;
             color: var(--text-secondary);
             text-align: center;
             border-top: 1px solid var(--border-color);
             width: 100%;
-            padding-top: 2rem;
+            padding-top: 1.5rem;
         }
 
         em {
@@ -190,14 +302,17 @@
 
         @media (max-width: 600px) {
             body {
-                padding: 1rem;
+                padding: 0.75rem 0.5rem;
             }
             h1 {
-                font-size: 1.8rem;
+                font-size: 1.6rem;
+            }
+            .canvas-wrapper {
+                padding: 4px;
             }
         }
     </style>
-    <link data-trunk rel="rust" href="Cargo.toml" />
+    <link data-trunk rel="rust" href="Cargo.toml" data-wasm-opt="0" />
 </head>
 <body>
     <div class="container">
@@ -231,9 +346,23 @@
                 </tbody>
             </table>
             <canvas id="gameCanvas" width="320" height="160">
-                This game requires a browser that supports the HTML5 canvas tag.
+                This game requires a browser that supports HTML5 Canvas.
             </canvas>
         </main>
+
+        <!-- On-Screen Touch Controls for Mobile / Phones -->
+        <div id="touch-controls" aria-label="Touch Controls">
+            <div class="dpad">
+                <button class="dpad-btn dpad-up" data-action="Up" aria-label="Up">▲</button>
+                <button class="dpad-btn dpad-left" data-action="Left" aria-label="Left">◀</button>
+                <button class="dpad-btn dpad-right" data-action="Right" aria-label="Right">▶</button>
+                <button class="dpad-btn dpad-down" data-action="Down" aria-label="Down">▼</button>
+            </div>
+            <div class="action-btns">
+                <button class="act-btn act-btn-bomb" data-action="Bomb" aria-label="Smart Bomb">BOMB</button>
+                <button class="act-btn" data-action="Shoot" aria-label="Fire Arrow">FIRE</button>
+            </div>
+        </div>
 
         <section id="controls">
             <h2>Controls</h2>
@@ -269,7 +398,7 @@
             <h2>About</h2>
             <p>
                 Experience the faithful Rust WebAssembly port of the classic Atari 800 game <em>Dandy Dungeon</em>. 
-                Navigate treacherous levels, collect keys, and blast monsters in this updated HTML5 implementation.
+                Navigate treacherous levels, collect keys, and blast monsters in this high-performance zero-copy WebAssembly implementation.
             </p>
         </section>
 
@@ -284,11 +413,56 @@
 
             const app = new DandyApp();
             let sleeping = false;
+            let loopRunning = true;
             const pressedKeys = new Set();
+            const activeTouches = new Map();
 
             const canvas = document.getElementById("gameCanvas");
-            const ctx = canvas.getContext("2d");
+            const ctx = canvas.getContext("2d", { alpha: false });
 
+            // Zero-Copy Transport Ladder (G3) View Cache
+            let cachedFbPtr = 0;
+            let cachedFbSize = 0;
+            let cachedMemoryBuffer = null;
+            let cachedFbBytes = null;
+            let cachedImgData = null;
+
+            let cachedStatsPtr = 0;
+            let cachedStatsLen = 0;
+            let cachedStatsMemory = null;
+            let cachedStatsArray = null;
+
+            function getFramebufferImageData(wasmMem, ptr, size) {
+                if (ptr !== cachedFbPtr || size !== cachedFbSize || wasmMem.buffer !== cachedMemoryBuffer) {
+                    cachedFbPtr = ptr;
+                    cachedFbSize = size;
+                    cachedMemoryBuffer = wasmMem.buffer;
+                    cachedFbBytes = new Uint8ClampedArray(wasmMem.buffer, ptr, size);
+                    cachedImgData = new ImageData(cachedFbBytes, 320, 160);
+                }
+                return cachedImgData;
+            }
+
+            function getStatsArray(wasmMem, ptr, len) {
+                if (ptr !== cachedStatsPtr || len !== cachedStatsLen || wasmMem.buffer !== cachedStatsMemory) {
+                    cachedStatsPtr = ptr;
+                    cachedStatsLen = len;
+                    cachedStatsMemory = wasmMem.buffer;
+                    cachedStatsArray = new Int32Array(wasmMem.buffer, ptr, len);
+                }
+                return cachedStatsArray;
+            }
+
+            function wakeLoop() {
+                if (sleeping) {
+                    sleeping = false;
+                    if (loopRunning) {
+                        requestAnimationFrame(gameLoop);
+                    }
+                }
+            }
+
+            // Keyboard Control Mapping
             const controlRegistry = {
                 "ArrowUp": { player: 0, action: PlayerAction.Up },
                 "ArrowDown": { player: 0, action: PlayerAction.Down },
@@ -317,11 +491,7 @@
                 if (bind !== undefined) {
                     pressedKeys.add(e.key);
                     app.set_action(bind.player, bind.action, true);
-
-                    if (sleeping) {
-                        sleeping = false;
-                        requestAnimationFrame(gameLoop);
-                    }
+                    wakeLoop();
 
                     if (e.key === " " || e.key.startsWith("Arrow")) {
                         e.preventDefault();
@@ -337,11 +507,71 @@
                 }
             });
 
-            window.addEventListener("blur", () => {
+            // Touch / Mobile Controls Setup
+            const touchActionMap = {
+                "Up": PlayerAction.Up,
+                "Down": PlayerAction.Down,
+                "Left": PlayerAction.Left,
+                "Right": PlayerAction.Right,
+                "Shoot": PlayerAction.Shoot,
+                "Bomb": PlayerAction.Bomb
+            };
+
+            const touchButtons = document.querySelectorAll("#touch-controls button");
+            touchButtons.forEach((btn) => {
+                const actionName = btn.dataset.action;
+                const action = touchActionMap[actionName];
+                if (action === undefined) return;
+
+                const press = (e) => {
+                    e.preventDefault();
+                    try {
+                        btn.setPointerCapture(e.pointerId);
+                    } catch (_) {}
+                    btn.classList.add("active");
+                    app.set_action(0, action, true);
+                    activeTouches.set(e.pointerId, { btn, action });
+                    wakeLoop();
+                };
+
+                const release = (e) => {
+                    e.preventDefault();
+                    try {
+                        btn.releasePointerCapture(e.pointerId);
+                    } catch (_) {}
+                    btn.classList.remove("active");
+                    app.set_action(0, action, false);
+                    activeTouches.delete(e.pointerId);
+                };
+
+                btn.addEventListener("pointerdown", press);
+                btn.addEventListener("pointerup", release);
+                btn.addEventListener("pointercancel", release);
+            });
+
+            // Lifecycle Hygiene (Focus loss, Visibility Change, Tab switch)
+            function resetAllInputs() {
                 pressedKeys.clear();
+                activeTouches.clear();
+                touchButtons.forEach((btn) => btn.classList.remove("active"));
                 for (const key in controlRegistry) {
                     const bind = controlRegistry[key];
                     app.set_action(bind.player, bind.action, false);
+                }
+            }
+
+            window.addEventListener("blur", resetAllInputs);
+
+            document.addEventListener("visibilitychange", () => {
+                if (document.hidden) {
+                    loopRunning = false;
+                    resetAllInputs();
+                } else {
+                    if (!loopRunning) {
+                        loopRunning = true;
+                        sleeping = false;
+                        requestAnimationFrame(gameLoop);
+                    }
                 }
             });
 
@@ -407,28 +637,34 @@
             }
 
             function gameLoop() {
+                if (!loopRunning) return;
+
                 app.tick();
 
+                // Zero-copy render blit using cached ImageData view
                 const fbPtr = app.get_framebuffer_ptr();
                 const fbSize = app.get_framebuffer_size();
-                const fbBytes = new Uint8ClampedArray(wasm.memory.buffer, fbPtr, fbSize);
-
-                const imgData = new ImageData(fbBytes, 320, 160);
+                const imgData = getFramebufferImageData(wasm.memory, fbPtr, fbSize);
                 ctx.putImageData(imgData, 0, 0);
 
+                // Zero-copy stats buffer read using cached typed array view
                 const statsPtr = app.get_stats_ptr();
                 const statsLen = app.get_stats_len();
-                const statsArray = new Int32Array(wasm.memory.buffer, statsPtr, statsLen);
-
+                const statsArray = getStatsArray(wasm.memory, statsPtr, statsLen);
                 updateHUD(statsArray);
 
-                if (pressedKeys.size === 0 && app.can_sleep()) {
+                if (pressedKeys.size === 0 && activeTouches.size === 0 && app.can_sleep()) {
                     sleeping = true;
                     return;
                 }
 
                 requestAnimationFrame(gameLoop);
             }
+
+            // Expose route info & benchmark helper to window for introspection
+            window.dandyApp = app;
+            window.dandyBuildInfo = app.get_build_info();
+            console.log(`[Dandy Dungeon] Loaded: ${window.dandyBuildInfo}`);
 
             requestAnimationFrame(gameLoop);
         });

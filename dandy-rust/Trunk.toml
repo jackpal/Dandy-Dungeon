@@ -1,0 +1,11 @@
+[build]
+target = "index.html"
+dist = "dist"
+
+[[hooks]]
+stage = "post_build"
+command = "bash"
+command_arguments = [
+    "-c",
+    "WASM_FILE=$(ls dist/*_bg.wasm 2>/dev/null | head -n 1); if [ -n \"$WASM_FILE\" ] && [ -x ~/.cache/trunk/wasm-opt-version_123/bin/wasm-opt ]; then ~/.cache/trunk/wasm-opt-version_123/bin/wasm-opt -Oz --enable-bulk-memory --enable-mutable-globals --enable-nontrapping-float-to-int --enable-sign-ext --enable-reference-types --enable-multivalue \"$WASM_FILE\" -o \"$WASM_FILE\"; fi"
+]
