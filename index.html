@@ -222,6 +222,83 @@
             align-items: center;
         }
 
+        /* POKEY Sound Test Styles */
+        .sound-test-card {
+            max-width: 640px;
+            width: 100%;
+            background: #181818;
+            border: 2px solid var(--accent-color);
+            box-shadow: 0 16px 48px rgba(0,0,0,0.9), 0 0 24px rgba(255, 167, 38, 0.25);
+        }
+
+        .sound-meta-box {
+            background: #111;
+            border: 1px solid #282828;
+            border-left: 3px solid var(--accent-color);
+            border-radius: 6px;
+            padding: 8px 12px;
+            font-family: monospace;
+            font-size: 0.78rem;
+            color: #bbb;
+        }
+
+        .sound-tiles-grid {
+            overflow-y: auto;
+            max-height: 180px;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+            gap: 6px;
+            padding-right: 4px;
+            scrollbar-width: thin;
+            scrollbar-color: #444 #141414;
+        }
+
+        .sound-tiles-grid::-webkit-scrollbar {
+            width: 6px;
+        }
+        .sound-tiles-grid::-webkit-scrollbar-track {
+            background: #141414;
+            border-radius: 3px;
+        }
+        .sound-tiles-grid::-webkit-scrollbar-thumb {
+            background: #444;
+            border-radius: 3px;
+        }
+
+        .sound-tile-btn {
+            background: #1a1a1a;
+            border: 1px solid #333;
+            border-radius: 5px;
+            padding: 6px 8px;
+            text-align: left;
+            font-family: monospace;
+            font-size: 0.72rem;
+            color: #ddd;
+            cursor: pointer;
+            transition: all 0.12s;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .sound-tile-btn:hover {
+            border-color: var(--accent-color);
+            background: #242424;
+            color: #fff;
+        }
+
+        .sound-tile-btn.selected {
+            border-color: var(--accent-color);
+            background: rgba(255, 167, 38, 0.15);
+            box-shadow: inset 0 0 0 1px var(--accent-color);
+        }
+
+        .sound-tile-btn.playing {
+            background: rgba(102, 187, 106, 0.25);
+            border-color: #66bb6a;
+            box-shadow: inset 0 0 0 1px #66bb6a;
+        }
+
         /* Multiplayer Lobby Overlay */
         #net-lobby {
             width: 100%;
@@ -1044,6 +1121,68 @@ dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
                         </div>
                     </div>
                 </div>
+
+                <!-- Welcome Screen Sound Test Trigger -->
+                <div class="welcome-footer-actions" style="margin-top: 1rem; padding-top: 0.75rem; border-top: 1px dashed #333; display: flex; justify-content: space-between; align-items: center;">
+                    <span style="font-size: 0.75rem; color: #888; font-family: monospace;">POKEY SOUND SYNTHESIZER</span>
+                    <button id="btn-welcome-sound-test" class="btn btn-sm" style="display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; font-size: 0.82rem; background: #262626; border: 1px solid #444; color: var(--accent-color); font-weight: bold; cursor: pointer; border-radius: 6px;">
+                        <span>🔊 Sound Test</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- POKEY Sound Test Modal -->
+        <div id="sound-test-modal" class="modal-overlay" style="display: none;">
+            <div class="modal-card sound-test-card" style="max-width: 640px; width: 95%; max-height: 90vh; display: flex; flex-direction: column; overflow: hidden; padding: 1.25rem;">
+                <div class="modal-header" style="margin-bottom: 0.35rem;">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span style="font-size: 1.3rem;">🔊</span>
+                        <h2 style="font-family: monospace; font-size: 1.15rem; letter-spacing: 0.05em; color: var(--accent-color);">ATARI 8-BIT POKEY SOUND TEST</h2>
+                    </div>
+                    <button id="btn-close-sound-test" class="btn-close" aria-label="Close sound test">✕</button>
+                </div>
+                <p class="modal-subtitle" style="margin-bottom: 0.75rem; font-size: 0.8rem;">Audition authentic 6502 sound effects synthesized via 4-channel POKEY chip emulation.</p>
+
+                <!-- Stepper & Main Interactive Control Row -->
+                <div style="background: #141414; border: 1px solid #333; border-radius: 8px; padding: 10px 12px; margin-bottom: 10px; display: flex; flex-direction: column; gap: 8px;">
+                    <div style="display: flex; gap: 6px; align-items: center;">
+                        <button id="btn-sound-prev" class="btn btn-sm" title="Previous Sound (◀)" style="padding: 6px 12px; font-size: 0.95rem; line-height: 1;">◀</button>
+                        <select id="sound-test-select" class="input-code" style="flex: 1; min-width: 0; height: 36px; font-family: monospace; font-size: 0.85rem; background: #222; color: #fff; border: 1px solid #444; border-radius: 6px; padding: 4px 8px; cursor: pointer;">
+                            <!-- Populated dynamically with all 21 sounds -->
+                        </select>
+                        <button id="btn-sound-next" class="btn btn-sm" title="Next Sound (▶)" style="padding: 6px 12px; font-size: 0.95rem; line-height: 1;">▶</button>
+                    </div>
+                    <div style="display: flex; gap: 8px; justify-content: flex-end; align-items: center;">
+                        <button id="btn-sound-stop" class="btn btn-sm" style="background: #2a2a2a; border: 1px solid #444; color: #ccc; padding: 6px 12px;">⏹ Stop</button>
+                        <button id="btn-sound-play" class="btn btn-primary" style="padding: 6px 18px; font-weight: bold; font-size: 0.9rem; display: inline-flex; align-items: center; gap: 6px;">▶ Play Sound</button>
+                    </div>
+                </div>
+
+                <!-- Sound Metadata Display Panel -->
+                <div id="sound-test-meta-panel" class="sound-meta-box">
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 6px; margin-bottom: 6px;">
+                        <div><span style="color: #777;">ID:</span> <span id="meta-sound-id" style="color: #fff; font-weight: bold;">01 (0x01)</span></div>
+                        <div><span style="color: #777;">6502 LABEL:</span> <span id="meta-sound-label" style="color: var(--accent-color); font-weight: bold;">Z.HIT.PLAYER</span></div>
+                        <div><span style="color: #777;">POKEY CH:</span> <span id="meta-sound-channel" style="color: #42a5f5; font-weight: bold;">Channel 1</span></div>
+                        <div><span style="color: #777;">PRIORITY:</span> <span id="meta-sound-priority" style="color: #66bb6a; font-weight: bold;">70 / 100</span></div>
+                        <div><span style="color: #777;">DURATION:</span> <span id="meta-sound-duration" style="color: #ffca28; font-weight: bold;">60 ms</span></div>
+                    </div>
+                    <div style="margin-top: 4px; border-top: 1px dashed #282828; padding-top: 4px;">
+                        <span style="color: #777;">SYNTHESIS / DISTORTION:</span>
+                        <span id="meta-sound-desc" style="color: #ddd; margin-left: 4px;">AUDF 250 (128 Hz) pulse transient + click</span>
+                    </div>
+                </div>
+
+                <!-- Quick-Audition Sound Grid -->
+                <div style="display: flex; flex-direction: column; flex: 1; min-height: 0;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                        <span style="font-size: 0.72rem; font-weight: bold; color: #888; text-transform: uppercase; letter-spacing: 0.05em; font-family: monospace;">Quick-Audition Sound List:</span>
+                    </div>
+                    <div id="sound-test-grid" class="sound-tiles-grid">
+                        <!-- Populated dynamically with sound cards -->
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -1093,6 +1232,7 @@ dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
                         <option value="3">Deadly</option>
                     </select>
                     <button id="btn-toggle-sound" class="btn btn-sm" title="Toggle Sound Effects" style="margin-left: 6px; padding: 4px 8px; font-size: 0.85rem;">🔊</button>
+                    <button id="btn-sound-test" class="btn btn-sm" title="Open POKEY Sound Test" style="margin-left: 4px; padding: 4px 8px; font-size: 0.85rem; display: inline-flex; align-items: center; gap: 4px;">🎵 Sound Test</button>
                 </div>
             </div>
 
@@ -1926,6 +2066,31 @@ dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
             const NUM_VOICES = 4;
             let voices = [];
 
+            // Complete catalog of all 21 authentic Atari 8-Bit sound effects (0=Silence, 1..20=Sound Effects)
+            const SOUND_DEFINITIONS = [
+                { id: 0, name: "Silence / None", label: "Z.SILENCE", asmRef: "S.0", channel: 0, priority: 0, duration: "0 ms", desc: "No sound emitted / Idle POKEY channel" },
+                { id: 1, name: "Hit Player", label: "Z.HIT.PLAYER", asmRef: "S.1", channel: 1, priority: 70, duration: "60 ms (4 frames)", desc: "AUDF 250 (128 Hz) pulse transient + click (friendly fire / damage)" },
+                { id: 2, name: "Shoot Arrow", label: "Z.SHOOT", asmRef: "S.7 / S.2", channel: 0, priority: 15, duration: "83 ms (5 frames)", desc: "AUDC 0x2A Sawtooth pitch sweep (1800 Hz down to 240 Hz)" },
+                { id: 3, name: "Bomb Explosion", label: "Z.EXPLODE.BOMB", asmRef: "S.3", channel: 3, priority: 100, duration: "480 ms (29 frames)", desc: "AUDC 0x8F 17-Bit Poly LFSR shaped noise + 75->28 Hz sub-bass rumble" },
+                { id: 4, name: "Open Door", label: "Z.OPEN.DOOR", asmRef: "S.5 / S.4", channel: 0, priority: 60, duration: "170 ms (10 frames)", desc: "AUDC 0xA4 Dual-tone square chime (640 Hz -> 355 Hz)" },
+                { id: 5, name: "Object / Key / Bomb Pickup", label: "Z.PICKUP.OBJECT", asmRef: "S.5 / S.9 / S.10", channel: 0, priority: 35, duration: "170 ms (10 frames)", desc: "AUDC 0xA4 Ascending square sweep (250 Hz up to 750 Hz)" },
+                { id: 6, name: "Eating Food / Heart", label: "Z.EAT.FOOD", asmRef: "S.6 / S.4", channel: 0, priority: 65, duration: "500 ms (30 frames)", desc: "AUDC 0xA4 Tri-tone ascending arpeggio (160 -> 320 -> 640 Hz)" },
+                { id: 7, name: "Pick Money / Treasure", label: "Z.PICK.MONEY", asmRef: "S.7", channel: 0, priority: 40, duration: "250 ms (15 frames)", desc: "AUDC 0xA4 Two-tone bright chime (160 Hz -> 627 Hz)" },
+                { id: 8, name: "Have None / Wall Thud", label: "Z.HAVE.NONE", asmRef: "S.8 / S.14", channel: 0, priority: 20, duration: "80 ms (5 frames)", desc: "AUDF 100 Triangle decay thud (316 Hz down to 120 Hz)" },
+                { id: 9, name: "Hit Monster Tier 1", label: "Z.HIT.MONS1", asmRef: "S.9 / S.2", channel: 1, priority: 45, duration: "160 ms (10 frames)", desc: "AUDF 193 Pure square tone (~165 Hz, Weak ghost)" },
+                { id: 10, name: "Hit Monster Tier 2", label: "Z.HIT.MONS2", asmRef: "S.10 / S.6", channel: 1, priority: 48, duration: "160 ms (10 frames)", desc: "AUDF 217 Pure square tone (~147 Hz, Medium ghost)" },
+                { id: 11, name: "Hit Monster Tier 3", label: "Z.HIT.MONS3", asmRef: "S.11 / S.12", channel: 1, priority: 50, duration: "160 ms (10 frames)", desc: "AUDF 243 Pure square tone (~131 Hz, Strong ghost)" },
+                { id: 12, name: "Monster Bite", label: "Z.MONSTER.BITE", asmRef: "S.12", channel: 2, priority: 75, duration: "250 ms (15 frames)", desc: "Sawtooth chewing pitch sweep (140 Hz down to 65 Hz)" },
+                { id: 13, name: "Player Death", label: "Z.DEAD.PLAYER", asmRef: "S.13", channel: 3, priority: 95, duration: "900 ms (54 frames)", desc: "AUDC 0x4F 5+4 Bit LFSR screech + descending square sweep" },
+                { id: 14, name: "Level Exit / Warp Out", label: "Z.WARP.OUT", asmRef: "S.14", channel: 3, priority: 90, duration: "380 ms (23 frames)", desc: "Square wave downward warp sweep (1200 Hz down to 100 Hz)" },
+                { id: 15, name: "Level Start / Warp In", label: "Z.WARP.IN", asmRef: "S.15", channel: 3, priority: 85, duration: "500 ms (30 frames)", desc: "Square wave upward warp sweep (100 Hz up to 1200 Hz)" },
+                { id: 16, name: "Spawning 1", label: "Z.SPAWNING.1", asmRef: "S.16", channel: 1, priority: 55, duration: "83 ms (5 frames)", desc: "AUDF 64 Pure square pulse (~492 Hz, Spawner Tier 1)" },
+                { id: 17, name: "Spawning 2", label: "Z.SPAWNING.2", asmRef: "S.17", channel: 1, priority: 55, duration: "83 ms (5 frames)", desc: "AUDF 81 Pure square pulse (~390 Hz, Spawner Tier 2)" },
+                { id: 18, name: "Spawning 3", label: "Z.SPAWNING.3", asmRef: "S.18", channel: 1, priority: 55, duration: "83 ms (5 frames)", desc: "AUDF 96 Pure square pulse (~329 Hz, Spawner Tier 3)" },
+                { id: 19, name: "Spawning 4", label: "Z.SPAWNING.4", asmRef: "S.19", channel: 1, priority: 55, duration: "83 ms (5 frames)", desc: "AUDF 121 Pure square pulse (~262 Hz, Spawner Tier 4)" },
+                { id: 20, name: "To Hand / Inventory", label: "Z.TO.HAND", asmRef: "S.20", channel: 0, priority: 30, duration: "500 ms (30 frames)", desc: "AUDC 0xAA Stepped pitch tone shift (262 Hz -> 347 Hz)" }
+            ];
+
             // Sound Priorities matching 6502 Atari 8-Bit EFFECTS.TXT
             const SOUND_PRIORITIES = {
                 3: 100, // SOUND_EXPLODE_BOMB (Smart bomb / explode)
@@ -2053,15 +2218,21 @@ dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
                 }
             }
 
+            let isResuming = false;
+
             function initAudio() {
                 if (audioCtx) {
                     ensureNoiseBuffers();
-                    if (audioCtx.state === "suspended") {
+                    if (audioCtx.state === "suspended" && !isResuming) {
+                        isResuming = true;
                         audioCtx.resume().then(() => {
+                            isResuming = false;
                             if (audioCtx && audioCtx.state === "running") {
                                 flushPendingSounds();
                             }
-                        }).catch(() => {});
+                        }).catch(() => {
+                            isResuming = false;
+                        });
                     } else if (audioCtx.state === "running") {
                         flushPendingSounds();
                     }
@@ -2108,23 +2279,31 @@ dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
                     if (audioCtx.state === "running") {
                         flushPendingSounds();
                     } else if (audioCtx.state === "suspended") {
+                        isResuming = true;
                         audioCtx.resume().then(() => {
+                            isResuming = false;
                             if (audioCtx && audioCtx.state === "running") {
                                 flushPendingSounds();
                             }
-                        }).catch(() => {});
+                        }).catch(() => {
+                            isResuming = false;
+                        });
                     }
                 } catch (_) {}
             }
 
             function unlockAudio() {
                 initAudio();
-                if (audioCtx && audioCtx.state === "suspended") {
+                if (audioCtx && audioCtx.state === "suspended" && !isResuming) {
+                    isResuming = true;
                     audioCtx.resume().then(() => {
+                        isResuming = false;
                         if (audioCtx && audioCtx.state === "running") {
                             flushPendingSounds();
                         }
-                    }).catch(() => {});
+                    }).catch(() => {
+                        isResuming = false;
+                    });
                 }
             }
 
@@ -2632,6 +2811,32 @@ dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
                 playEvents(activeIds);
             }
 
+            function playDirectSound(id) {
+                if (id <= 0) {
+                    if (id === 0) stopAll();
+                    return;
+                }
+                unlockAudio();
+                if (audioCtx && audioCtx.state === "running") {
+                    playSoundDirect(id);
+                } else if (audioCtx && audioCtx.state === "suspended") {
+                    audioCtx.resume().then(() => {
+                        if (audioCtx && audioCtx.state === "running") {
+                            playSoundDirect(id);
+                        }
+                    }).catch(() => {});
+                } else {
+                    pendingSoundIds.add(id);
+                }
+            }
+
+            function stopAll() {
+                for (const voice of voices) {
+                    stopVoice(voice);
+                }
+                pendingSoundIds.clear();
+            }
+
             function toggleMute() {
                 isMuted = !isMuted;
                 return isMuted;
@@ -2645,14 +2850,21 @@ dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
                 init: initAudio,
                 unlock: unlockAudio,
                 play: playSound,
+                playDirectSound,
+                testSound: playDirectSound,
+                stopAll,
                 playMask,
                 playEvents,
                 toggleMute,
                 setMuted,
                 isMuted: () => isMuted,
-                getVoiceState: () => voices.map(v => ({ id: v.activeSoundId, priority: v.priority }))
+                getVoiceState: () => voices.map(v => ({ id: v.activeSoundId, priority: v.priority })),
+                SOUND_DEFINITIONS,
+                getDefinitions: () => SOUND_DEFINITIONS
             };
         })();
+
+        window.PokeyAudio = PokeyAudio;
 
         // Global user gesture listeners to unlock browser Web Audio
         ["keydown", "pointerdown", "touchstart", "mousedown", "click"].forEach((evt) => {
@@ -2742,8 +2954,8 @@ dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
             function wakeLoop() {
                 if (sleeping) {
                     sleeping = false;
-                    lastTimestamp = 0;
-                    accumulator = 0;
+                    lastTimestamp = performance.now();
+                    accumulator = TIMESTEP;
                     if (loopRunning) {
                         requestAnimationFrame(gameLoop);
                     }
@@ -2751,6 +2963,7 @@ dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
             }
 
             let keyboardInputMasks = [0, 0, 0, 0];
+            let latchedInputMasks = [0, 0, 0, 0];
             let gamepadInputMasks = [0, 0, 0, 0];
             let touchInputMask = 0;
 
@@ -2889,6 +3102,7 @@ dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
 
                     if (targetSlot !== null && targetSlot < 4) {
                         keyboardInputMasks[targetSlot] |= (1 << action);
+                        latchedInputMasks[targetSlot] |= (1 << action);
                     }
                     wakeLoop();
 
@@ -2940,6 +3154,7 @@ dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
                     try { btn.setPointerCapture(e.pointerId); } catch (_) {}
                     btn.classList.add("active");
                     touchInputMask |= (1 << action);
+                    latchedInputMasks[localPlayerOrder[0] || 0] |= (1 << action);
                     activeTouches.set(e.pointerId, { btn, action });
                     wakeLoop();
                 };
@@ -3156,7 +3371,8 @@ dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
 
                 // Apply combined input masks to WASM engine
                 for (let p = 0; p < 4; p++) {
-                    const kbMask = keyboardInputMasks[p] || 0;
+                    const kbMask = (keyboardInputMasks[p] || 0) | (latchedInputMasks[p] || 0);
+                    latchedInputMasks[p] = 0;
                     const gpMask = gamepadInputMasks[p] || 0;
                     const touchMask = (localPlayerOrder[0] === p) ? touchInputMask : 0;
                     const combinedMask = kbMask | gpMask | touchMask;
@@ -3184,6 +3400,7 @@ dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
                 pressedKeys.clear();
                 activeTouches.clear();
                 keyboardInputMasks = [0, 0, 0, 0];
+                latchedInputMasks = [0, 0, 0, 0];
                 gamepadInputMasks = [0, 0, 0, 0];
                 touchInputMask = 0;
                 touchButtons.forEach((btn) => btn.classList.remove("active"));
@@ -4478,6 +4695,217 @@ dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
             const roomActiveBadge = document.getElementById("room-active-badge");
             const roomPillCode = document.getElementById("room-pill-code");
 
+            // Sound Test Modal & UI Controls
+            const btnWelcomeSoundTest = document.getElementById("btn-welcome-sound-test");
+            const btnSoundTest = document.getElementById("btn-sound-test");
+            const soundTestModal = document.getElementById("sound-test-modal");
+            const btnCloseSoundTest = document.getElementById("btn-close-sound-test");
+            const soundTestSelect = document.getElementById("sound-test-select");
+            const btnSoundPrev = document.getElementById("btn-sound-prev");
+            const btnSoundNext = document.getElementById("btn-sound-next");
+            const btnSoundPlay = document.getElementById("btn-sound-play");
+            const btnSoundStop = document.getElementById("btn-sound-stop");
+            const soundTestGrid = document.getElementById("sound-test-grid");
+            const metaSoundId = document.getElementById("meta-sound-id");
+            const metaSoundLabel = document.getElementById("meta-sound-label");
+            const metaSoundChannel = document.getElementById("meta-sound-channel");
+            const metaSoundPriority = document.getElementById("meta-sound-priority");
+            const metaSoundDuration = document.getElementById("meta-sound-duration");
+            const metaSoundDesc = document.getElementById("meta-sound-desc");
+
+            let currentSelectedSoundId = 1;
+            let soundTestInitialized = false;
+
+            function updateSoundMeta(soundId) {
+                const defs = PokeyAudio.SOUND_DEFINITIONS || [];
+                const def = defs.find(s => s.id === soundId) || defs[0];
+                if (!def) return;
+                if (metaSoundId) metaSoundId.textContent = String(def.id).padStart(2, "0") + " (0x" + def.id.toString(16).toUpperCase().padStart(2, "0") + ")";
+                if (metaSoundLabel) metaSoundLabel.textContent = def.label + (def.asmRef ? ` (${def.asmRef})` : "");
+                if (metaSoundChannel) {
+                    metaSoundChannel.textContent = `Channel ${def.channel} (Voice ${def.channel})`;
+                    const chColors = ["#90caf9", "#ffcc80", "#a5d6a7", "#ef9a9a"];
+                    metaSoundChannel.style.color = chColors[def.channel] || "#42a5f5";
+                }
+                if (metaSoundPriority) metaSoundPriority.textContent = `${def.priority} / 100`;
+                if (metaSoundDuration) metaSoundDuration.textContent = def.duration;
+                if (metaSoundDesc) metaSoundDesc.textContent = def.desc;
+
+                if (soundTestSelect && soundTestSelect.value !== String(soundId)) {
+                    soundTestSelect.value = String(soundId);
+                }
+
+                if (soundTestGrid) {
+                    const tiles = soundTestGrid.querySelectorAll(".sound-tile-btn");
+                    tiles.forEach(tile => {
+                        const tileId = parseInt(tile.getAttribute("data-sound-id"), 10);
+                        if (tileId === soundId) {
+                            tile.classList.add("selected");
+                        } else {
+                            tile.classList.remove("selected");
+                        }
+                    });
+                }
+            }
+
+            function triggerSoundPlay(soundId) {
+                currentSelectedSoundId = soundId;
+                updateSoundMeta(soundId);
+                PokeyAudio.playDirectSound(soundId);
+
+                if (soundTestGrid) {
+                    const tile = soundTestGrid.querySelector(`.sound-tile-btn[data-sound-id="${soundId}"]`);
+                    if (tile) {
+                        tile.classList.add("playing");
+                        setTimeout(() => tile.classList.remove("playing"), 300);
+                    }
+                }
+            }
+
+            function initSoundTestUI() {
+                if (soundTestInitialized) return;
+                soundTestInitialized = true;
+                const defs = PokeyAudio.SOUND_DEFINITIONS || [];
+
+                if (soundTestSelect) {
+                    soundTestSelect.innerHTML = "";
+                    for (const def of defs) {
+                        const opt = document.createElement("option");
+                        opt.value = String(def.id);
+                        opt.textContent = `${String(def.id).padStart(2, "0")}: ${def.name} (${def.label})`;
+                        soundTestSelect.appendChild(opt);
+                    }
+                    soundTestSelect.addEventListener("change", (e) => {
+                        const newId = parseInt(e.target.value, 10);
+                        currentSelectedSoundId = newId;
+                        updateSoundMeta(newId);
+                    });
+                }
+
+                if (soundTestGrid) {
+                    soundTestGrid.innerHTML = "";
+                    for (const def of defs) {
+                        const tile = document.createElement("button");
+                        tile.className = "sound-tile-btn" + (def.id === currentSelectedSoundId ? " selected" : "");
+                        tile.setAttribute("data-sound-id", String(def.id));
+                        tile.setAttribute("title", `${def.name} - ${def.desc}`);
+
+                        const topRow = document.createElement("div");
+                        topRow.style.display = "flex";
+                        topRow.style.justifyContent = "space-between";
+                        topRow.style.alignItems = "center";
+                        topRow.style.width = "100%";
+
+                        const idSpan = document.createElement("span");
+                        idSpan.style.color = "var(--accent-color)";
+                        idSpan.style.fontWeight = "bold";
+                        idSpan.textContent = `#${String(def.id).padStart(2, "0")}`;
+
+                        const chSpan = document.createElement("span");
+                        chSpan.style.fontSize = "0.65rem";
+                        chSpan.style.padding = "1px 4px";
+                        chSpan.style.borderRadius = "3px";
+                        chSpan.style.background = "#2a2a2a";
+                        chSpan.style.color = ["#90caf9", "#ffcc80", "#a5d6a7", "#ef9a9a"][def.channel] || "#888";
+                        chSpan.textContent = `CH ${def.channel}`;
+
+                        topRow.appendChild(idSpan);
+                        topRow.appendChild(chSpan);
+
+                        const nameSpan = document.createElement("div");
+                        nameSpan.style.fontWeight = "500";
+                        nameSpan.style.color = "#eee";
+                        nameSpan.style.whiteSpace = "nowrap";
+                        nameSpan.style.overflow = "hidden";
+                        nameSpan.style.textOverflow = "ellipsis";
+                        nameSpan.textContent = def.name;
+
+                        tile.appendChild(topRow);
+                        tile.appendChild(nameSpan);
+
+                        tile.addEventListener("click", () => {
+                            triggerSoundPlay(def.id);
+                        });
+
+                        soundTestGrid.appendChild(tile);
+                    }
+                }
+
+                updateSoundMeta(currentSelectedSoundId);
+            }
+
+            function showSoundTestModal() {
+                initSoundTestUI();
+                PokeyAudio.unlock();
+                if (soundTestModal) {
+                    soundTestModal.style.display = "flex";
+                }
+            }
+
+            function hideSoundTestModal() {
+                if (soundTestModal) {
+                    soundTestModal.style.display = "none";
+                }
+            }
+
+            if (btnWelcomeSoundTest) {
+                btnWelcomeSoundTest.addEventListener("click", () => {
+                    showSoundTestModal();
+                });
+            }
+
+            if (btnSoundTest) {
+                btnSoundTest.addEventListener("click", () => {
+                    showSoundTestModal();
+                });
+            }
+
+            if (btnCloseSoundTest) {
+                btnCloseSoundTest.addEventListener("click", () => {
+                    hideSoundTestModal();
+                });
+            }
+
+            if (soundTestModal) {
+                soundTestModal.addEventListener("click", (e) => {
+                    if (e.target === soundTestModal) {
+                        hideSoundTestModal();
+                    }
+                });
+            }
+
+            if (btnSoundPlay) {
+                btnSoundPlay.addEventListener("click", () => {
+                    triggerSoundPlay(currentSelectedSoundId);
+                });
+            }
+
+            if (btnSoundStop) {
+                btnSoundStop.addEventListener("click", () => {
+                    PokeyAudio.stopAll();
+                });
+            }
+
+            if (btnSoundPrev) {
+                btnSoundPrev.addEventListener("click", () => {
+                    const defs = PokeyAudio.SOUND_DEFINITIONS || [];
+                    const currentIndex = defs.findIndex(s => s.id === currentSelectedSoundId);
+                    const prevIndex = (currentIndex - 1 + defs.length) % defs.length;
+                    const prevSound = defs[prevIndex];
+                    if (prevSound) triggerSoundPlay(prevSound.id);
+                });
+            }
+
+            if (btnSoundNext) {
+                btnSoundNext.addEventListener("click", () => {
+                    const defs = PokeyAudio.SOUND_DEFINITIONS || [];
+                    const currentIndex = defs.findIndex(s => s.id === currentSelectedSoundId);
+                    const nextIndex = (currentIndex + 1) % defs.length;
+                    const nextSound = defs[nextIndex];
+                    if (nextSound) triggerSoundPlay(nextSound.id);
+                });
+            }
+
             function updateStatus(statusText, color = "#4caf50") {
                 const el = document.getElementById("net-stat-status");
                 if (el) {
@@ -4629,6 +5057,10 @@ dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
 
             window.addEventListener("keydown", (e) => {
                 if (e.key === "Escape") {
+                    if (soundTestModal && soundTestModal.style.display !== "none") {
+                        hideSoundTestModal();
+                        return;
+                    }
                     if (welcomeModal && welcomeModal.style.display !== "none" && btnCloseWelcome && btnCloseWelcome.style.display !== "none") {
                         hideWelcomeModal();
                     }
@@ -5488,6 +5920,12 @@ dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
                         // 1. Advance rollback netcode step
                         const currentFrame = app.net_step();
 
+                        // Dispatch audio sound effects triggered during this step
+                        const soundMask = app.get_sound_mask();
+                        if (soundMask !== 0) {
+                            PokeyAudio.playMask(soundMask);
+                        }
+
                         // 2. Broadcast local input packets for all local player slots to peers
                         const inputPackets = app.net_encode_all_local_input_packets(currentFrame);
                         if (inputPackets.length > 0) {
@@ -5568,13 +6006,13 @@ dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
                     while (accumulator >= TIMESTEP) {
                         accumulator -= TIMESTEP;
                         app.tick();
-                    }
-                }
 
-                // Play any sound effects triggered during tick/step
-                const soundMask = app.get_sound_mask();
-                if (soundMask !== 0) {
-                    PokeyAudio.playMask(soundMask);
+                        // Dispatch audio sound effects triggered during this tick
+                        const soundMask = app.get_sound_mask();
+                        if (soundMask !== 0) {
+                            PokeyAudio.playMask(soundMask);
+                        }
+                    }
                 }
 
                 // Zero-copy render blit using cached ImageData view
