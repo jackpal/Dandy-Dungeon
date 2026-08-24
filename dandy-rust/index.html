@@ -85,6 +85,143 @@
             margin: 0;
         }
 
+        /* Modal Base Styles */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(10, 10, 10, 0.85);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(8px);
+            padding: 1rem;
+        }
+
+        .modal-card {
+            background: var(--surface-color);
+            border: 2px solid var(--accent-color);
+            border-radius: 12px;
+            padding: 1.5rem;
+            max-width: 520px;
+            width: 100%;
+            box-shadow: 0 16px 48px rgba(0,0,0,0.9), 0 0 24px rgba(255, 167, 38, 0.2);
+            position: relative;
+            animation: modalPop 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        @keyframes modalPop {
+            from { transform: scale(0.92); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+
+        .modal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 0.25rem;
+        }
+
+        .modal-header h2 {
+            border: none;
+            padding: 0;
+            margin: 0;
+            font-size: 1.3rem;
+            color: var(--accent-color);
+        }
+
+        .btn-close {
+            background: transparent;
+            border: 1px solid #444;
+            color: var(--text-secondary);
+            width: 32px;
+            height: 32px;
+            border-radius: 6px;
+            font-size: 1.1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+
+        .btn-close:hover {
+            color: #fff;
+            border-color: var(--accent-color);
+            background: #2a2a2a;
+        }
+
+        .modal-subtitle {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            margin: 0 0 1.25rem 0;
+        }
+
+        .mode-options-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .mode-option-card {
+            background: #181818;
+            border: 1px solid #333;
+            border-radius: 8px;
+            padding: 14px;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            transition: all 0.2s;
+            text-align: left;
+            cursor: pointer;
+        }
+
+        .mode-option-card:hover {
+            border-color: var(--accent-color);
+            background: #202020;
+        }
+
+        .mode-option-card:active {
+            transform: scale(0.99);
+        }
+
+        .mode-icon {
+            font-size: 2rem;
+            line-height: 1;
+            flex-shrink: 0;
+        }
+
+        .mode-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .mode-info h3 {
+            margin: 0 0 3px 0;
+            font-size: 0.95rem;
+            color: #fff;
+        }
+
+        .mode-info p {
+            margin: 0;
+            font-size: 0.78rem;
+            color: var(--text-secondary);
+            line-height: 1.3;
+        }
+
+        .btn-mode {
+            padding: 8px 16px;
+            font-size: 0.85rem;
+            flex-shrink: 0;
+        }
+
+        .join-input-group {
+            display: flex;
+            gap: 6px;
+            flex-shrink: 0;
+            align-items: center;
+        }
+
         /* Multiplayer Lobby Overlay */
         #net-lobby {
             width: 100%;
@@ -97,6 +234,91 @@
             display: flex;
             flex-direction: column;
             gap: 8px;
+        }
+
+        .lobby-header-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 8px;
+            padding-bottom: 4px;
+        }
+
+        .lobby-mode-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .btn-switch-mode {
+            background: #242424;
+            border: 1px solid #444;
+            color: #fff;
+            padding: 5px 12px;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 0.85rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+
+        .btn-switch-mode:hover {
+            background: #333;
+            border-color: var(--accent-color);
+            color: var(--accent-color);
+        }
+
+        .room-pill {
+            background: rgba(255, 167, 38, 0.15);
+            border: 1px solid rgba(255, 167, 38, 0.4);
+            border-radius: 4px;
+            padding: 3px 8px;
+            font-size: 0.75rem;
+            font-family: 'Courier New', Courier, monospace;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            color: var(--accent-color);
+            font-weight: bold;
+        }
+
+        .room-pill-label {
+            color: var(--text-secondary);
+            font-size: 0.68rem;
+        }
+
+        .host-share-group {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+        }
+
+        .difficulty-group {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.85rem;
+        }
+
+        .difficulty-label {
+            color: var(--text-secondary);
+            font-size: 0.75rem;
+            font-weight: bold;
+            letter-spacing: 0.05em;
+        }
+
+        .difficulty-select {
+            width: auto;
+            padding: 3px 8px;
+            font-size: 0.8rem;
+            background: #222;
+            border-color: #555;
+            cursor: pointer;
         }
 
         .lobby-tabs {
@@ -167,6 +389,16 @@
             background: #f57c00;
         }
 
+        .btn-sm {
+            padding: 4px 8px;
+            font-size: 0.8rem;
+        }
+
+        .btn-xs {
+            padding: 2px 6px;
+            font-size: 0.7rem;
+        }
+
         .input-code {
             background: #000;
             color: #fff;
@@ -178,6 +410,38 @@
             font-size: 0.95rem;
             width: 140px;
             text-transform: uppercase;
+        }
+
+        .diagnostics-details {
+            margin-top: 4px;
+            border-top: 1px solid #282828;
+            padding-top: 4px;
+            width: 100%;
+        }
+
+        .diagnostics-summary {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            user-select: none;
+            padding: 3px 6px;
+            border-radius: 4px;
+            transition: background 0.15s, color 0.15s;
+        }
+
+        .diagnostics-summary:hover {
+            color: #fff;
+            background: rgba(255,255,255,0.05);
+        }
+
+        .diagnostics-content {
+            margin-top: 6px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
         }
 
         .net-stats-bar {
@@ -694,69 +958,97 @@
             <p class="subtitle">Classic dungeon crawl action with zero-latency peer-to-peer multiplayer netcode.</p>
         </header>
 
-        <!-- Multiplayer Lobby & Peer Connection Overlay -->
-        <div id="net-lobby">
-            <div class="lobby-tabs" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
-                <div style="display: flex; gap: 8px;">
-                    <button id="tab-local" class="tab-btn active">🎮 Local Co-op (1-4 Players)</button>
-                    <button id="tab-online" class="tab-btn">🌐 Online P2P (WebRTC Rollback)</button>
+        <!-- Welcome / Play Mode Selection Modal -->
+        <div id="welcome-modal" class="modal-overlay">
+            <div class="modal-card">
+                <div class="modal-header">
+                    <h2>🎮 Select Play Mode</h2>
+                    <button id="btn-close-welcome" class="btn-close" aria-label="Close modal" style="display: none;">✕</button>
                 </div>
-                <div style="display: flex; align-items: center; gap: 6px; font-size: 0.85rem;">
-                    <label for="select-difficulty" style="color: var(--text-secondary); font-size: 0.75rem; font-weight: bold; letter-spacing: 0.05em;">DIFFICULTY:</label>
-                    <select id="select-difficulty" class="input-code" style="width: auto; padding: 3px 8px; font-size: 0.8rem; background: #222; border-color: #555; cursor: pointer;">
+                <p class="modal-subtitle">Choose how you want to play Dandy Dungeon</p>
+
+                <div class="mode-options-grid">
+                    <!-- Option 1: Local Co-op -->
+                    <div class="mode-option-card" id="mode-opt-local">
+                        <div class="mode-icon">🎮</div>
+                        <div class="mode-info">
+                            <h3>Play Local (1-4 Players)</h3>
+                            <p>Play solo or same-device multiplayer with Keyboard, Gamepad, or Touch D-Pad.</p>
+                        </div>
+                        <button id="btn-welcome-local" class="btn btn-mode">Play Local</button>
+                    </div>
+
+                    <!-- Option 2: Host Online -->
+                    <div class="mode-option-card" id="mode-opt-host">
+                        <div class="mode-icon">⚡</div>
+                        <div class="mode-info">
+                            <h3>Host Online Game</h3>
+                            <p>Create a private room with zero-lag WebRTC rollback netcode. Share link or QR code.</p>
+                        </div>
+                        <button id="btn-welcome-host" class="btn btn-primary btn-mode">Host Room</button>
+                    </div>
+
+                    <!-- Option 3: Join Online -->
+                    <div class="mode-option-card" id="mode-opt-join">
+                        <div class="mode-icon">🔗</div>
+                        <div class="mode-info">
+                            <h3>Join Online Game</h3>
+                            <p>Connect to an existing online lobby using a room code.</p>
+                        </div>
+                        <div class="join-input-group">
+                            <input type="text" id="welcome-input-room-code" class="input-code" placeholder="ROOM-CODE" maxlength="10" style="width: 110px;">
+                            <button id="btn-welcome-join" class="btn btn-mode">Connect</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Multiplayer Lobby Overlay -->
+        <div id="net-lobby">
+            <!-- Top Controls Row with Progressive Disclosure -->
+            <div class="lobby-header-bar">
+                <div class="lobby-mode-group">
+                    <button id="btn-switch-mode" class="btn-switch-mode" title="Switch play mode">
+                        <span id="current-mode-icon">🎮</span>
+                        <span id="current-mode-label">Local Co-op</span>
+                        <span style="font-size: 0.7rem; margin-left: 2px;">▾</span>
+                    </button>
+
+                    <!-- Hidden tabs retained for test scripts and backward compatibility -->
+                    <div class="lobby-tabs" style="display: none;">
+                        <button id="tab-local" class="tab-btn active">🎮 Local Co-op (1-4 Players)</button>
+                        <button id="tab-online" class="tab-btn">🌐 Online P2P (WebRTC Rollback)</button>
+                    </div>
+
+                    <div id="room-active-badge" class="room-pill" style="display: none;">
+                        <span class="room-pill-label">ROOM:</span>
+                        <span id="room-pill-code">NONE</span>
+                    </div>
+                </div>
+
+                <!-- Host Share Actions (Copy Link & QR Code) -->
+                <div id="host-share-actions" class="host-share-group" style="display: none;">
+                    <button id="btn-share-link" class="btn btn-sm" style="display: none;">🔗 Copy Link</button>
+                    <button id="btn-show-qr" class="btn btn-sm" style="display: none;">📱 QR Code</button>
+                </div>
+
+                <!-- Online Panel Container for elements used in join/host -->
+                <div id="online-panel" style="display: none;">
+                    <button id="btn-create-room" class="btn btn-primary btn-sm" style="display: none;">⚡ Host Room</button>
+                    <input type="text" id="input-room-code" class="input-code" placeholder="ROOM-CODE" maxlength="10" style="display: none;">
+                    <button id="btn-join-room" class="btn btn-sm" style="display: none;">Connect</button>
+                </div>
+
+                <!-- Difficulty Selector -->
+                <div class="difficulty-group">
+                    <label for="select-difficulty" class="difficulty-label">DIFFICULTY:</label>
+                    <select id="select-difficulty" class="input-code difficulty-select">
                         <option value="0">Trivial (Delay 13)</option>
                         <option value="1" selected>Easy (Delay 8)</option>
                         <option value="2">Hard (Delay 5)</option>
                         <option value="3">Deadly (Delay 2)</option>
                     </select>
-                </div>
-            </div>
-
-            <!-- Online P2P Controls Panel -->
-            <div id="online-panel" class="lobby-content" style="display: none;">
-                <div class="lobby-row">
-                    <button id="btn-create-room" class="btn btn-primary">⚡ Host Room</button>
-                    <button id="btn-share-link" class="btn" style="display: none;">🔗 Copy Invite Link</button>
-                    <button id="btn-show-qr" class="btn" style="display: none;">📱 QR Code</button>
-                    <span style="color: var(--text-secondary); font-size: 0.85rem;">or Join:</span>
-                    <input type="text" id="input-room-code" class="input-code" placeholder="ROOM-CODE" maxlength="10">
-                    <button id="btn-join-room" class="btn">Connect</button>
-                    <button id="btn-manual-sdp-toggle" class="btn" style="font-size: 0.75rem;">Manual SDP ⚙</button>
-                </div>
-
-                <!-- QR Code Modal -->
-                <div id="qr-modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.75); z-index: 1000; align-items: center; justify-content: center;">
-                    <div style="background: var(--surface-color); border: 2px solid var(--accent-color); border-radius: 8px; padding: 20px; text-align: center; max-width: 320px; width: 90%; box-shadow: 0 8px 32px rgba(0,0,0,0.8);">
-                        <h3 style="margin-top: 0; color: var(--accent-color); font-size: 1.1rem;">📱 Scan to Join on Phone</h3>
-                        <div style="background: #ffffff; padding: 12px; border-radius: 6px; display: inline-block; margin: 10px 0;">
-                            <canvas id="qr-canvas" width="180" height="180" style="display: block;"></canvas>
-                        </div>
-                        <p style="font-size: 0.8rem; color: var(--text-secondary); margin: 6px 0 12px 0;">
-                            Scan with your iPhone Camera or Android to join immediately with mobile touch D-Pad controls.
-                        </p>
-                        <div style="display: flex; gap: 8px; justify-content: center;">
-                            <button id="btn-qr-copy-link" class="btn btn-primary" style="font-size: 0.8rem;">📋 Copy Link</button>
-                            <button id="btn-qr-close" class="btn" style="font-size: 0.8rem;">Close</button>
-                        </div>
-                    </div>
-                </div>
-
-                <div id="sdp-modal">
-                    <div style="font-size: 0.8rem; margin-bottom: 4px; color: var(--text-secondary);">Direct SDP Exchange (Serverless Fallback):</div>
-                    <textarea id="sdp-text" placeholder="Paste peer offer/answer JSON here..."></textarea>
-                    <div style="display: flex; gap: 6px; margin-top: 4px;">
-                        <button id="btn-sdp-copy" class="btn" style="padding: 3px 8px; font-size: 0.75rem;">Copy My SDP</button>
-                        <button id="btn-sdp-apply" class="btn btn-primary" style="padding: 3px 8px; font-size: 0.75rem;">Apply Remote SDP</button>
-                    </div>
-                </div>
-
-                <div class="net-stats-bar">
-                    <span>Room: <b id="net-stat-room">NONE</b></span>
-                    <span>Role: <b id="net-stat-role">LOCAL</b></span>
-                    <span>Frame: <b id="net-stat-frame">0</b></span>
-                    <span>Ping: <b id="net-stat-ping">-- ms</b></span>
-                    <span>Rollbacks: <b id="net-stat-rollbacks">0</b></span>
-                    <span>Status: <b id="net-stat-status" style="color: #4caf50;">Ready</b></span>
                 </div>
             </div>
 
@@ -777,6 +1069,51 @@
                 <div class="slot-card p4" id="slot-p4">
                     <div class="slot-name">P4: Emerald</div>
                     <div class="slot-badge" id="slot-badge-p4">Press Num8</div>
+                </div>
+            </div>
+
+            <!-- Expandable Diagnostics Panel (Progressive Disclosure) -->
+            <details id="diagnostics-panel" class="diagnostics-details">
+                <summary class="diagnostics-summary">
+                    <span>⚙️ Diagnostics & Troubleshooting</span>
+                    <span style="font-size: 0.7rem; color: var(--text-secondary);">Status: <b id="net-stat-status-summary" style="color: #4caf50;">Ready</b></span>
+                </summary>
+                <div class="diagnostics-content">
+                    <div class="net-stats-bar">
+                        <span>Room: <b id="net-stat-room">NONE</b></span>
+                        <span>Role: <b id="net-stat-role">LOCAL</b></span>
+                        <span>Frame: <b id="net-stat-frame">0</b></span>
+                        <span>Ping: <b id="net-stat-ping">-- ms</b></span>
+                        <span>Rollbacks: <b id="net-stat-rollbacks">0</b></span>
+                        <span>Status: <b id="net-stat-status" style="color: #4caf50;">Ready</b></span>
+                        <button id="btn-manual-sdp-toggle" class="btn btn-xs" style="margin-left: auto;">Manual SDP ⚙</button>
+                    </div>
+
+                    <div id="sdp-modal" style="display: none;">
+                        <div style="font-size: 0.8rem; margin-bottom: 4px; color: var(--text-secondary);">Direct SDP Exchange (Serverless Fallback):</div>
+                        <textarea id="sdp-text" placeholder="Paste peer offer/answer JSON here..."></textarea>
+                        <div style="display: flex; gap: 6px; margin-top: 4px;">
+                            <button id="btn-sdp-copy" class="btn" style="padding: 3px 8px; font-size: 0.75rem;">Copy My SDP</button>
+                            <button id="btn-sdp-apply" class="btn btn-primary" style="padding: 3px 8px; font-size: 0.75rem;">Apply Remote SDP</button>
+                        </div>
+                    </div>
+                </div>
+            </details>
+
+            <!-- QR Code Modal -->
+            <div id="qr-modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.75); z-index: 1000; align-items: center; justify-content: center;">
+                <div style="background: var(--surface-color); border: 2px solid var(--accent-color); border-radius: 8px; padding: 20px; text-align: center; max-width: 320px; width: 90%; box-shadow: 0 8px 32px rgba(0,0,0,0.8);">
+                    <h3 style="margin-top: 0; color: var(--accent-color); font-size: 1.1rem;">📱 Scan to Join on Phone</h3>
+                    <div style="background: #ffffff; padding: 12px; border-radius: 6px; display: inline-block; margin: 10px 0;">
+                        <canvas id="qr-canvas" width="180" height="180" style="display: block;"></canvas>
+                    </div>
+                    <p style="font-size: 0.8rem; color: var(--text-secondary); margin: 6px 0 12px 0;">
+                        Scan with your iPhone Camera or Android to join immediately with mobile touch D-Pad controls.
+                    </p>
+                    <div style="display: flex; gap: 8px; justify-content: center;">
+                        <button id="btn-qr-copy-link" class="btn btn-primary" style="font-size: 0.8rem;">📋 Copy Link</button>
+                        <button id="btn-qr-close" class="btn" style="font-size: 0.8rem;">Close</button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -2134,8 +2471,7 @@
                     if (localPlayerIdx === 0) {
                         // Host
                         app.net_set_player_joined(assignedSlot, true);
-                        document.getElementById("net-stat-status").textContent = "Connected";
-                        document.getElementById("net-stat-status").style.color = "#4caf50";
+                        updateStatus("Connected", "#4caf50");
                         updateSlotCards();
                         sendInitialState(dc, assignedSlot);
                         broadcastPacket(new Uint8Array([0x05, assignedSlot, 1]), peerId);
@@ -2172,8 +2508,7 @@
                     } else {
                         PEER_CONNECTIONS.delete(peerId);
                         updateSlotCards();
-                        document.getElementById("net-stat-status").textContent = "Disconnected";
-                        document.getElementById("net-stat-status").style.color = "#ef5350";
+                        updateStatus("Disconnected", "#ef5350");
                     }
                     wakeLoop();
                 };
@@ -2208,8 +2543,7 @@
                                     app.load_state_bytes(stateBytes);
                                 }
                                 isWaitingForHostSync = false;
-                                document.getElementById("net-stat-status").textContent = "Connected";
-                                document.getElementById("net-stat-status").style.color = "#4caf50";
+                                updateStatus("Connected", "#4caf50");
                                 updateSlotCards();
                                 wakeLoop();
                             } else if (pktType === 0x05) { // PKT_JOIN
@@ -2499,8 +2833,7 @@
                         console.log(`[Joiner] Connection to host failed/closed`);
                         PEER_CONNECTIONS.delete(targetId);
                         updateSlotCards();
-                        document.getElementById("net-stat-status").textContent = "Disconnected";
-                        document.getElementById("net-stat-status").style.color = "#ef5350";
+                        updateStatus("Disconnected", "#ef5350");
                         wakeLoop();
                     }
                 };
@@ -2589,7 +2922,7 @@
             }
 
             // -----------------------------------------------------------------
-            // UI Mode Switching & Lobby Event Listeners
+            // UI Mode Switching, Progressive Disclosure & Welcome Flow
             // -----------------------------------------------------------------
             const tabLocal = document.getElementById("tab-local");
             const tabOnline = document.getElementById("tab-online");
@@ -2604,7 +2937,168 @@
             const btnSdpCopy = document.getElementById("btn-sdp-copy");
             const btnSdpApply = document.getElementById("btn-sdp-apply");
 
+            // Welcome Modal & Progressive Disclosure Elements
+            const welcomeModal = document.getElementById("welcome-modal");
+            const btnCloseWelcome = document.getElementById("btn-close-welcome");
+            const btnWelcomeLocal = document.getElementById("btn-welcome-local");
+            const btnWelcomeHost = document.getElementById("btn-welcome-host");
+            const btnWelcomeJoin = document.getElementById("btn-welcome-join");
+            const welcomeInputRoomCode = document.getElementById("welcome-input-room-code");
+            const modeOptLocal = document.getElementById("mode-opt-local");
+            const modeOptHost = document.getElementById("mode-opt-host");
+            const modeOptJoin = document.getElementById("mode-opt-join");
+            const btnSwitchMode = document.getElementById("btn-switch-mode");
+            const currentModeIcon = document.getElementById("current-mode-icon");
+            const currentModeLabel = document.getElementById("current-mode-label");
+            const hostShareActions = document.getElementById("host-share-actions");
+            const roomActiveBadge = document.getElementById("room-active-badge");
+            const roomPillCode = document.getElementById("room-pill-code");
+
+            function updateStatus(statusText, color = "#4caf50") {
+                const el = document.getElementById("net-stat-status");
+                if (el) {
+                    el.textContent = statusText;
+                    el.style.color = color;
+                }
+                const sumEl = document.getElementById("net-stat-status-summary");
+                if (sumEl) {
+                    sumEl.textContent = statusText;
+                    sumEl.style.color = color;
+                }
+            }
+
+            function setUIModeDisplay(mode, roomCode = null) {
+                if (mode === "local") {
+                    if (currentModeIcon) currentModeIcon.textContent = "🎮";
+                    if (currentModeLabel) currentModeLabel.textContent = "Local Co-op";
+                    if (roomActiveBadge) roomActiveBadge.style.display = "none";
+                    if (hostShareActions) hostShareActions.style.display = "none";
+                } else if (mode === "host") {
+                    if (currentModeIcon) currentModeIcon.textContent = "⚡";
+                    if (currentModeLabel) currentModeLabel.textContent = "Online Host";
+                    if (roomActiveBadge) {
+                        roomActiveBadge.style.display = "inline-flex";
+                        if (roomPillCode) roomPillCode.textContent = roomCode || "NONE";
+                    }
+                    if (hostShareActions) hostShareActions.style.display = "flex";
+                } else if (mode === "join") {
+                    if (currentModeIcon) currentModeIcon.textContent = "🔗";
+                    if (currentModeLabel) currentModeLabel.textContent = "Online Joiner";
+                    if (roomActiveBadge) {
+                        roomActiveBadge.style.display = "inline-flex";
+                        if (roomPillCode) roomPillCode.textContent = roomCode || "NONE";
+                    }
+                    if (hostShareActions) hostShareActions.style.display = "none";
+                }
+            }
+
+            function showWelcomeModal(allowClose = false) {
+                if (!welcomeModal) return;
+                welcomeModal.style.display = "flex";
+                if (btnCloseWelcome) {
+                    btnCloseWelcome.style.display = allowClose ? "flex" : "none";
+                }
+            }
+
+            function hideWelcomeModal() {
+                if (!welcomeModal) return;
+                welcomeModal.style.display = "none";
+            }
+
+            if (btnSwitchMode) {
+                btnSwitchMode.addEventListener("click", () => {
+                    showWelcomeModal(true);
+                });
+            }
+
+            if (btnCloseWelcome) {
+                btnCloseWelcome.addEventListener("click", () => {
+                    hideWelcomeModal();
+                });
+            }
+
+            if (welcomeModal) {
+                welcomeModal.addEventListener("click", (e) => {
+                    if (e.target === welcomeModal && btnCloseWelcome && btnCloseWelcome.style.display !== "none") {
+                        hideWelcomeModal();
+                    }
+                });
+            }
+
+            if (btnWelcomeLocal) {
+                btnWelcomeLocal.addEventListener("click", () => {
+                    hideWelcomeModal();
+                    tabLocal.click();
+                });
+            }
+
+            if (modeOptLocal) {
+                modeOptLocal.addEventListener("click", (e) => {
+                    if (e.target !== btnWelcomeLocal) {
+                        btnWelcomeLocal.click();
+                    }
+                });
+            }
+
+            if (btnWelcomeHost) {
+                btnWelcomeHost.addEventListener("click", () => {
+                    hideWelcomeModal();
+                    tabOnline.click();
+                    btnCreateRoom.click();
+                });
+            }
+
+            if (modeOptHost) {
+                modeOptHost.addEventListener("click", (e) => {
+                    if (e.target !== btnWelcomeHost) {
+                        btnWelcomeHost.click();
+                    }
+                });
+            }
+
+            if (btnWelcomeJoin) {
+                btnWelcomeJoin.addEventListener("click", () => {
+                    const code = welcomeInputRoomCode ? welcomeInputRoomCode.value.trim().toUpperCase() : "";
+                    if (!code) return;
+                    hideWelcomeModal();
+                    if (inputRoomCode) inputRoomCode.value = code;
+                    tabOnline.click();
+                    btnJoinRoom.click();
+                });
+            }
+
+            if (modeOptJoin) {
+                modeOptJoin.addEventListener("click", (e) => {
+                    if (e.target !== btnWelcomeJoin && e.target !== welcomeInputRoomCode) {
+                        if (welcomeInputRoomCode) welcomeInputRoomCode.focus();
+                    }
+                });
+            }
+
+            if (welcomeInputRoomCode) {
+                welcomeInputRoomCode.addEventListener("keydown", (e) => {
+                    if (e.key === "Enter" && btnWelcomeJoin) {
+                        btnWelcomeJoin.click();
+                    }
+                });
+            }
+
+            window.addEventListener("keydown", (e) => {
+                if (e.key === "Escape") {
+                    if (welcomeModal && welcomeModal.style.display !== "none" && btnCloseWelcome && btnCloseWelcome.style.display !== "none") {
+                        hideWelcomeModal();
+                    }
+                    if (qrModal && qrModal.style.display !== "none") {
+                        qrModal.style.display = "none";
+                    }
+                    if (sdpModal && sdpModal.style.display !== "none") {
+                        sdpModal.style.display = "none";
+                    }
+                }
+            });
+
             tabLocal.addEventListener("click", () => {
+                hideWelcomeModal();
                 isOnlineMode = false;
                 isWaitingForHostSync = false;
                 closeAllPeerConnections();
@@ -2628,9 +3122,9 @@
                 connectingOverlay.style.display = "none";
                 localPlayerIdx = 0;
                 localPlayerOrder = [0];
+                setUIModeDisplay("local");
                 document.getElementById("net-stat-role").textContent = "LOCAL";
-                document.getElementById("net-stat-status").textContent = "Ready";
-                document.getElementById("net-stat-status").style.color = "#4caf50";
+                updateStatus("Ready", "#4caf50");
                 document.getElementById("net-stat-room").textContent = "NONE";
                 updateSlotCards();
                 wakeLoop();
@@ -2682,14 +3176,15 @@
                 localPlayerOrder = [0];
                 app.net_init_mask(0b0001);
                 document.getElementById("net-stat-role").textContent = "P1 RUBY [ME]";
-                document.getElementById("net-stat-status").textContent = "Ready";
-                document.getElementById("net-stat-status").style.color = "#4caf50";
+                updateStatus("Ready", "#4caf50");
                 document.getElementById("net-stat-room").textContent = currentRoomId || "NONE";
+                setUIModeDisplay(currentRoomId ? (localPlayerIdx === 0 ? "host" : "join") : "host", currentRoomId);
                 updateSlotCards();
                 wakeLoop();
             });
 
             btnCreateRoom.addEventListener("click", async () => {
+                hideWelcomeModal();
                 closeAllPeerConnections();
                 const randomId = "DANDY-" + Math.floor(1000 + Math.random() * 9000);
                 isOnlineMode = true;
@@ -2700,9 +3195,9 @@
                 localPlayerIdx = 0; // Host is P1 Ruby
                 localPlayerOrder = [0];
                 app.net_init_mask(0b0001);
+                setUIModeDisplay("host", randomId);
                 document.getElementById("net-stat-role").textContent = "P1 RUBY (HOST)";
-                document.getElementById("net-stat-status").textContent = "Waiting for peers...";
-                document.getElementById("net-stat-status").style.color = "#4caf50";
+                updateStatus("Waiting for peers...", "#4caf50");
                 updateSlotCards();
                 wakeLoop();
 
@@ -2729,6 +3224,7 @@
                 const code = inputRoomCode.value.trim().toUpperCase();
                 if (!code) return;
 
+                hideWelcomeModal();
                 closeAllPeerConnections();
                 isOnlineMode = true;
                 isWaitingForHostSync = true;
@@ -2738,9 +3234,10 @@
                 localPlayerIdx = 1; // Provisional joiner slot until assigned
                 localPlayerOrder = [1];
                 app.net_init_mask(0); // Empty mask until host offer & sync
+                setUIModeDisplay("join", code);
                 document.getElementById("net-stat-role").textContent = "CONNECTING...";
-                document.getElementById("net-stat-status").textContent = "Connecting to room " + code + "...";
-                document.getElementById("net-stat-status").style.color = "#ffa726";
+                updateStatus("Connecting to room " + code + "...", "#ffa726");
+                window.location.hash = "room=" + code;
                 updateSlotCards();
                 wakeLoop();
 
@@ -2826,8 +3323,10 @@
                     const roomMatch = window.location.hash.match(/room=([A-Za-z0-9-]+)/);
                     if (roomMatch) {
                         const roomId = roomMatch[1];
-                        if (currentRoomId === roomId && localPlayerIdx === 0) {
-                            // Host already created and initialized this room, ignore hash event
+                        hideWelcomeModal();
+                        if (currentRoomId === roomId) {
+                            // Already active in this room, maintain existing mode and connection state
+                            setUIModeDisplay(localPlayerIdx === 0 ? "host" : "join", roomId);
                             return;
                         }
                         isOnlineMode = true;
@@ -2836,15 +3335,28 @@
                         tabLocal.classList.remove("active");
                         onlinePanel.style.display = "flex";
                         inputRoomCode.value = roomId;
+                        setUIModeDisplay("join", roomId);
                         document.getElementById("net-stat-role").textContent = "CONNECTING...";
-                        document.getElementById("net-stat-status").textContent = "Connecting to room " + roomId + "...";
-                        document.getElementById("net-stat-status").style.color = "#ffa726";
+                        updateStatus("Connecting to room " + roomId + "...", "#ffa726");
                         updateSlotCards();
                         wakeLoop();
                         if (currentRoomId !== roomId) {
                             setTimeout(() => btnJoinRoom.click(), 100);
                         }
+                        return;
                     }
+                }
+
+                // If hash changed to empty while in online room (e.g. browser back button), reset to local
+                if (isOnlineMode || currentRoomId) {
+                    tabLocal.click();
+                    showWelcomeModal(true);
+                    return;
+                }
+
+                // If no room in hash on initial load, show the Welcome Modal
+                if (!currentRoomId && !isOnlineMode) {
+                    showWelcomeModal(false);
                 }
             }
 

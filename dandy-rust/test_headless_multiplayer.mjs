@@ -9,10 +9,59 @@ const GBROWSER_BIN = "/google/bin/releases/gemini-agents-gbrowser/gbrowser";
 const testCode = `
 new Promise(async (resolve, reject) => {
     try {
-        console.log("[Test] 1. Initializing Host (P1 Ruby)...");
-        document.getElementById("tab-online").click();
-        document.getElementById("btn-create-room").click();
-        await new Promise(r => setTimeout(r, 200));
+        console.log("[Test] 0. Inspecting Initial Welcome Modal & Progressive Disclosure Diagnostics...");
+        const welcomeModal = document.getElementById("welcome-modal");
+        const initialWelcomeVisible = welcomeModal && window.getComputedStyle(welcomeModal).display !== "none";
+        const btnWelcomeLocal = document.getElementById("btn-welcome-local");
+        const btnWelcomeHost = document.getElementById("btn-welcome-host");
+        const btnWelcomeJoin = document.getElementById("btn-welcome-join");
+        const has3WelcomeOptions = Boolean(btnWelcomeLocal && btnWelcomeHost && btnWelcomeJoin);
+
+        const diagPanel = document.getElementById("diagnostics-panel");
+        const initialDiagCollapsed = diagPanel ? !diagPanel.open : true;
+
+        // Test Switch Mode button opening, Escape key closing, and Close button
+        const btnSwitchMode = document.getElementById("btn-switch-mode");
+        const btnCloseWelcome = document.getElementById("btn-close-welcome");
+        let switchModeTestPassed = false;
+        let escapeKeyTestPassed = false;
+        let optionCardClickTestPassed = false;
+
+        if (btnSwitchMode && btnCloseWelcome) {
+            // 1. Open via Switch Mode button
+            btnSwitchMode.click();
+            await new Promise(r => setTimeout(r, 100));
+            const openedWithCloseBtn = window.getComputedStyle(welcomeModal).display !== "none" && window.getComputedStyle(btnCloseWelcome).display !== "none";
+
+            // 2. Close via Escape key
+            window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+            await new Promise(r => setTimeout(r, 100));
+            const closedWithEscape = window.getComputedStyle(welcomeModal).display === "none";
+            escapeKeyTestPassed = openedWithCloseBtn && closedWithEscape;
+
+            // 3. Re-open and close via Close button (✕)
+            btnSwitchMode.click();
+            await new Promise(r => setTimeout(r, 100));
+            btnCloseWelcome.click();
+            await new Promise(r => setTimeout(r, 100));
+            const closedAfterClick = window.getComputedStyle(welcomeModal).display === "none";
+            switchModeTestPassed = escapeKeyTestPassed && closedAfterClick;
+        }
+
+        // Test option card click delegator (clicking mode-opt-host card body opens host mode)
+        const modeOptHost = document.getElementById("mode-opt-host");
+        btnSwitchMode.click();
+        await new Promise(r => setTimeout(r, 100));
+        if (modeOptHost) {
+            modeOptHost.click();
+            await new Promise(r => setTimeout(r, 300));
+            optionCardClickTestPassed = window.getComputedStyle(welcomeModal).display === "none";
+        } else {
+            btnWelcomeHost.click();
+            await new Promise(r => setTimeout(r, 300));
+        }
+
+        const hostWelcomeVisibleAfterHost = window.getComputedStyle(welcomeModal).display === "none";
 
         const roomCode = document.getElementById("net-stat-room").textContent;
         console.log("[Test] Host created room:", roomCode);
@@ -175,6 +224,13 @@ new Promise(async (resolve, reject) => {
         const p4App = iframeP4.contentWindow.dandyApp;
 
         const results = {
+            initialWelcomeVisible,
+            has3WelcomeOptions,
+            initialDiagCollapsed,
+            switchModeTestPassed,
+            escapeKeyTestPassed,
+            optionCardClickTestPassed,
+            hostWelcomeVisibleAfterHost,
             roomCode,
             p1Badges,
             p2Badges,
@@ -264,6 +320,16 @@ try {
     console.log(`Stats Buffer Lengths: ${res.statsLens.join(", ")} ints`);
 
     console.log("\n=== Verifying Assertions ===");
+    // 0. Welcome Modal & Progressive Disclosure
+    assert.strictEqual(res.initialWelcomeVisible, true, "Welcome modal must be visible on root load without room hash");
+    assert.strictEqual(res.has3WelcomeOptions, true, "Welcome modal must contain Play Local, Host Online, and Join Online options");
+    assert.strictEqual(res.initialDiagCollapsed, true, "Diagnostics details panel must be collapsed by default");
+    assert.strictEqual(res.switchModeTestPassed, true, "Switch Mode button must open welcome modal with close button");
+    assert.strictEqual(res.escapeKeyTestPassed, true, "Escape key must dismiss modal when close button is visible");
+    assert.strictEqual(res.optionCardClickTestPassed, true, "Clicking option card body must trigger mode action");
+    assert.strictEqual(res.hostWelcomeVisibleAfterHost, true, "Welcome modal must dismiss after hosting room");
+    console.log("✓ Welcome Modal flow, 3-option play picker, Mode Switcher, Escape key, card delegators, and Progressive Diagnostics verified.");
+
     // 1. Connection statuses
     assert(res.statuses.every(s => s === "Connected"), "All peers must have 'Connected' status");
     console.log("✓ All 4 player instances report 'Connected' status.");
