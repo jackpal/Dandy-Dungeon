@@ -13,7 +13,7 @@ impl Map {
     }
 
     pub fn get(&self, x: i32, y: i32) -> u8 {
-        if (0..MAP_WIDTH).contains(&x) && (0..MAP_HEIGHT).contains(&y) {
+        if (x as u32) < (MAP_WIDTH as u32) && (y as u32) < (MAP_HEIGHT as u32) {
             self.data[(x + y * MAP_WIDTH) as usize]
         } else {
             1 // Return Wall (1) as default for out of bounds to prevent entities walking out
@@ -21,7 +21,7 @@ impl Map {
     }
 
     pub fn set(&mut self, x: i32, y: i32, val: u8) {
-        if (0..MAP_WIDTH).contains(&x) && (0..MAP_HEIGHT).contains(&y) {
+        if (x as u32) < (MAP_WIDTH as u32) && (y as u32) < (MAP_HEIGHT as u32) {
             self.data[(x + y * MAP_WIDTH) as usize] = val;
         }
     }

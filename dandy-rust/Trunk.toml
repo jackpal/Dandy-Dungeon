@@ -2,10 +2,15 @@
 target = "index.html"
 dist = "dist"
 
+# Post-build: shrink the module with wasm-opt -Oz.
+# IMPORTANT: during post_build Trunk's freshly built output lives in
+# $TRUNK_STAGING_DIR (i.e. dist/.stage), and is only copied into dist/
+# AFTER hooks finish. Operating on dist/ here silently no-ops (the file
+# isn't there yet), so we must target $TRUNK_STAGING_DIR.
 [[hooks]]
 stage = "post_build"
 command = "bash"
 command_arguments = [
     "-c",
-    "WASM_FILE=$(ls dist/*_bg.wasm 2>/dev/null | head -n 1); if [ -n \"$WASM_FILE\" ] && [ -x ~/.cache/trunk/wasm-opt-version_123/bin/wasm-opt ]; then ~/.cache/trunk/wasm-opt-version_123/bin/wasm-opt -Oz --enable-bulk-memory --enable-mutable-globals --enable-nontrapping-float-to-int --enable-sign-ext --enable-reference-types --enable-multivalue \"$WASM_FILE\" -o \"$WASM_FILE\"; fi"
+    "set -e; WO=$(command -v wasm-opt 2>/dev/null || ls ~/.cache/trunk/wasm-opt-*/bin/wasm-opt 2>/dev/null | head -n1); if [ -z \"$WO\" ]; then echo 'wasm-opt not found; skipping (artifact NOT size-optimized)'; exit 0; fi; shopt -s nullglob; found=0; for WASM in \"$TRUNK_STAGING_DIR\"/*_bg.wasm; do found=1; before=$(stat -c%s \"$WASM\"); \"$WO\" -Oz --enable-bulk-memory --enable-mutable-globals --enable-nontrapping-float-to-int --enable-sign-ext --enable-reference-types --enable-multivalue \"$WASM\" -o \"$WASM\"; after=$(stat -c%s \"$WASM\"); echo \"wasm-opt: $(basename \"$WASM\") $before -> $after bytes\"; done; if [ \"$found\" = 0 ]; then echo 'ERROR: no *_bg.wasm found in staging dir' >&2; exit 1; fi"
 ]

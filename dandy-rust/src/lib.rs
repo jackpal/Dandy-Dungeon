@@ -77,6 +77,10 @@ impl DandyApp {
         "dandy-rust v0.1.0 (wasm32; bulk-memory; zero-copy ABI)".to_string()
     }
 
+    pub fn get_route_info(&self) -> String {
+        "engine=sm-pie;arch=wasm32;opt=z;panic=abort;boundary=G3-cached-view;blitter=word-fill+bulk-copy;parity=tier-2".to_string()
+    }
+
     pub fn bench_tick(&mut self, frames: u32) {
         for _ in 0..frames {
             self.tick();
@@ -141,18 +145,18 @@ impl DandyApp {
 
         let base_x = (offset_x + (active.left * TILE_SIZE) as f64) as i32;
         let base_y = (offset_y + (active.top * TILE_SIZE) as f64) as i32;
-        let tile_size = TILE_SIZE as i32;
+        let tile_size = TILE_SIZE;
 
         // Render viewport active grid
         for y in 0..active.height {
             let dy = active.top + y;
-            let dest_y = base_y + (y as i32) * tile_size;
+            let dest_y = base_y + y * tile_size;
             for x in 0..active.width {
                 let dx = active.left + x;
                 let tile_val = self.game.map.get(dx, dy);
 
                 // Calculate pixel coordinate on retro screen
-                let dest_x = base_x + (x as i32) * tile_size;
+                let dest_x = base_x + x * tile_size;
 
                 // Blit tile from spritesheet into framebuffer
                 self.framebuffer.blit_tile(&self.spritesheet, tile_val, dest_x, dest_y);
