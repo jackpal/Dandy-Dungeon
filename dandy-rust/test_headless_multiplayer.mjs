@@ -141,6 +141,20 @@ new Promise(async (resolve, reject) => {
         const p3Status = iframeP3.contentDocument?.getElementById("net-stat-status")?.textContent;
         const p4Status = iframeP4.contentDocument?.getElementById("net-stat-status")?.textContent;
 
+        const getShareInfo = (doc) => {
+            const btn = doc?.getElementById("btn-share-link");
+            const qr = doc?.getElementById("btn-show-qr");
+            return {
+                btnVisible: btn && window.getComputedStyle(btn).display !== "none",
+                btnText: btn?.textContent,
+                qrVisible: qr && window.getComputedStyle(qr).display !== "none"
+            };
+        };
+        const p1ShareInfo = getShareInfo(document);
+        const p2ShareInfo = getShareInfo(iframeP2.contentDocument);
+        const p3ShareInfo = getShareInfo(iframeP3.contentDocument);
+        const p4ShareInfo = getShareInfo(iframeP4.contentDocument);
+
         console.log("[Test] 5. Inspecting Initial Entity Positions across all 4 peers...");
         const getPositions = () => {
             const apps = [
@@ -419,6 +433,7 @@ new Promise(async (resolve, reject) => {
         const joinerRefreshRoom = joinerRefreshDoc.getElementById("net-stat-room")?.textContent;
         const joinerRefreshHash = iframeJoinerRefresh.contentWindow?.location.hash;
         const joinerRefreshModalHidden = window.getComputedStyle(joinerRefreshDoc.getElementById("welcome-modal")).display === "none";
+        const joinerRefreshShareInfo = getShareInfo(joinerRefreshDoc);
 
         console.log("[Test] 11. Simulating Bare Room Code URL Join (#DANDY-6666)...");
         const iframeBareJoin = spawnJoiner("Bare_Join", "#DANDY-6666");
@@ -435,6 +450,7 @@ new Promise(async (resolve, reject) => {
         const bareJoinRole = bareJoinDoc.getElementById("net-stat-role")?.textContent;
         const bareJoinRoom = bareJoinDoc.getElementById("net-stat-room")?.textContent;
         const bareJoinHash = iframeBareJoin.contentWindow?.location.hash;
+        const bareJoinShareInfo = getShareInfo(bareJoinDoc);
 
         console.log("[Test] 12. Simulating Query-Style Host URL (#room=DANDY-9999&role=host)...");
         const iframeQueryHost = spawnJoiner("Query_Host", "#room=DANDY-9999&role=host");
@@ -471,6 +487,12 @@ new Promise(async (resolve, reject) => {
             btnShareLinkText,
             btnShareLinkVisible,
             btnShowQrVisible,
+            p1ShareInfo,
+            p2ShareInfo,
+            p3ShareInfo,
+            p4ShareInfo,
+            joinerRefreshShareInfo,
+            bareJoinShareInfo,
             p1Badges,
             p2Badges,
             p3Badges,
@@ -644,6 +666,16 @@ try {
     assert.strictEqual(res.btnShareLinkVisible, true, "Share link button must be visible on Host");
     assert.strictEqual(res.btnShareLinkText, "📋 Copy Link (" + res.roomCode + ")", "Share link text must match room code");
     assert.strictEqual(res.btnShowQrVisible, true, "QR code button must be visible on Host");
+
+    // Verify Copy Link and QR Code buttons across all Joiners in active 4-player mesh
+    assert.strictEqual(res.p2ShareInfo.btnVisible, true, "Share link button must be visible on Joiner P2");
+    assert.strictEqual(res.p2ShareInfo.btnText, "📋 Copy Link (" + res.roomCode + ")", "Share link text on P2 must match room code");
+    assert.strictEqual(res.p2ShareInfo.qrVisible, true, "QR code button must be visible on Joiner P2");
+    assert.strictEqual(res.p3ShareInfo.btnVisible, true, "Share link button must be visible on Joiner P3");
+    assert.strictEqual(res.p3ShareInfo.btnText, "📋 Copy Link (" + res.roomCode + ")", "Share link text on P3 must match room code");
+    assert.strictEqual(res.p4ShareInfo.btnVisible, true, "Share link button must be visible on Joiner P4");
+    assert.strictEqual(res.p4ShareInfo.btnText, "📋 Copy Link (" + res.roomCode + ")", "Share link text on P4 must match room code");
+
     assert.strictEqual(res.hostRefreshRole, "P1 RUBY (HOST)", "Reloading with #host=DANDY-XXXX must resume Host role");
     assert.strictEqual(res.hostRefreshRoom, "DANDY-7777", "Host refresh must preserve room ID");
     assert.strictEqual(res.hostRefreshHash, "#host=DANDY-7777", "Host refresh must retain #host= URL hash");
@@ -653,9 +685,15 @@ try {
     assert.strictEqual(res.joinerRefreshRoom, "DANDY-8888", "Joiner refresh must preserve room ID");
     assert.strictEqual(res.joinerRefreshHash, "#room=DANDY-8888", "Joiner URL hash must be normalized to #room=DANDY-XXXX");
     assert.strictEqual(res.joinerRefreshModalHidden, true, "Welcome modal must be hidden when loading with joiner hash");
+    assert.strictEqual(res.joinerRefreshShareInfo.btnVisible, true, "Share link button must be visible on Joiner Refresh");
+    assert.strictEqual(res.joinerRefreshShareInfo.btnText, "📋 Copy Link (DANDY-8888)", "Share link text on Joiner Refresh must be DANDY-8888");
+    assert.strictEqual(res.joinerRefreshShareInfo.qrVisible, true, "QR code button must be visible on Joiner Refresh");
     assert.strictEqual(res.bareJoinRole, "CONNECTING...", "Bare #DANDY-6666 URL must boot into Joiner role");
     assert.strictEqual(res.bareJoinRoom, "DANDY-6666", "Bare room code URL must connect to DANDY-6666");
     assert.strictEqual(res.bareJoinHash, "#room=DANDY-6666", "Bare room code URL must normalize hash to #room=DANDY-6666");
+    assert.strictEqual(res.bareJoinShareInfo.btnVisible, true, "Share link button must be visible on Bare Join");
+    assert.strictEqual(res.bareJoinShareInfo.btnText, "📋 Copy Link (DANDY-6666)", "Share link text on Bare Join must be DANDY-6666");
+    assert.strictEqual(res.bareJoinShareInfo.qrVisible, true, "QR code button must be visible on Bare Join");
     assert.strictEqual(res.queryHostRole, "P1 RUBY (HOST)", "Query style #room=DANDY-9999&role=host must boot into Host role");
     assert.strictEqual(res.queryHostRoom, "DANDY-9999", "Query style host room must preserve room ID DANDY-9999");
     assert.strictEqual(res.invalidNoneRoom, "NONE", "Invalid #host=NONE hash must not set active room");

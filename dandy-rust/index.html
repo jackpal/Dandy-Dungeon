@@ -3641,6 +3641,8 @@
                     if (currentModeLabel) currentModeLabel.textContent = "Local Co-op";
                     if (roomActiveBadge) roomActiveBadge.style.display = "none";
                     if (hostShareActions) hostShareActions.style.display = "none";
+                    if (btnShareLink) btnShareLink.style.display = "none";
+                    if (btnShowQr) btnShowQr.style.display = "none";
                 } else if (mode === "host") {
                     if (currentModeIcon) currentModeIcon.textContent = "⚡";
                     if (currentModeLabel) currentModeLabel.textContent = "Online Host";
@@ -3649,6 +3651,15 @@
                         if (roomPillCode) roomPillCode.textContent = roomCode || "NONE";
                     }
                     if (hostShareActions) hostShareActions.style.display = "flex";
+                    if (btnShareLink) {
+                        btnShareLink.style.display = "inline-flex";
+                        if (roomCode) {
+                            btnShareLink.textContent = "📋 Copy Link (" + roomCode + ")";
+                        }
+                    }
+                    if (btnShowQr) {
+                        btnShowQr.style.display = "inline-flex";
+                    }
                 } else if (mode === "join") {
                     if (currentModeIcon) currentModeIcon.textContent = "🔗";
                     if (currentModeLabel) currentModeLabel.textContent = "Online Joiner";
@@ -3656,7 +3667,16 @@
                         roomActiveBadge.style.display = "inline-flex";
                         if (roomPillCode) roomPillCode.textContent = roomCode || "NONE";
                     }
-                    if (hostShareActions) hostShareActions.style.display = "none";
+                    if (hostShareActions) hostShareActions.style.display = "flex";
+                    if (btnShareLink) {
+                        btnShareLink.style.display = "inline-flex";
+                        if (roomCode) {
+                            btnShareLink.textContent = "📋 Copy Link (" + roomCode + ")";
+                        }
+                    }
+                    if (btnShowQr) {
+                        btnShowQr.style.display = "inline-flex";
+                    }
                 }
             }
 
@@ -3981,6 +4001,11 @@
                 wakeLoop();
 
                 connectSignaling(cleanCode, () => {
+                    btnShareLink.style.display = "inline-flex";
+                    btnShareLink.textContent = "📋 Copy Link (" + cleanCode + ")";
+                    btnShowQr.style.display = "inline-flex";
+                    updateQrCode();
+
                     // Send join request immediately
                     sendSignaling({
                         roomId: currentRoomId,
