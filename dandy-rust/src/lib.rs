@@ -711,6 +711,52 @@ mod tests {
             "Framebuffer must continuously visually update on every single frame of the 8-frame stride (sub-pixel interpolation)"
         );
     }
+
+    #[test]
+    fn test_rapid_direction_oscillation_during_stride() {
+        let mut app = DandyApp::new();
+        for _ in 0..30 {
+            app.tick();
+        }
+
+        // P1 begins moving Right
+        app.set_action(0, PlayerAction::Right, true);
+        app.tick(); // Move starts: move_cooldown = 7, dir = 2 (Right)
+        app.set_action(0, PlayerAction::Right, false);
+
+        let p1_orig_x = app.game.players[0].x; // Target tile X
+
+        // Rapidly oscillate directions Up/Down/Left while mid-stride
+        let opposing_actions = [
+            PlayerAction::Up,
+            PlayerAction::Down,
+            PlayerAction::Left,
+            PlayerAction::Up,
+            PlayerAction::Down,
+            PlayerAction::Left,
+        ];
+
+        for action in opposing_actions {
+            app.set_action(0, action, true);
+            app.tick();
+            app.set_action(0, action, false);
+            // Direction should remain locked to the stride (Right = 2) until cooldown finishes
+            if app.game.players[0].move_cooldown > 0 {
+                assert_eq!(
+                    app.game.players[0].dir, 2,
+                    "Player facing direction must not jump mid-stride on opposing input"
+                );
+            }
+        }
+
+        // Advance until move_cooldown reaches 0
+        while app.game.players[0].move_cooldown > 0 {
+            app.tick();
+        }
+
+        assert_eq!(app.game.players[0].x, p1_orig_x);
+        assert_eq!(app.game.players[0].move_cooldown, 0);
+    }
 }
 
 

@@ -139,14 +139,14 @@ pub fn step_player(
         _ => None,
     };
 
-    if let Some(d) = dir_opt {
-        players[index].dir = d;
-    }
-
     // 2. Check Shoot vs Move
     if (input & ACTION_SHOOT) != 0 {
         if players[index].arrow.is_none() {
-            let shoot_dir = dir_opt.unwrap_or(players[index].dir);
+            let shoot_dir = if players[index].move_cooldown == 0 {
+                dir_opt.unwrap_or(players[index].dir)
+            } else {
+                players[index].dir
+            };
             players[index].dir = shoot_dir;
             players[index].arrow = Some(Arrow {
                 x: players[index].x,
@@ -159,6 +159,7 @@ pub fn step_player(
         }
     } else if players[index].move_cooldown == 0 {
         if let Some(d) = dir_opt {
+            players[index].dir = d;
             // Try moving with wall-sliding
             let moved = try_move_player(index, &mut players[index], map, d, sounds);
             let any_moved = if !moved {
