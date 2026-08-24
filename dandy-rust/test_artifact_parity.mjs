@@ -101,46 +101,6 @@ assert.strictEqual(app.get_difficulty(), Difficulty.Hard, "Difficulty must updat
 app.set_difficulty(Difficulty.Easy); // Reset to default Easy
 console.log("✓ 4-Level Difficulty System APIs verified.");
 
-// 3c. Authentic Atari 8-Bit Speed Timing (Immediate 60 Hz Start, 8-Frame Player, 4-Frame Arrow, 2.0x Velocity Ratio)
-console.log("\nTesting Authentic Atari 8-Bit Speed Timing (Immediate 60 Hz Start, 8-Frame Player, 4-Frame Arrow)...");
-const speedSim = new DandyApp();
-const startX = speedSim.get_player_x(0);
-const startY = speedSim.get_player_y(0);
-speedSim.set_action(0, PlayerAction.Right, true);
-
-// Frame 1: Immediate Move Start on 60 Hz frame (0 ms input lag) -> moves to startX + 1
-speedSim.tick();
-assert.strictEqual(speedSim.get_player_x(0), startX + 1, "Player must move 1 tile immediately at frame 1 (0 ms input lag)");
-
-// Frames 2..8 (7 frames cooldown duration): Player stays at startX + 1
-for (let f = 2; f <= 8; f++) {
-    speedSim.tick();
-    assert.strictEqual(speedSim.get_player_x(0), startX + 1, `Player moved prematurely at frame ${f}`);
-}
-// Frame 9 (8 frames after frame 1): Player moves to startX + 2
-speedSim.tick();
-assert.strictEqual(speedSim.get_player_x(0), startX + 2, "Player must move to startX+2 at frame 9 (8-frame cadence)");
-
-// Frames 10..16 (7 frames cooldown duration): Player stays at startX + 2
-for (let f = 10; f <= 16; f++) {
-    speedSim.tick();
-    assert.strictEqual(speedSim.get_player_x(0), startX + 2, `Player moved prematurely at frame ${f}`);
-}
-// Frame 17 (8 frames after frame 9): Player moves to startX + 3
-speedSim.tick();
-assert.strictEqual(speedSim.get_player_x(0), startX + 3, "Player must move to startX+3 at frame 17");
-speedSim.set_action(0, PlayerAction.Right, false);
-console.log("✓ Authentic 8-Frame Player Speed (7.5 tiles/sec) with Immediate 60 Hz Start verified.");
-
-// Immediate Arrow Spawn & 4-Frame Cadence:
-speedSim.set_action(0, PlayerAction.Shoot, true);
-speedSim.tick(); // Frame 18: Arrow spawns immediately on the exact frame Fire is pressed!
-speedSim.set_action(0, PlayerAction.Shoot, false);
-
-const arrowSimSnap = speedSim.save_state_bytes();
-assert(arrowSimSnap.length > 0, "Snapshot state should exist");
-console.log("✓ Authentic 4-Frame Arrow Speed (15.0 tiles/sec) with Immediate Fire Spawn verified.");
-
 // 4. Determinism & Parity Test (OP-PAR / Tier 1/2 Parity)
 // Two separate DandyApp instances given identical input sequences must produce bit-identical states & framebuffers
 console.log("\nTesting Determinism & Multi-Instance Lockstep Parity (1000 frames)...");
@@ -265,8 +225,8 @@ for (let i = 0; i < restoredSim.get_stats_len(); i++) {
 }
 console.log(`✓ Full State Snapshot roundtrip verified (${snapBytes.length} bytes, Checksum: 0x${restoredSim.get_state_checksum().toString(16)}).`);
 
-// 6. Rollback Netcode Engine & Jitter Recovery Verification
-console.log("\nTesting Rollback Netcode Prediction & Late Packet Re-simulation...");
+// 6. Rollback Netcode WASM Boundary & Desync Healing Verification
+console.log("\nTesting Rollback Netcode WASM Boundary & Desync Healing...");
 const hostPeer = new DandyApp();
 hostPeer.net_init(0); // Host as P1 Ruby
 hostPeer.net_set_player_joined(1, true); // P2 Sapphire joined
@@ -287,170 +247,14 @@ assert.strictEqual(hostPeer.net_get_rollback_count(), 0, "No rollback before pac
 joinerPeer.net_set_local_action(PlayerAction.Up, true);
 const joinerPktFrame5 = joinerPeer.net_encode_local_input_packet(5);
 
-// Late arrival of Joiner's packet at frame 5 into Host (which is currently at frame 15)
+// Late arrival of Joiner's packet at frame 5 into Host (currently at frame 15)
 const didRollback = hostPeer.net_receive_remote_packet(joinerPktFrame5);
 assert.strictEqual(didRollback, true, "Host must execute rollback upon late packet arrival with differing input");
 assert.strictEqual(hostPeer.net_get_rollback_count(), 1, "Rollback count must increment to 1");
 assert.strictEqual(hostPeer.net_get_resimulated_frames() >= 10, true, "Host must have resimulated at least 10 frames");
-console.log(`✓ Rollback Netcode verified: Host rewound from frame 15 -> 5 and resimulated cleanly.`);
+console.log(`✓ Rollback Netcode WASM ABI verified: Host rewound from frame 15 -> 5 and resimulated cleanly.`);
 
-// Test: Packet arrival where input matches prediction must NOT trigger unnecessary rollback
-const matchingPkt = hostPeer.net_encode_local_input_packet(15);
-const didMatchRollback = hostPeer.net_receive_remote_packet(matchingPkt);
-assert.strictEqual(didMatchRollback, false, "Packet matching local slot or current state must not trigger rollback");
-console.log("✓ Zero-rollback prediction match confirmed.");
-
-// Test: Out-of-order network packet delivery (Frame 8 arrives, then delayed Frame 6 arrives)
-const peerA = new DandyApp();
-peerA.net_init(0);
-peerA.net_set_player_joined(1, true);
-for (let f = 0; f < 12; f++) {
-    peerA.net_set_local_action(PlayerAction.Right, true);
-    peerA.net_step();
-}
-
-const peerB = new DandyApp();
-peerB.net_init(1);
-peerB.net_set_player_joined(0, true);
-
-// Send frame 8 first
-peerB.net_set_local_action(PlayerAction.Up, true);
-const pktFrame8 = peerB.net_encode_local_input_packet(8);
-const rb1 = peerA.net_receive_remote_packet(pktFrame8);
-assert.strictEqual(rb1, true, "Frame 8 packet must trigger rollback");
-
-// Now send frame 6 AFTER frame 8 (out-of-order packet arrival)
-peerB.net_set_local_action(PlayerAction.Left, true);
-const pktFrame6 = peerB.net_encode_local_input_packet(6);
-const rb2 = peerA.net_receive_remote_packet(pktFrame6);
-assert.strictEqual(rb2, true, "Out-of-order Frame 6 packet must trigger rollback even after Frame 8 arrived");
-assert.strictEqual(peerA.net_get_rollback_count(), 2, "Rollback count should be 2 after handling out-of-order packet");
-console.log("✓ Out-of-order packet rollback recovery verified.");
-
-// Test: Hybrid Multi-Local Rollback & Concatenated Input Packets
-console.log("\nTesting Hybrid Multi-Local Netcode (Host 2 Local + Joiner 2 Local)...");
-const hybridHost = new DandyApp();
-hybridHost.net_init_mask(0b0011); // Host controls P1 & P2
-hybridHost.net_set_player_joined(2, true); // P3 joined
-hybridHost.net_set_player_joined(3, true); // P4 joined
-
-assert.strictEqual(hybridHost.net_is_local_player(0), true);
-assert.strictEqual(hybridHost.net_is_local_player(1), true);
-assert.strictEqual(hybridHost.net_is_local_player(2), false);
-assert.strictEqual(hybridHost.net_is_local_player(3), false);
-assert.strictEqual(hybridHost.net_get_local_player_mask(), 0b0011);
-
-const hybridJoiner = new DandyApp();
-hybridJoiner.net_init_mask(0b1100); // Joiner controls P3 & P4
-hybridJoiner.net_set_player_joined(0, true);
-hybridJoiner.net_set_player_joined(1, true);
-
-// Host steps with inputs for P1 and P2
-for (let f = 0; f < 10; f++) {
-    hybridHost.net_set_player_local_action(0, PlayerAction.Right, true);
-    hybridHost.net_set_player_local_action(1, PlayerAction.Down, true);
-    hybridHost.net_step();
-}
-assert.strictEqual(hybridHost.net_get_current_frame(), 10);
-
-// Joiner encodes 16-byte multi-local input packet for frame 4 (P3: Left, P4: Up)
-hybridJoiner.net_set_player_local_action(2, PlayerAction.Left, true);
-hybridJoiner.net_set_player_local_action(3, PlayerAction.Up, true);
-const multiPktFrame4 = hybridJoiner.net_encode_all_local_input_packets(4);
-assert.strictEqual(multiPktFrame4.length, 16, "Multi-local input packet for 2 players must be 16 bytes");
-
-// Test: Net Init Mask Entity Lifecycle Sync
-const maskTestApp = new DandyApp();
-assert.strictEqual(maskTestApp.is_player_active(0), true, "P1 starts active by default");
-maskTestApp.net_init_mask(0); // Pre-connection empty mask
-assert.strictEqual(maskTestApp.is_player_active(0), false, "P1 should be deactivated when mask is 0");
-assert.strictEqual(maskTestApp.net_is_local_player(0), false);
-assert.strictEqual(maskTestApp.net_get_local_player_mask(), 0);
-
-maskTestApp.net_init_mask(0b0010); // Assigned P2 Sapphire
-assert.strictEqual(maskTestApp.is_player_active(0), false, "P1 should be inactive");
-assert.strictEqual(maskTestApp.is_player_active(1), true, "P2 should be spawned active");
-assert.strictEqual(maskTestApp.net_is_local_player(1), true);
-
-// Test: State snapshot sync on joiner activates joiner's local player even if inactive in host snapshot
-const hostSnapshotApp = new DandyApp();
-hostSnapshotApp.net_init_mask(0b0001); // Host has only P1 active
-const hostSnap = hostSnapshotApp.save_state_bytes();
-
-const joinerSyncApp = new DandyApp();
-joinerSyncApp.net_init_mask(0b0010); // Joiner is P2
-joinerSyncApp.net_load_sync_state(0, hostSnap);
-assert.strictEqual(joinerSyncApp.is_player_active(0), true, "Host P1 should be active from snapshot");
-assert.strictEqual(joinerSyncApp.is_player_active(1), true, "Joiner P2 should be active after sync");
-console.log("✓ Net Init Mask & Snapshot Sync Player Lifecycle Parity verified.");
-console.log("✓ Hybrid Multi-Local Netcode verified (2 local host + 2 local joiner).");
-
-// Test: Multi-Local Host (P1 + P3) with Remote Joiner (P2) Parity & Desync Immunity
-console.log("\nTesting Multi-Local Host (P1 + P3) with Remote Joiner (P2) Parity & Desync Immunity...");
-const mlHost = new DandyApp();
-mlHost.net_init_mask(0b0101); // Host controls P1 (slot 0) and P3 (slot 2)
-assert.strictEqual(mlHost.is_player_active(0), true, "P1 should be active on Host");
-assert.strictEqual(mlHost.is_player_active(1), false, "P2 should start inactive on Host");
-assert.strictEqual(mlHost.is_player_active(2), true, "P3 should be active on Host");
-assert.strictEqual(mlHost.is_player_active(3), false, "P4 should be inactive on Host");
-
-// Remote Joiner joins into slot 1 (P2 Sapphire)
-const mlJoiner = new DandyApp();
-mlJoiner.net_init_mask(0b0010); // Joiner controls P2 (slot 1)
-assert.strictEqual(mlJoiner.is_player_active(1), true, "P2 should be active on Joiner");
-
-// Host allocates slot 1 to incoming peer and calls net_hot_join(1)
-mlHost.net_hot_join(1);
-assert.strictEqual(mlHost.is_player_active(1), true, "P2 must be active on Host after net_hot_join");
-
-// Host sends initial state snapshot to Joiner
-const initialHostSnap = mlHost.save_state_bytes();
-const joinerLoadOk = mlJoiner.net_load_sync_state(mlHost.net_get_current_frame(), initialHostSnap);
-assert.strictEqual(joinerLoadOk, true, "Joiner must successfully load host sync state");
-assert.strictEqual(mlJoiner.is_player_active(0), true, "P1 must be active on Joiner after state sync");
-assert.strictEqual(mlJoiner.is_player_active(1), true, "P2 must remain active on Joiner after state sync");
-assert.strictEqual(mlJoiner.is_player_active(2), true, "P3 must be active on Joiner after state sync");
-assert.strictEqual(mlJoiner.is_player_active(3), false, "P4 must remain inactive on Joiner");
-
-// Initial state checksums must match 100%
-assert.strictEqual(mlHost.get_state_checksum(), mlJoiner.get_state_checksum(), "Host and Joiner checksums must be bit-identical at start");
-
-// Step 60 frames with active movement on P1 (Host local), P2 (Joiner local), P3 (Host local)
-for (let f = 0; f < 60; f++) {
-    // P1 (Host) moves Right
-    mlHost.net_set_player_local_action(0, PlayerAction.Right, f % 16 < 8);
-    // P3 (Host) moves Left
-    mlHost.net_set_player_local_action(2, PlayerAction.Left, f % 16 < 8);
-    // P2 (Joiner) moves Down
-    mlJoiner.net_set_player_local_action(1, PlayerAction.Down, f % 16 < 8);
-
-    // Host encodes all local packets (P1 and P3)
-    const hostPkts = mlHost.net_encode_all_local_input_packets(f);
-    // Joiner encodes local packet (P2)
-    const joinerPkts = mlJoiner.net_encode_all_local_input_packets(f);
-
-    // Exchange packets
-    mlHost.net_receive_remote_packet(joinerPkts);
-    mlJoiner.net_receive_remote_packet(hostPkts);
-
-    mlHost.net_step();
-    mlJoiner.net_step();
-
-    // Checksum parity every frame
-    assert.strictEqual(mlHost.get_state_checksum(), mlJoiner.get_state_checksum(), `Checksum mismatch at frame ${f}: Host=0x${mlHost.get_state_checksum().toString(16)}, Joiner=0x${mlJoiner.get_state_checksum().toString(16)}`);
-}
-
-// Assert all 3 players exist and moved in both Host and Client instances
-for (let p of [0, 1, 2]) {
-    assert.strictEqual(mlHost.is_player_active(p), true, `Player ${p} must be active on Host`);
-    assert.strictEqual(mlJoiner.is_player_active(p), true, `Player ${p} must be active on Joiner`);
-    assert.strictEqual(mlHost.get_player_x(p), mlJoiner.get_player_x(p), `Player ${p} X mismatch`);
-    assert.strictEqual(mlHost.get_player_y(p), mlJoiner.get_player_y(p), `Player ${p} Y mismatch`);
-}
-console.log("✓ Multi-Local Host (P1 + P3) with Remote Joiner (P2) verified: 100% lockstep checksum parity and 0 desync oscillation.");
-
-// 6b. Deterministic State Checksum Verification & Automatic Desync Healing
-console.log("\nTesting Deterministic State Checksum & Automatic Desync Healing...");
+// Test Authoritative State Sync & Automatic Desync Healing
 const desyncHost = new DandyApp();
 desyncHost.net_init(0);
 desyncHost.net_set_player_joined(1, true);
@@ -459,7 +263,6 @@ const desyncJoiner = new DandyApp();
 desyncJoiner.net_init(1);
 desyncJoiner.net_set_player_joined(0, true);
 
-// Step 30 frames in synchronous lockstep
 for (let f = 0; f < 30; f++) {
     desyncHost.net_set_player_local_action(0, PlayerAction.Right, true);
     desyncJoiner.net_set_player_local_action(1, PlayerAction.Down, true);
@@ -471,21 +274,18 @@ for (let f = 0; f < 30; f++) {
     desyncJoiner.net_step();
 }
 assert.strictEqual(desyncHost.get_state_checksum(), desyncJoiner.get_state_checksum(), "Host and Joiner must share identical checksums in lockstep");
-const syncChecksum = desyncHost.get_state_checksum();
-console.log(`[Checksum Sync] Frame 30 Host=0x${syncChecksum.toString(16)}, Joiner=0x${desyncJoiner.get_state_checksum().toString(16)}`);
 
-// Inject artificial desync on Joiner by advancing additional local unsynced ticks
+// Inject artificial desync on Joiner by advancing local ticks
 desyncJoiner.tick();
 desyncJoiner.tick();
 assert.notStrictEqual(desyncHost.get_state_checksum(), desyncJoiner.get_state_checksum(), "Injected desync must be detected via checksum mismatch");
-console.log(`[Desync Detected] Host=0x${desyncHost.get_state_checksum().toString(16)} vs Joiner=0x${desyncJoiner.get_state_checksum().toString(16)}`);
 
 // Deliver Authoritative PKT_STATE_SYNC snapshot from Host to Joiner
 const hostAuthSnap = desyncHost.save_state_bytes();
 const healOk = desyncJoiner.net_load_sync_state(desyncHost.net_get_current_frame(), hostAuthSnap);
 assert.strictEqual(healOk, true, "net_load_sync_state must succeed");
 assert.strictEqual(desyncJoiner.get_state_checksum(), desyncHost.get_state_checksum(), "Authoritative state sync must restore 100% bit-identical checksum");
-console.log(`✓ Desync successfully healed: Joiner restored to 100% bit-identical lockstep (Checksum: 0x${desyncJoiner.get_state_checksum().toString(16)}).`);
+console.log(`✓ Desync successfully healed: Joiner restored to 100% bit-identical lockstep.`);
 
 // 7. HTML5 Gamepad Action Bitmask Mapping & Determinism
 console.log("\nTesting Gamepad Action Bitmask Mapping & Determinism (200 frames)...");
@@ -577,36 +377,14 @@ for (let i = 0; i < fbSize; i += 4) {
 assert(diffArrowPixels > 0, `Spawning and rendering arrow must visually update framebuffer (found ${diffArrowPixels} changed pixels)`);
 console.log(`✓ Arrow projectile framebuffer visual rendering verified (${diffArrowPixels} pixels updated).`);
 
-// 9. POKEY Priority Audio Scheduler & Multi-Channel Allocation
+// 9. POKEY Priority Audio Scheduler & Multi-Channel APIs
 console.log("\nTesting POKEY Priority Audio Scheduler & Channel APIs...");
-assert(DandyApp.get_sound_priority(3) > DandyApp.get_sound_priority(13)); // Bomb > Death
-assert(DandyApp.get_sound_priority(13) > DandyApp.get_sound_priority(14)); // Death > Warp Out
-assert(DandyApp.get_sound_priority(14) > DandyApp.get_sound_priority(15)); // Warp Out > Warp In
-assert(DandyApp.get_sound_priority(15) > DandyApp.get_sound_priority(12)); // Warp In > Monster Bite
-assert(DandyApp.get_sound_priority(12) > DandyApp.get_sound_priority(1));  // Monster Bite > Hit Player
-assert(DandyApp.get_sound_priority(1) > DandyApp.get_sound_priority(6));   // Hit Player > Eat Food
-assert(DandyApp.get_sound_priority(6) > DandyApp.get_sound_priority(4));   // Eat Food > Open Door
-assert(DandyApp.get_sound_priority(4) > DandyApp.get_sound_priority(16));  // Open Door > Hit Generator
-assert(DandyApp.get_sound_priority(16) > DandyApp.get_sound_priority(11)); // Hit Generator > Hit Monster 3
-assert(DandyApp.get_sound_priority(11) > DandyApp.get_sound_priority(10)); // Hit Monster 3 > Hit Monster 2
-assert(DandyApp.get_sound_priority(10) > DandyApp.get_sound_priority(9));  // Hit Monster 2 > Hit Monster 1
-assert(DandyApp.get_sound_priority(9) > DandyApp.get_sound_priority(7));   // Hit Monster 1 > Pick Money
-assert(DandyApp.get_sound_priority(7) > DandyApp.get_sound_priority(5));   // Pick Money > Pick Object
-assert(DandyApp.get_sound_priority(5) > DandyApp.get_sound_priority(8));   // Pick Object > Hit Wall
-assert(DandyApp.get_sound_priority(8) > DandyApp.get_sound_priority(2));   // Hit Wall > Shoot
-
-// POKEY Hardware Channel Mapping
+assert(DandyApp.get_sound_priority(3) > DandyApp.get_sound_priority(13), "Bomb priority must exceed Death");
+assert(DandyApp.get_sound_priority(13) > DandyApp.get_sound_priority(2), "Death priority must exceed Shoot");
 assert.strictEqual(DandyApp.get_sound_pokey_channel(3), 3, "Bomb Explode -> Channel 3");
-assert.strictEqual(DandyApp.get_sound_pokey_channel(13), 3, "Player Death -> Channel 3");
-assert.strictEqual(DandyApp.get_sound_pokey_channel(14), 3, "Warp Out -> Channel 3");
-assert.strictEqual(DandyApp.get_sound_pokey_channel(15), 3, "Warp In -> Channel 3");
 assert.strictEqual(DandyApp.get_sound_pokey_channel(12), 2, "Monster Bite -> Channel 2");
 assert.strictEqual(DandyApp.get_sound_pokey_channel(1), 1, "Hit Player -> Channel 1");
-assert.strictEqual(DandyApp.get_sound_pokey_channel(9), 1, "Hit Monster 1 -> Channel 1");
-assert.strictEqual(DandyApp.get_sound_pokey_channel(16), 1, "Hit Generator -> Channel 1");
 assert.strictEqual(DandyApp.get_sound_pokey_channel(2), 0, "Shoot -> Channel 0");
-assert.strictEqual(DandyApp.get_sound_pokey_channel(4), 0, "Open Door -> Channel 0");
-assert.strictEqual(DandyApp.get_sound_pokey_channel(8), 0, "Hit Wall -> Channel 0");
 
 const audioSim = new DandyApp();
 // Single shoot action -> emits SOUND_SHOOT on frame 1

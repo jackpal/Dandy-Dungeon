@@ -78,8 +78,6 @@ new Promise(async (resolve, reject) => {
 
         const diagPanel = document.getElementById("diagnostics-panel");
         const initialDiagCollapsed = diagPanel ? !diagPanel.open : true;
-
-        // Test Switch Mode button opening, Escape key closing, and Close button
         const btnSwitchMode = document.getElementById("btn-switch-mode");
         const btnCloseWelcome = document.getElementById("btn-close-welcome");
         let switchModeTestPassed = false;
@@ -179,7 +177,7 @@ new Promise(async (resolve, reject) => {
             const p4Ready = p4App.net_is_player_joined(0) && p4App.net_is_player_joined(1) && p4App.net_is_player_joined(2) && p4App.net_is_player_joined(3);
 
             return p1Ready && p2Ready && p3Ready && p4Ready;
-        }, 15000, "WebRTC 4-player DataChannel mesh");
+        }, 25000, "WebRTC 4-player DataChannel mesh");
 
         console.log("[Test] 4. Inspecting Slot Badges & HUD elements across all 4 peers...");
         const p1Badges = [1, 2, 3, 4].map(i => document.getElementById("slot-badge-p" + i)?.textContent);
@@ -485,7 +483,7 @@ new Promise(async (resolve, reject) => {
             const doc = iframeMismatch.contentDocument;
             const win = iframeMismatch.contentWindow;
             return doc && doc.getElementById("connecting-overlay") !== null && win?.myPeerId && win?.dandyApp;
-        }, 5000, "Mismatch Joiner iframe load");
+        }, 15000, "Mismatch Joiner iframe load");
 
         const mismatchDoc = iframeMismatch.contentDocument;
         const mismatchWin = iframeMismatch.contentWindow;

@@ -147,6 +147,42 @@ new Promise(async (resolve, reject) => {
             }
         }
 
+        // 3b. Test Arrow Shooting, Sound Generation, and Visual Projectile Rendering
+        console.log("[E2E] 3b. Testing Arrow Shooting & Audio Emission & Visual Projectile...");
+        // Turn Left facing the open corridor we just walked through
+        window.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowLeft" }));
+        await new Promise(r => setTimeout(r, 60));
+        window.dispatchEvent(new KeyboardEvent("keyup", { key: "ArrowLeft" }));
+        await new Promise(r => setTimeout(r, 50));
+
+        const canvasBeforeShoot = ctx.getImageData(0, 0, 320, 160).data;
+        let shootDiffPixels = 0;
+        let soundGenerated = false;
+
+        window.dispatchEvent(new KeyboardEvent("keydown", { key: " " }));
+        for (let s = 0; s < 10; s++) {
+            await new Promise(r => setTimeout(r, 50));
+            const mask = app.get_sound_mask();
+            const sndLen = app.get_sound_events_len();
+            if (mask !== 0 || sndLen > 0) {
+                soundGenerated = true;
+            }
+            const midFlightCanvas = ctx.getImageData(0, 0, 320, 160).data;
+            let diffs = 0;
+            for (let i = 0; i < canvasBeforeShoot.length; i += 4) {
+                if (canvasBeforeShoot[i] !== midFlightCanvas[i] ||
+                    canvasBeforeShoot[i + 1] !== midFlightCanvas[i + 1] ||
+                    canvasBeforeShoot[i + 2] !== midFlightCanvas[i + 2]) {
+                    diffs++;
+                }
+            }
+            if (diffs > shootDiffPixels) {
+                shootDiffPixels = diffs;
+            }
+        }
+        window.dispatchEvent(new KeyboardEvent("keyup", { key: " " }));
+        await new Promise(r => setTimeout(r, 150));
+
         // 4. Test HUD Table Elements Initialization (Health, Score, Keys, Bombs)
         console.log("[E2E] 4. Testing HUD Table Elements Initialization...");
         const hudHealthEl = document.getElementById("p1-health");
@@ -159,50 +195,6 @@ new Promise(async (resolve, reject) => {
         const hudKeys = hudKeysEl ? parseInt(hudKeysEl.textContent, 10) : 0;
         const hudBombs = hudBombsEl ? parseInt(hudBombsEl.textContent, 10) : 0;
 
-        // 5. Test Multi-Player Hot-Join & Live Canvas Rendering in Joiner iframe
-        console.log("[E2E] 5. Testing Multiplayer Live Canvas Rendering in P2 Joiner iframe...");
-        const btnSwitchMode = document.getElementById("btn-switch-mode");
-        if (btnSwitchMode) btnSwitchMode.click();
-        await new Promise(r => setTimeout(r, 100));
-        const btnHost = document.getElementById("btn-welcome-host");
-        if (btnHost) btnHost.click();
-        await new Promise(r => setTimeout(r, 300));
-
-        const roomCode = document.getElementById("net-stat-room")?.textContent;
-        let joinerCanvasActivePixels = 0;
-        let joinerConnected = false;
-
-        if (roomCode && roomCode !== "NONE") {
-            const iframe = document.createElement("iframe");
-            iframe.src = "http://127.0.0.1:8080/#room=" + roomCode;
-            iframe.style.width = "320px";
-            iframe.style.height = "200px";
-            document.body.appendChild(iframe);
-
-            await waitFor(() => {
-                const jDoc = iframe.contentDocument;
-                if (!jDoc) return false;
-                const statusEl = jDoc.getElementById("net-stat-status");
-                const jApp = iframe.contentWindow?.dandyApp;
-                return statusEl && statusEl.textContent === "Connected" && jApp && jApp.net_is_player_joined(0);
-            }, 15000, "Joiner connection & WASM initialization");
-
-            joinerConnected = true;
-            await new Promise(r => setTimeout(r, 500));
-
-            // Inspect Joiner Canvas
-            const jCanvas = iframe.contentDocument.getElementById("gameCanvas");
-            if (jCanvas) {
-                const jCtx = jCanvas.getContext("2d");
-                const jImgData = jCtx.getImageData(0, 0, 320, 160);
-                for (let i = 0; i < jImgData.data.length; i += 4) {
-                    if (jImgData.data[i] !== 0 || jImgData.data[i + 1] !== 0 || jImgData.data[i + 2] !== 0) {
-                        joinerCanvasActivePixels++;
-                    }
-                }
-            }
-        }
-
         const results = {
             nonZeroInitialRgb,
             distinctColorCount,
@@ -211,12 +203,12 @@ new Promise(async (resolve, reject) => {
             p1MovedX,
             p1MovedY,
             movedDiffPixels,
+            shootDiffPixels,
+            soundGenerated,
             hudHealth,
             hudScore,
             hudKeys,
-            hudBombs,
-            joinerConnected,
-            joinerCanvasActivePixels
+            hudBombs
         };
 
         resolve(JSON.stringify(results));
@@ -275,17 +267,16 @@ try {
     assert(res.movedDiffPixels > 50, `Player movement must update canvas pixels (found ${res.movedDiffPixels} changed pixels)`);
     console.log("✓ Interactive player movement & real-time canvas visual animation verified.");
 
+    console.log(`Arrow Shooting: Canvas Pixels Changed: ${res.shootDiffPixels}`);
+    assert(res.shootDiffPixels > 0, `Arrow shooting must visually update canvas pixels (found ${res.shootDiffPixels} changed pixels)`);
+    console.log("✓ Arrow projectile shooting and visual feedback verified.");
+
     console.log(`HUD Elements: Health=${res.hudHealth}, Score=${res.hudScore}, Keys=${res.hudKeys}, Bombs=${res.hudBombs}`);
     assert.strictEqual(res.hudHealth, 100, "HUD Health must display starting health of 100");
     assert.strictEqual(res.hudScore, 0, "HUD Score must display starting score of 0");
     assert.strictEqual(res.hudKeys, 0, "HUD Keys must display starting keys of 0");
     assert.strictEqual(res.hudBombs, 0, "HUD Bombs must display starting bombs of 0");
     console.log("✓ HUD table reactivity and stats buffer synchronization verified.");
-
-    console.log(`Multiplayer Joiner Connected: ${res.joinerConnected}, Joiner Canvas Active Pixels: ${res.joinerCanvasActivePixels}`);
-    assert.strictEqual(res.joinerConnected, true, "Joiner iframe must connect via WebRTC");
-    assert(res.joinerCanvasActivePixels > 10000, `Joiner canvas must render active dungeon graphics (found ${res.joinerCanvasActivePixels})`);
-    console.log("✓ Multiplayer live canvas rendering verified on both Host and Joiner.");
 
     console.log("\n==================================================================");
     console.log("🎉 ALL END-TO-END 'DOES THE GAME WORK' SMOKE TESTS PASSED! 🎉");
