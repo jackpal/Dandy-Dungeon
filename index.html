@@ -977,8 +977,8 @@
     </style>
     
 <script type="module">
-import init, * as bindings from './dandy-rust-56bac02d9a5a180.js';
-const wasm = await init({ module_or_path: './dandy-rust-56bac02d9a5a180_bg.wasm' });
+import init, * as bindings from './dandy-rust-790f9f69a0fe09f9.js';
+const wasm = await init({ module_or_path: './dandy-rust-790f9f69a0fe09f9_bg.wasm' });
 
 
 window.wasmBindings = bindings;
@@ -987,7 +987,7 @@ window.wasmBindings = bindings;
 dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
 
 </script>
-<link rel="modulepreload" href="./dandy-rust-56bac02d9a5a180.js" crossorigin="anonymous" integrity="sha384-CdzftEjHA0rI1Y2R2HRXSgZZ+H5CsQAyrGzbo614Ix/P5KZ4JszJEkamYEiwN+5F"><link rel="preload" href="./dandy-rust-56bac02d9a5a180_bg.wasm" crossorigin="anonymous" integrity="sha384-zKwBge/3wmCREaOkOvthP9AFA6umsPu+LAO+jJ/M0wNVCMyomNqfH3opmds9i3u7" as="fetch" type="application/wasm"></head>
+<link rel="modulepreload" href="./dandy-rust-790f9f69a0fe09f9.js" crossorigin="anonymous" integrity="sha384-CdzftEjHA0rI1Y2R2HRXSgZZ+H5CsQAyrGzbo614Ix/P5KZ4JszJEkamYEiwN+5F"><link rel="preload" href="./dandy-rust-790f9f69a0fe09f9_bg.wasm" crossorigin="anonymous" integrity="sha384-AaX9dIWZa8ZUVutHkPzJ5Y+G4oQK7XZ/3tWIz0+2myrmIROt2j0+xxpo77Wt8C7a" as="fetch" type="application/wasm"></head>
 <body>
     <div class="container">
         <header>
@@ -3272,12 +3272,18 @@ dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
                                     broadcastPacket(bytes, peerId);
                                 }
                             } else if (pktType === 0x02) { // PKT_PING
-                                const pong = new Uint8Array([0x03, bytes[1], bytes[2], bytes[3], bytes[4]]);
-                                try { dc.send(pong); } catch (_) {}
+                                if (bytes.length >= 5) {
+                                    const pong = new Uint8Array([0x03, bytes[1], bytes[2], bytes[3], bytes[4]]);
+                                    try { dc.send(pong); } catch (_) {}
+                                }
                             } else if (pktType === 0x03) { // PKT_PONG
-                                const sentTime = new DataView(bytes.buffer, 1).getUint32(0, false);
-                                measuredPing = Math.max(1, Math.round(performance.now() - sentTime));
-                                document.getElementById("net-stat-ping").textContent = `${measuredPing} ms`;
+                                if (bytes.length >= 5) {
+                                    const dv = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+                                    const sentTime = dv.getUint32(1, false);
+                                    measuredPing = Math.max(1, Math.round(performance.now() - sentTime));
+                                    const pingEl = document.getElementById("net-stat-ping");
+                                    if (pingEl) pingEl.textContent = `${measuredPing} ms`;
+                                }
                             } else if (pktType === 0x04) { // PKT_STATE_SYNC
                                 if (bytes.length >= 5) {
                                     const dv = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
