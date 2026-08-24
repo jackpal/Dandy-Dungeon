@@ -2965,6 +2965,9 @@ dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
             const STUN_SERVERS = {
                 iceServers: [
                     { urls: "stun:stun.l.google.com:19302" },
+                    { urls: "stun:stun1.l.google.com:19302" },
+                    { urls: "stun:stun2.l.google.com:19302" },
+                    { urls: "stun:stun.cloudflare.com:3478" },
                     { urls: "stun:global.stun.twilio.com:3478" }
                 ]
             };
@@ -3371,11 +3374,304 @@ dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
             }
 
             // ----------------- MULTI-TRANSPORT RESILIENT WEBRTC SIGNALING -----------------
-            // (BroadcastChannel + LocalStorage for same-browser windows + WebSocket Relay)
+            // (BroadcastChannel + LocalStorage for same-browser windows + Embedded Zero-Dependency MQTT 3.1.1 Broker Relay)
+            const MQTT_BROKERS = [
+                "wss://broker.emqx.io:8084/mqtt",
+                "wss://broker.hivemq.com:8884/mqtt"
+            ];
+            let activeMqttBrokerIdx = 0;
+            let signalingMqttWs = null;
+            let mqttSubscribed = false;
+            let mqttPingInterval = null;
+            let mqttConnectTimer = null;
+            let signalingOutbox = [];
+            let mqttSessionEpoch = 0;
+
             let broadcastChannel = null;
-            let signalingWs = null;
             let storageListener = null;
             const seenSignalingMsgIds = new Set();
+
+            function encodeMqttRemainingLength(len) {
+                const bytes = [];
+                do {
+                    let digit = len % 128;
+                    len = Math.floor(len / 128);
+                    if (len > 0) digit |= 0x80;
+                    bytes.push(digit);
+                } while (len > 0);
+                return bytes;
+            }
+
+            function decodeMqttRemainingLength(buf, offset) {
+                let multiplier = 1;
+                let value = 0;
+                let bytesRead = 0;
+                let digit;
+                do {
+                    if (offset + bytesRead >= buf.length) return null;
+                    digit = buf[offset + bytesRead];
+                    value += (digit & 0x7F) * multiplier;
+                    multiplier *= 128;
+                    bytesRead++;
+                    if (multiplier > 128 * 128 * 128) return null;
+                } while ((digit & 0x80) !== 0);
+                return { length: value, bytesRead };
+            }
+
+            function buildMqttConnect(clientId) {
+                const enc = new TextEncoder();
+                const idBytes = enc.encode(clientId);
+                // Variable header: "MQTT" (4 bytes), level 4 (1), flags 0x02 (clean session), keepalive 30 (2 bytes) = 10 bytes
+                const varHeader = [0x00, 0x04, 0x4D, 0x51, 0x54, 0x54, 0x04, 0x02, 0x00, 0x1E];
+                const payload = [idBytes.length >> 8, idBytes.length & 0xFF, ...idBytes];
+                const remLen = encodeMqttRemainingLength(varHeader.length + payload.length);
+                return new Uint8Array([0x10, ...remLen, ...varHeader, ...payload]);
+            }
+
+            function buildMqttSubscribe(topic, packetId = 1) {
+                const enc = new TextEncoder();
+                const topicBytes = enc.encode(topic);
+                const varHeader = [packetId >> 8, packetId & 0xFF];
+                const payload = [topicBytes.length >> 8, topicBytes.length & 0xFF, ...topicBytes, 0x00]; // QoS 0
+                const remLen = encodeMqttRemainingLength(varHeader.length + payload.length);
+                return new Uint8Array([0x82, ...remLen, ...varHeader, ...payload]);
+            }
+
+            function buildMqttPublish(topic, message) {
+                const enc = new TextEncoder();
+                const topicBytes = enc.encode(topic);
+                const msgBytes = enc.encode(message);
+                const varHeader = [topicBytes.length >> 8, topicBytes.length & 0xFF, ...topicBytes];
+                const remLen = encodeMqttRemainingLength(varHeader.length + msgBytes.length);
+                return new Uint8Array([0x30, ...remLen, ...varHeader, ...msgBytes]);
+            }
+
+            function parseMqttPackets(buf) {
+                const packets = [];
+                let offset = 0;
+                while (offset < buf.length) {
+                    if (offset + 1 >= buf.length) break;
+                    const packetType = buf[offset] >> 4;
+                    const flags = buf[offset] & 0x0F;
+                    const rem = decodeMqttRemainingLength(buf, offset + 1);
+                    if (!rem) break;
+                    const headerSize = 1 + rem.bytesRead;
+                    const packetTotalSize = headerSize + rem.length;
+                    if (offset + packetTotalSize > buf.length) break;
+
+                    let payloadOffset = offset + headerSize;
+                    if (packetType === 2) { // CONNACK
+                        const sp = buf[payloadOffset];
+                        const rc = buf[payloadOffset + 1];
+                        packets.push({ type: "CONNACK", sessionPresent: sp === 1, returnCode: rc });
+                    } else if (packetType === 9) { // SUBACK
+                        const packetId = (buf[payloadOffset] << 8) | buf[payloadOffset + 1];
+                        const returnCode = buf[payloadOffset + 2];
+                        packets.push({ type: "SUBACK", packetId, returnCode });
+                    } else if (packetType === 3) { // PUBLISH
+                        const qos = (flags & 0x06) >> 1;
+                        const topicLen = (buf[payloadOffset] << 8) | buf[payloadOffset + 1];
+                        payloadOffset += 2;
+                        const topic = new TextDecoder().decode(buf.subarray(payloadOffset, payloadOffset + topicLen));
+                        payloadOffset += topicLen;
+                        if (qos > 0) {
+                            payloadOffset += 2; // packetId
+                        }
+                        const payloadEnd = offset + packetTotalSize;
+                        const payload = new TextDecoder().decode(buf.subarray(payloadOffset, payloadEnd));
+                        packets.push({ type: "PUBLISH", topic, payload });
+                    } else if (packetType === 13) { // PINGRESP
+                        packets.push({ type: "PINGRESP" });
+                    }
+                    offset += packetTotalSize;
+                }
+                return packets;
+            }
+
+            function initMqttSignaling(roomId) {
+                const sessionEpoch = ++mqttSessionEpoch;
+                mqttSubscribed = false;
+
+                if (mqttPingInterval) {
+                    clearInterval(mqttPingInterval);
+                    mqttPingInterval = null;
+                }
+                if (mqttConnectTimer) {
+                    clearTimeout(mqttConnectTimer);
+                    mqttConnectTimer = null;
+                }
+                if (signalingMqttWs) {
+                    try { signalingMqttWs.close(); } catch (_) {}
+                    signalingMqttWs = null;
+                }
+
+                const brokerUrl = MQTT_BROKERS[activeMqttBrokerIdx];
+                const topic = "dandy-dungeon/room/" + roomId;
+                const clientId = "dandy_" + Math.random().toString(36).substring(2, 10);
+
+                console.log(`[Signaling] Connecting to MQTT broker (${activeMqttBrokerIdx + 1}/${MQTT_BROKERS.length}): ${brokerUrl}`);
+
+                let ws = null;
+                try {
+                    ws = new WebSocket(brokerUrl, ["mqtt"]);
+                    ws.binaryType = "arraybuffer";
+                    signalingMqttWs = ws;
+                } catch (err) {
+                    console.warn(`[Signaling] WebSocket init error for broker ${brokerUrl}:`, err);
+                    rotateBrokerAndRetry(roomId, sessionEpoch);
+                    return;
+                }
+
+                // 2.5s connect & subscribe timeout for fast failover
+                mqttConnectTimer = setTimeout(() => {
+                    if (sessionEpoch === mqttSessionEpoch && !mqttSubscribed) {
+                        console.warn(`[Signaling] Broker ${brokerUrl} subscription timed out (2.5s), failing over...`);
+                        try { ws.close(); } catch (_) {}
+                        rotateBrokerAndRetry(roomId, sessionEpoch);
+                    }
+                }, 2500);
+
+                ws.onopen = () => {
+                    if (sessionEpoch !== mqttSessionEpoch) return;
+                    try {
+                        ws.send(buildMqttConnect(clientId));
+                    } catch (e) {
+                        console.warn("[Signaling] Failed to send CONNECT packet:", e);
+                    }
+                };
+
+                ws.onmessage = (event) => {
+                    if (sessionEpoch !== mqttSessionEpoch) return;
+                    try {
+                        const buf = new Uint8Array(event.data);
+                        const packets = parseMqttPackets(buf);
+                        for (const pkt of packets) {
+                            if (pkt.type === "CONNACK") {
+                                if (pkt.returnCode === 0) {
+                                    try {
+                                        ws.send(buildMqttSubscribe(topic, 1));
+                                    } catch (e) {
+                                        console.warn("[Signaling] Failed to send SUBSCRIBE packet:", e);
+                                    }
+                                } else {
+                                    console.warn(`[Signaling] MQTT CONNACK rejected with code ${pkt.returnCode}`);
+                                    rotateBrokerAndRetry(roomId, sessionEpoch);
+                                }
+                            } else if (pkt.type === "SUBACK") {
+                                if (pkt.returnCode !== undefined && pkt.returnCode < 0x80) {
+                                    mqttSubscribed = true;
+                                    if (mqttConnectTimer) {
+                                        clearTimeout(mqttConnectTimer);
+                                        mqttConnectTimer = null;
+                                    }
+                                    console.log(`[Signaling] MQTT Subscribed to ${topic} on ${brokerUrl}`);
+
+                                    // Setup 30s PINGREQ heartbeat
+                                    if (mqttPingInterval) clearInterval(mqttPingInterval);
+                                    mqttPingInterval = setInterval(() => {
+                                        if (signalingMqttWs && signalingMqttWs.readyState === WebSocket.OPEN) {
+                                            try {
+                                                signalingMqttWs.send(new Uint8Array([0xC0, 0x00]));
+                                            } catch (_) {}
+                                        }
+                                    }, 30000);
+
+                                    // Flush queued outbox messages
+                                    flushSignalingOutbox(topic);
+                                } else {
+                                    console.warn(`[Signaling] MQTT SUBACK error: code ${pkt.returnCode}`);
+                                    rotateBrokerAndRetry(roomId, sessionEpoch);
+                                }
+                            } else if (pkt.type === "PUBLISH") {
+                                if (pkt.payload) {
+                                    try {
+                                        const msg = JSON.parse(pkt.payload);
+                                        handleSignalingMessage(msg);
+                                    } catch (e) {
+                                        console.warn("[Signaling] Failed to parse PUBLISH JSON:", e);
+                                    }
+                                }
+                            }
+                        }
+                    } catch (err) {
+                        console.warn("[Signaling] Error processing MQTT frame:", err);
+                    }
+                };
+
+                ws.onerror = () => {
+                    if (sessionEpoch !== mqttSessionEpoch) return;
+                    console.warn(`[Signaling] MQTT WebSocket error on ${brokerUrl}`);
+                };
+
+                ws.onclose = () => {
+                    if (sessionEpoch !== mqttSessionEpoch) return;
+                    console.warn(`[Signaling] MQTT WebSocket closed on ${brokerUrl}`);
+                    if (!mqttSubscribed) {
+                        rotateBrokerAndRetry(roomId, sessionEpoch);
+                    } else {
+                        // Reconnect after disconnection
+                        mqttSubscribed = false;
+                        if (mqttPingInterval) {
+                            clearInterval(mqttPingInterval);
+                            mqttPingInterval = null;
+                        }
+                        setTimeout(() => {
+                            if (sessionEpoch === mqttSessionEpoch) {
+                                initMqttSignaling(roomId);
+                            }
+                        }, 1000);
+                    }
+                };
+            }
+
+            function rotateBrokerAndRetry(roomId, sessionEpoch) {
+                if (sessionEpoch !== mqttSessionEpoch) return;
+                activeMqttBrokerIdx = (activeMqttBrokerIdx + 1) % MQTT_BROKERS.length;
+                setTimeout(() => {
+                    if (sessionEpoch === mqttSessionEpoch) {
+                        initMqttSignaling(roomId);
+                    }
+                }, 100);
+            }
+
+            function flushSignalingOutbox(topic) {
+                if (!signalingMqttWs || signalingMqttWs.readyState !== WebSocket.OPEN || !mqttSubscribed) return;
+                while (signalingOutbox.length > 0) {
+                    const msg = signalingOutbox.shift();
+                    try {
+                        const packet = buildMqttPublish(topic, JSON.stringify(msg));
+                        signalingMqttWs.send(packet);
+                    } catch (e) {
+                        console.warn("[Signaling] Failed to send queued MQTT packet:", e);
+                    }
+                }
+            }
+
+            function closeSignalingTransport() {
+                mqttSessionEpoch++;
+                mqttSubscribed = false;
+                if (mqttPingInterval) {
+                    clearInterval(mqttPingInterval);
+                    mqttPingInterval = null;
+                }
+                if (mqttConnectTimer) {
+                    clearTimeout(mqttConnectTimer);
+                    mqttConnectTimer = null;
+                }
+                if (signalingMqttWs) {
+                    try { signalingMqttWs.close(); } catch (_) {}
+                    signalingMqttWs = null;
+                }
+                if (broadcastChannel) {
+                    try { broadcastChannel.close(); } catch (_) {}
+                    broadcastChannel = null;
+                }
+                if (storageListener) {
+                    try { window.removeEventListener("storage", storageListener); } catch (_) {}
+                    storageListener = null;
+                }
+                signalingOutbox = [];
+            }
 
             function sendSignaling(msg) {
                 msg.roomId = currentRoomId;
@@ -3385,25 +3681,36 @@ dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
                 seenSignalingMsgIds.add(msg.msgId);
                 const jsonStr = JSON.stringify(msg);
 
-                // Tier 1: Instant local BroadcastChannel (cross-tab / cross-window on same browser)
-                if (broadcastChannel) {
-                    try {
-                        broadcastChannel.postMessage(msg);
-                    } catch (e) {
-                        console.warn("[Signaling] BroadcastChannel error", e);
+                const disableLocalSig = Boolean(window.__DISABLE_LOCAL_SIGNALING__ || (window.location && window.location.search && window.location.search.includes("disable_local_sig")));
+
+                if (!disableLocalSig) {
+                    // Tier 1: Instant local BroadcastChannel (cross-tab / cross-window on same browser)
+                    if (broadcastChannel) {
+                        try {
+                            broadcastChannel.postMessage(msg);
+                        } catch (e) {
+                            console.warn("[Signaling] BroadcastChannel error", e);
+                        }
                     }
+
+                    // Tier 2: LocalStorage storage events (fallback cross-window on same origin)
+                    try {
+                        localStorage.setItem("dandy_sig_" + currentRoomId, JSON.stringify({ t: Date.now(), msg }));
+                    } catch (_) {}
                 }
 
-                // Tier 2: LocalStorage storage events (fallback cross-window on same origin)
-                try {
-                    localStorage.setItem("dandy_sig_" + currentRoomId, JSON.stringify({ t: Date.now(), msg }));
-                } catch (_) {}
-
-                // Tier 3: Public WebSocket relay (if connected)
-                if (signalingWs && signalingWs.readyState === WebSocket.OPEN) {
+                // Tier 3: Zero-Dependency Pure MQTT 3.1.1 WebSocket Relay with Outbox Queuing
+                const topic = "dandy-dungeon/room/" + currentRoomId;
+                if (mqttSubscribed && signalingMqttWs && signalingMqttWs.readyState === WebSocket.OPEN) {
                     try {
-                        signalingWs.send(jsonStr);
-                    } catch (_) {}
+                        const packet = buildMqttPublish(topic, jsonStr);
+                        signalingMqttWs.send(packet);
+                    } catch (e) {
+                        console.warn("[Signaling] Failed to send MQTT packet:", e);
+                        signalingOutbox.push(msg);
+                    }
+                } else {
+                    signalingOutbox.push(msg);
                 }
             }
 
@@ -3557,179 +3864,172 @@ dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
             }
 
             async function createHostPeerConnection(peerId, assignedSlot) {
-                const pc = new RTCPeerConnection(STUN_SERVERS);
-                const dc = pc.createDataChannel("dandy_input", {
-                    ordered: false,
-                    maxRetransmits: 0
-                });
-                setupDataChannel(peerId, dc, assignedSlot);
+                try {
+                    const pc = new RTCPeerConnection(STUN_SERVERS);
+                    const dc = pc.createDataChannel("dandy_input", {
+                        ordered: false,
+                        maxRetransmits: 0
+                    });
+                    setupDataChannel(peerId, dc, assignedSlot);
 
-                pc.onicecandidate = (e) => {
-                    if (e.candidate) {
-                        sendSignaling({
-                            senderId: "HOST",
-                            targetId: peerId,
-                            type: "ice",
-                            candidate: e.candidate
-                        });
-                    }
-                };
-
-                const ownedSlots = new Set([assignedSlot]);
-
-                pc.onconnectionstatechange = () => {
-                    if (pc.connectionState === "failed" || pc.connectionState === "closed") {
-                        console.log(`[Host] Peer connection failed/closed for ${peerId}`);
-                        const peer = PEER_CONNECTIONS.get(peerId);
-                        const slotsToFree = peer && peer.ownedSlots ? Array.from(peer.ownedSlots) : Array.from(ownedSlots);
-                        for (const s of slotsToFree) {
-                            app.net_set_player_joined(s, false);
-                            broadcastPacket(new Uint8Array([0x06, s]));
+                    pc.onicecandidate = (e) => {
+                        if (e.candidate) {
+                            sendSignaling({
+                                senderId: "HOST",
+                                targetId: peerId,
+                                type: "ice",
+                                candidate: e.candidate
+                            });
                         }
-                        PEER_CONNECTIONS.delete(peerId);
-                        updateSlotCards();
-                        wakeLoop();
-                    }
-                };
+                    };
 
-                PEER_CONNECTIONS.set(peerId, { pc, dc, playerIdx: assignedSlot, ownedSlots, ping: 0 });
+                    const ownedSlots = new Set([assignedSlot]);
 
-                const offer = await pc.createOffer();
-                await pc.setLocalDescription(offer);
+                    pc.onconnectionstatechange = () => {
+                        if (pc.connectionState === "failed" || pc.connectionState === "closed") {
+                            console.log(`[Host] Peer connection failed/closed for ${peerId}`);
+                            const peer = PEER_CONNECTIONS.get(peerId);
+                            const slotsToFree = peer && peer.ownedSlots ? Array.from(peer.ownedSlots) : Array.from(ownedSlots);
+                            for (const s of slotsToFree) {
+                                app.net_set_player_joined(s, false);
+                                broadcastPacket(new Uint8Array([0x06, s]));
+                            }
+                            PEER_CONNECTIONS.delete(peerId);
+                            updateSlotCards();
+                            wakeLoop();
+                        }
+                    };
 
-                sendSignaling({
-                    senderId: "HOST",
-                    targetId: peerId,
-                    assignedSlot,
-                    type: "offer",
-                    sdp: offer
-                });
+                    PEER_CONNECTIONS.set(peerId, { pc, dc, playerIdx: assignedSlot, ownedSlots, ping: 0 });
 
-                return pc;
+                    const offer = await pc.createOffer();
+                    await pc.setLocalDescription(offer);
+
+                    sendSignaling({
+                        senderId: "HOST",
+                        targetId: peerId,
+                        assignedSlot,
+                        type: "offer",
+                        sdp: offer
+                    });
+
+                    return pc;
+                } catch (err) {
+                    console.warn(`[Host] Failed to create peer connection for ${peerId}:`, err);
+                    return null;
+                }
             }
 
             async function createJoinerPeerConnection(targetId, offerSdp, assignedSlot) {
-                const existing = PEER_CONNECTIONS.get(targetId);
-                if (existing && existing.pc) {
-                    try { existing.pc.close(); } catch (_) {}
+                try {
+                    const existing = PEER_CONNECTIONS.get(targetId);
+                    if (existing && existing.pc) {
+                        try { existing.pc.close(); } catch (_) {}
+                    }
+
+                    const pc = new RTCPeerConnection(STUN_SERVERS);
+                    pc.ondatachannel = (e) => {
+                        const dc = e.channel;
+                        setupDataChannel(targetId, dc, 0); // Host is slot 0
+                        const entry = PEER_CONNECTIONS.get(targetId);
+                        if (entry) {
+                            entry.dc = dc;
+                        } else {
+                            PEER_CONNECTIONS.set(targetId, { pc, dc, playerIdx: 0, ping: 0 });
+                        }
+                    };
+
+                    pc.onicecandidate = (e) => {
+                        if (e.candidate) {
+                            sendSignaling({
+                                senderId: myPeerId,
+                                targetId,
+                                type: "ice",
+                                candidate: e.candidate
+                            });
+                        }
+                    };
+
+                    pc.onconnectionstatechange = () => {
+                        if (pc.connectionState === "failed" || pc.connectionState === "closed") {
+                            console.log(`[Joiner] Connection to host failed/closed`);
+                            PEER_CONNECTIONS.delete(targetId);
+                            updateSlotCards();
+                            updateStatus("Disconnected", "#ef5350");
+                            wakeLoop();
+                        }
+                    };
+
+                    PEER_CONNECTIONS.set(targetId, { pc, dc: null, playerIdx: 0, ping: 0 });
+
+                    await pc.setRemoteDescription(new RTCSessionDescription(offerSdp));
+                    await flushQueuedIceCandidates(targetId, pc);
+
+                    const answer = await pc.createAnswer();
+                    await pc.setLocalDescription(answer);
+
+                    sendSignaling({
+                        senderId: myPeerId,
+                        targetId,
+                        type: "answer",
+                        sdp: answer
+                    });
+
+                    return pc;
+                } catch (err) {
+                    console.warn(`[Joiner] Failed to create peer connection for ${targetId}:`, err);
+                    return null;
                 }
-
-                const pc = new RTCPeerConnection(STUN_SERVERS);
-                pc.ondatachannel = (e) => {
-                    const dc = e.channel;
-                    setupDataChannel(targetId, dc, 0); // Host is slot 0
-                    const entry = PEER_CONNECTIONS.get(targetId);
-                    if (entry) {
-                        entry.dc = dc;
-                    } else {
-                        PEER_CONNECTIONS.set(targetId, { pc, dc, playerIdx: 0, ping: 0 });
-                    }
-                };
-
-                pc.onicecandidate = (e) => {
-                    if (e.candidate) {
-                        sendSignaling({
-                            senderId: myPeerId,
-                            targetId,
-                            type: "ice",
-                            candidate: e.candidate
-                        });
-                    }
-                };
-
-                pc.onconnectionstatechange = () => {
-                    if (pc.connectionState === "failed" || pc.connectionState === "closed") {
-                        console.log(`[Joiner] Connection to host failed/closed`);
-                        PEER_CONNECTIONS.delete(targetId);
-                        updateSlotCards();
-                        updateStatus("Disconnected", "#ef5350");
-                        wakeLoop();
-                    }
-                };
-
-                PEER_CONNECTIONS.set(targetId, { pc, dc: null, playerIdx: 0, ping: 0 });
-
-                await pc.setRemoteDescription(new RTCSessionDescription(offerSdp));
-                await flushQueuedIceCandidates(targetId, pc);
-
-                const answer = await pc.createAnswer();
-                await pc.setLocalDescription(answer);
-
-                sendSignaling({
-                    senderId: myPeerId,
-                    targetId,
-                    type: "answer",
-                    sdp: answer
-                });
-
-                return pc;
             }
 
             function connectSignaling(roomId, onReady) {
                 currentRoomId = roomId;
                 document.getElementById("net-stat-room").textContent = roomId;
+                signalingOutbox = [];
+
+                const disableLocalSig = Boolean(window.__DISABLE_LOCAL_SIGNALING__ || (window.location && window.location.search && window.location.search.includes("disable_local_sig")));
 
                 // Close any existing channels
                 if (broadcastChannel) {
                     try { broadcastChannel.close(); } catch (_) {}
-                }
-                if (signalingWs) {
-                    try { signalingWs.close(); } catch (_) {}
-                    signalingWs = null;
+                    broadcastChannel = null;
                 }
 
-                // 1. Initialize BroadcastChannel
-                try {
-                    if (typeof BroadcastChannel !== "undefined") {
-                        broadcastChannel = new BroadcastChannel("dandy_room_" + roomId);
-                        broadcastChannel.onmessage = (e) => {
-                            handleSignalingMessage(e.data);
-                        };
-                        console.log(`[Signaling] BroadcastChannel active for room ${roomId}`);
+                if (!disableLocalSig) {
+                    // 1. Initialize BroadcastChannel
+                    try {
+                        if (typeof BroadcastChannel !== "undefined") {
+                            broadcastChannel = new BroadcastChannel("dandy_room_" + roomId);
+                            broadcastChannel.onmessage = (e) => {
+                                handleSignalingMessage(e.data);
+                            };
+                            console.log(`[Signaling] BroadcastChannel active for room ${roomId}`);
+                        }
+                    } catch (e) {
+                        console.warn("[Signaling] BroadcastChannel not supported", e);
                     }
-                } catch (e) {
-                    console.warn("[Signaling] BroadcastChannel not supported", e);
-                }
 
-                // 2. Initialize LocalStorage storage event listener
-                if (storageListener) {
-                    window.removeEventListener("storage", storageListener);
-                }
-                storageListener = (e) => {
-                    if (e.key === "dandy_sig_" + currentRoomId && e.newValue) {
-                        try {
-                            const data = JSON.parse(e.newValue);
-                            if (data && data.msg) {
-                                handleSignalingMessage(data.msg);
-                            }
-                        } catch (_) {}
+                    // 2. Initialize LocalStorage storage event listener
+                    if (storageListener) {
+                        window.removeEventListener("storage", storageListener);
                     }
-                };
-                window.addEventListener("storage", storageListener);
+                    storageListener = (e) => {
+                        if (e.key === "dandy_sig_" + currentRoomId && e.newValue) {
+                            try {
+                                const data = JSON.parse(e.newValue);
+                                if (data && data.msg) {
+                                    handleSignalingMessage(data.msg);
+                                }
+                            } catch (_) {}
+                        }
+                    };
+                    window.addEventListener("storage", storageListener);
+                } else {
+                    console.log(`[Signaling] Local transports disabled (isolated MQTT broker signaling active for room ${roomId})`);
+                }
 
-                // 3. Fallback WebSocket Relay (non-blocking, suppressed errors)
-                const wsUrls = [
-                    `wss://socketsbay.com/wss/v2/100/${roomId}/`,
-                    `wss://broker.emqx.io:8084/mqtt`
-                ];
-
-                try {
-                    const wsUrl = wsUrls[0];
-                    signalingWs = new WebSocket(wsUrl);
-                    signalingWs.onopen = () => {
-                        console.log(`[Signaling] WebSocket connected to room ${roomId}`);
-                    };
-                    signalingWs.onmessage = (event) => {
-                        try {
-                            const msg = JSON.parse(event.data);
-                            handleSignalingMessage(msg);
-                        } catch (_) {}
-                    };
-                    signalingWs.onerror = () => {
-                        // Suppress error banner - local BroadcastChannel is active
-                        console.info("[Signaling] External WebSocket relay offline; using local BroadcastChannel.");
-                    };
-                } catch (_) {}
+                // 3. Embedded Zero-Dependency MQTT 3.1.1 WebSocket Relay
+                initMqttSignaling(roomId);
 
                 if (onReady) onReady();
             }
@@ -3939,18 +4239,7 @@ dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
                 if (roomFullOverlay) roomFullOverlay.style.display = "none";
                 if (versionMismatchOverlay) versionMismatchOverlay.style.display = "none";
                 closeAllPeerConnections();
-                if (broadcastChannel) {
-                    try { broadcastChannel.close(); } catch (_) {}
-                    broadcastChannel = null;
-                }
-                if (signalingWs) {
-                    try { signalingWs.close(); } catch (_) {}
-                    signalingWs = null;
-                }
-                if (storageListener) {
-                    try { window.removeEventListener("storage", storageListener); } catch (_) {}
-                    storageListener = null;
-                }
+                closeSignalingTransport();
                 currentRoomId = null;
                 if (window.location.hash) {
                     try { history.replaceState(null, "", window.location.pathname + window.location.search); } catch (_) {}
