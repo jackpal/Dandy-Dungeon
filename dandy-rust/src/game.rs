@@ -1289,4 +1289,134 @@ mod tests {
         game_a.map.set(10, 10, GHOST);
         assert_ne!(game_a.get_state_checksum(), original_cs);
     }
+
+    #[test]
+    fn test_arrow_generator_degradation_and_destruction() {
+        let mut game = Game::new();
+        game.load();
+        let px = 10;
+        let py = 10;
+        game.map.set(game.players[0].x, game.players[0].y, SPACE);
+        game.players[0].x = px;
+        game.players[0].y = py;
+        game.players[0].dir = 2; // East
+        game.map.set(px, py, PLAYER);
+
+        // Place a Level 3 Generator at (px + 2, py)
+        game.map.set(px + 1, py, SPACE);
+        game.map.set(px + 2, py, GENERATOR + 2); // 15
+        game.players[0].score = 0;
+
+        // Shot 1: Fire arrow East
+        game.players[0].input_mask = ACTION_SHOOT;
+        game.step(); // Frame 1: arrow spawns at px + 1
+        game.players[0].input_mask = 0;
+
+        for _ in 0..4 {
+            game.step(); // Frame 5: arrow hits generator at px + 2
+        }
+
+        // Generator should degrade from 15 -> 14, player score + 200
+        assert_eq!(game.map.get(px + 2, py), GENERATOR + 1);
+        assert_eq!(game.players[0].score, 200);
+        assert!(game.players[0].arrow.is_none());
+
+        // Shot 2: Fire again
+        game.players[0].input_mask = ACTION_SHOOT;
+        game.step();
+        game.players[0].input_mask = 0;
+        for _ in 0..4 {
+            game.step();
+        }
+
+        // Generator should degrade from 14 -> 13, player score + 200 -> 400
+        assert_eq!(game.map.get(px + 2, py), GENERATOR);
+        assert_eq!(game.players[0].score, 400);
+        assert!(game.players[0].arrow.is_none());
+
+        // Shot 3: Fire again to destroy
+        game.players[0].input_mask = ACTION_SHOOT;
+        game.step();
+        game.players[0].input_mask = 0;
+        for _ in 0..4 {
+            game.step();
+        }
+
+        // Generator should be destroyed to SPACE, player score + 200 -> 600
+        assert_eq!(game.map.get(px + 2, py), SPACE);
+        assert_eq!(game.players[0].score, 600);
+        assert!(game.players[0].arrow.is_none());
+    }
+
+    #[test]
+    fn test_smart_bomb_clears_generators_and_ghosts() {
+        let mut game = Game::new();
+        game.load();
+        
+        // Clear map of existing ghosts and generators
+        for y in 0..MAP_HEIGHT {
+            for x in 0..MAP_WIDTH {
+                let v = game.map.get(x, y);
+                if (v >= GHOST && v <= GHOST + 2) || (v >= GENERATOR && v <= GENERATOR + 2) {
+                    game.map.set(x, y, SPACE);
+                }
+            }
+        }
+
+        let active = game.get_active_rect();
+
+        // Place ghost and generator inside active rect
+        let gx = active.left + 2;
+        let gy = active.top + 2;
+        game.map.set(gx, gy, GHOST + 1); // 20 pts
+        game.map.set(gx + 1, gy, GENERATOR + 1); // 200 pts
+
+        game.players[0].score = 0;
+        game.players[0].bombs = 1;
+        game.players[0].input_mask = ACTION_BOMB;
+
+        game.step();
+
+        // Both should be cleared to SPACE
+        assert_eq!(game.map.get(gx, gy), SPACE);
+        assert_eq!(game.map.get(gx + 1, gy), SPACE);
+        // Score should be 20 + 200 = 220
+        assert_eq!(game.players[0].score, 220);
+        assert_eq!(game.players[0].bombs, 0);
+    }
+
+    #[test]
+    fn test_move_cooldown_decrements_while_shooting() {
+        let mut game = Game::new();
+        game.load();
+        let px = 10;
+        let py = 10;
+        game.map.set(game.players[0].x, game.players[0].y, SPACE);
+        game.players[0].x = px;
+        game.players[0].y = py;
+        game.map.set(px, py, PLAYER);
+        game.map.set(px + 1, py, SPACE);
+        game.map.set(px + 2, py, SPACE);
+        game.map.set(px, py + 1, SPACE);
+
+        // Frame 1: P1 moves Right (move_cooldown set to 8)
+        game.players[0].input_mask = ACTION_RIGHT;
+        game.step();
+        assert_eq!(game.players[0].x, px + 1);
+        assert_eq!(game.players[0].move_cooldown, 8);
+
+        // Frames 2..9 (8 frames): P1 holds Shoot
+        game.players[0].input_mask = ACTION_SHOOT;
+        for _ in 0..8 {
+            game.step();
+        }
+
+        // move_cooldown should now have fully decremented to 0
+        assert_eq!(game.players[0].move_cooldown, 0);
+
+        // Frame 10: P1 releases shoot and presses Down -> must move IMMEDIATELY (0 ms lag)
+        game.players[0].input_mask = ACTION_DOWN;
+        game.step();
+        assert_eq!(game.players[0].y, py + 1, "Player must move immediately without 8-frame freeze");
+    }
 }

@@ -16,6 +16,9 @@ pub fn do_smart_bomb(
             if (GHOST..=GHOST + 2).contains(&v) {
                 map.set(x, y, SPACE);
                 score_gain += 10 * ((v - GHOST) as i32 + 1);
+            } else if (GENERATOR..=GENERATOR + 2).contains(&v) {
+                map.set(x, y, SPACE);
+                score_gain += 100 * ((v - GENERATOR) as i32 + 1);
             }
         }
     }
@@ -100,6 +103,11 @@ pub fn step_player(
         do_smart_bomb(&mut players[index], map, active_rect);
     }
 
+    // Decrement movement cooldown unconditionally each 60 Hz frame if > 0
+    if players[index].move_cooldown > 0 {
+        players[index].move_cooldown -= 1;
+    }
+
     // Get direction from input mask
     let mut dx = 0;
     let mut dy = 0;
@@ -137,22 +145,17 @@ pub fn step_player(
             });
             step_arrow_advance(index, players, map, active_rect);
         }
-    } else {
-        if players[index].move_cooldown > 0 {
-            players[index].move_cooldown -= 1;
-        }
-        if players[index].move_cooldown == 0 {
-            if let Some(d) = dir_opt {
-                // Try moving with wall-sliding
-                let moved = try_move_player(index, &mut players[index], map, d);
-                if !moved {
-                    let moved_left = try_move_player(index, &mut players[index], map, (d + 1) & 7);
-                    if !moved_left {
-                        try_move_player(index, &mut players[index], map, (d + 7) & 7);
-                    }
+    } else if players[index].move_cooldown == 0 {
+        if let Some(d) = dir_opt {
+            // Try moving with wall-sliding
+            let moved = try_move_player(index, &mut players[index], map, d);
+            if !moved {
+                let moved_left = try_move_player(index, &mut players[index], map, (d + 1) & 7);
+                if !moved_left {
+                    try_move_player(index, &mut players[index], map, (d + 7) & 7);
                 }
-                players[index].move_cooldown = PLAYER_MOVE_INTERVAL as u8;
             }
+            players[index].move_cooldown = PLAYER_MOVE_INTERVAL as u8;
         }
     }
 }
@@ -198,6 +201,13 @@ pub fn step_arrow_advance(
                 players[index].score += 10;
                 if v > GHOST {
                     new_v = v - 1; // Ghost degrades
+                }
+            }
+            GENERATOR..=15 => {
+                // Hit generator / spawner!
+                players[index].score += 200;
+                if v > GENERATOR {
+                    new_v = v - 1; // Spawner degrades
                 }
             }
             HEART => {

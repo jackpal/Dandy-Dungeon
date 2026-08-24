@@ -2593,9 +2593,17 @@
                                 if (difficultySelect) {
                                     difficultySelect.value = diffVal.toString();
                                 }
-                                // If Host (localPlayerIdx == 0), relay to all other connected peers!
+                                // If Host (localPlayerIdx == 0), relay to all other connected peers and deliver authoritative state sync!
                                 if (localPlayerIdx === 0) {
                                     broadcastPacket(bytes, peerId);
+                                    const curFrame = app.net_get_current_frame();
+                                    const stateBytes = app.save_state_bytes();
+                                    const syncPkt = new Uint8Array(1 + 4 + stateBytes.length);
+                                    syncPkt[0] = 0x04; // PKT_STATE_SYNC
+                                    const syncDv = new DataView(syncPkt.buffer);
+                                    syncDv.setUint32(1, curFrame, false);
+                                    syncPkt.set(stateBytes, 5);
+                                    broadcastPacket(syncPkt);
                                 }
                                 wakeLoop();
                             } else if (pktType === 0x08) { // PKT_CHECKSUM
@@ -3773,6 +3781,16 @@
                     if (isOnlineMode) {
                         const diffPkt = new Uint8Array([0x07, val & 0x03]);
                         broadcastPacket(diffPkt);
+                        if (localPlayerIdx === 0) {
+                            const curFrame = app.net_get_current_frame();
+                            const stateBytes = app.save_state_bytes();
+                            const syncPkt = new Uint8Array(1 + 4 + stateBytes.length);
+                            syncPkt[0] = 0x04; // PKT_STATE_SYNC
+                            const syncDv = new DataView(syncPkt.buffer);
+                            syncDv.setUint32(1, curFrame, false);
+                            syncPkt.set(stateBytes, 5);
+                            broadcastPacket(syncPkt);
+                        }
                     }
                     wakeLoop();
                 });
