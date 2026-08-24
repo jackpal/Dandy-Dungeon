@@ -179,4 +179,50 @@ mod tests {
         fb.blit_tile(&spritesheet, 1, SCREEN_WIDTH as i32 - 8, SCREEN_HEIGHT as i32 - 8); // Partially off-screen bottom-right
         fb.blit_tile(&[], 1, 0, 0); // Empty spritesheet safety
     }
+
+    #[test]
+    fn test_blit_tile_exact_pixel_transfer_and_quadrant_clipping() {
+        let mut fb = Framebuffer::new();
+        let spritesheet = parse_bmp(SPRITESHEET_BYTES);
+        assert!(!spritesheet.is_empty(), "Parsed spritesheet must not be empty");
+
+        // Blit multiple tile indices across the 256x32 spritesheet (row 0: tiles 0..15, row 1: tiles 16..31)
+        for tile_idx in [0u8, 1, 2, 7, 15, 16, 17, 31] {
+            fb.clear(0, 0, 0);
+            fb.blit_tile(&spritesheet, tile_idx, 32, 32);
+
+            let tile_col = (tile_idx & 15) as usize;
+            let tile_row = (tile_idx >> 4) as usize;
+            let src_x = tile_col * 16;
+            let src_y = tile_row * 16;
+
+            // Check sample pixel inside the 16x16 destination region matches spritesheet source
+            for py in 0..16 {
+                for px in 0..16 {
+                    let dest_idx = ((32 + py) * SCREEN_WIDTH + (32 + px)) * 4;
+                    let src_idx = ((src_y + py) * 256 + (src_x + px)) * 4;
+                    assert_eq!(
+                        &fb.pixels[dest_idx..dest_idx + 4],
+                        &spritesheet[src_idx..src_idx + 4],
+                        "Pixel mismatch for tile {} at offset ({}, {})",
+                        tile_idx, px, py
+                    );
+                }
+            }
+        }
+
+        // Test clipping on all 4 quadrants (partial overlap without panic or out-of-bound writes)
+        fb.clear(0, 0, 0);
+        // Top edge clipping (y = -8)
+        fb.blit_tile(&spritesheet, 1, 100, -8);
+        // Bottom edge clipping (y = SCREEN_HEIGHT - 8)
+        fb.blit_tile(&spritesheet, 1, 100, SCREEN_HEIGHT as i32 - 8);
+        // Left edge clipping (x = -8)
+        fb.blit_tile(&spritesheet, 1, -8, 50);
+        // Right edge clipping (x = SCREEN_WIDTH - 8)
+        fb.blit_tile(&spritesheet, 1, SCREEN_WIDTH as i32 - 8, 50);
+
+        let active_pixels = fb.pixels.chunks_exact(4).filter(|px| px[0] != 0 || px[1] != 0 || px[2] != 0).count();
+        assert!(active_pixels > 0, "Clipped tiles must draw non-zero pixels inside visible bounds");
+    }
 }

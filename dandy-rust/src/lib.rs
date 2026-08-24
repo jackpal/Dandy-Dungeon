@@ -586,3 +586,79 @@ impl DandyApp {
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_dandy_app_initial_framebuffer_rendered_non_zero_rgb() {
+        let app = DandyApp::new();
+        assert_eq!(app.get_framebuffer_size(), SCREEN_WIDTH * SCREEN_HEIGHT * 4);
+        assert!(!app.get_framebuffer_ptr().is_null());
+
+        let fb_slice = &app.framebuffer.pixels;
+        let mut non_zero_pixels = 0;
+        for px in fb_slice.chunks_exact(4) {
+            if px[0] != 0 || px[1] != 0 || px[2] != 0 {
+                non_zero_pixels += 1;
+            }
+        }
+
+        // Level 1 has active dungeon walls, player, floor features covering thousands of pixels
+        let total_pixels = SCREEN_WIDTH * SCREEN_HEIGHT;
+        assert!(
+            non_zero_pixels > 10000,
+            "Initial framebuffer must contain non-zero RGB rendered pixels (found {} / {})",
+            non_zero_pixels, total_pixels
+        );
+    }
+
+    #[test]
+    fn test_dandy_app_movement_animates_framebuffer_pixels() {
+        let mut app = DandyApp::new();
+        let initial_pixels = app.framebuffer.pixels.clone();
+
+        // Move player right across 10 frames
+        app.set_action(0, PlayerAction::Right, true);
+        for _ in 0..10 {
+            app.tick();
+        }
+
+        let updated_pixels = &app.framebuffer.pixels;
+        let differing_bytes = initial_pixels
+            .iter()
+            .zip(updated_pixels.iter())
+            .filter(|(a, b)| a != b)
+            .count();
+
+        assert!(
+            differing_bytes > 0,
+            "Framebuffer pixel memory must mutate when player moves and scene updates (found {} differing bytes)",
+            differing_bytes
+        );
+    }
+
+    #[test]
+    fn test_dandy_app_shooting_renders_arrow_visual_update() {
+        let mut app = DandyApp::new();
+        let before_shoot = app.framebuffer.pixels.clone();
+
+        // Trigger shoot action
+        app.set_action(0, PlayerAction::Shoot, true);
+        app.tick();
+
+        let after_shoot = &app.framebuffer.pixels;
+        let diff_count = before_shoot
+            .iter()
+            .zip(after_shoot.iter())
+            .filter(|(a, b)| a != b)
+            .count();
+
+        assert!(
+            diff_count > 0,
+            "Framebuffer must visually update when arrow is spawned and rendered"
+        );
+    }
+}
+
+

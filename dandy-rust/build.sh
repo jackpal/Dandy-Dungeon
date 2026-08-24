@@ -26,6 +26,10 @@ node test_artifact_parity.mjs
 
 if [ -x "/google/bin/releases/gemini-agents-gbrowser/gbrowser" ] || command -v gbrowser >/dev/null 2>&1; then
     echo ""
+    echo "=== Running Headless End-to-End Game Smoke Gate ==="
+    node test_game_e2e.mjs
+
+    echo ""
     echo "=== Running Headless Multi-Browser WebRTC Multiplayer Gate ==="
     node test_headless_multiplayer.mjs
 fi

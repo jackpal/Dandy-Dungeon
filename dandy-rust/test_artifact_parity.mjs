@@ -517,20 +517,65 @@ for (let f = 0; f < 200; f++) {
 console.log("✓ Gamepad Action Bitmask Mapping & Determinism verified.");
 
 // 8. Boundary extraction zero-copy view validity & graphics rendering parity
+console.log("\nTesting Zero-Copy Framebuffer ABI, Pixel Density, and Dynamic Graphics Rendering...");
 const fbPtr = app.get_framebuffer_ptr();
 const fbSize = app.get_framebuffer_size();
 const fbBytes = new Uint8ClampedArray(wasmInstance.memory.buffer, fbPtr, fbSize);
 assert.strictEqual(fbBytes.length, 320 * 160 * 4, "Framebuffer byte length must be 320*160*4");
 
 let nonZeroRgbCount = 0;
+const colorHistogram = new Map();
 for (let i = 0; i < fbBytes.length; i += 4) {
-    if (fbBytes[i] !== 0 || fbBytes[i + 1] !== 0 || fbBytes[i + 2] !== 0) {
+    const r = fbBytes[i];
+    const g = fbBytes[i + 1];
+    const b = fbBytes[i + 2];
+    const a = fbBytes[i + 3];
+    assert.strictEqual(a, 255, `Alpha channel must always be 255 (found ${a} at pixel ${i/4})`);
+    if (r !== 0 || g !== 0 || b !== 0) {
         nonZeroRgbCount++;
+        const key = `${r},${g},${b}`;
+        colorHistogram.set(key, (colorHistogram.get(key) || 0) + 1);
     }
 }
 // 320x160 = 51200 pixels. Level 1 rendering has active dungeon tiles (walls, player, floor features) covering thousands of pixels.
 assert(nonZeroRgbCount > 10000, `Framebuffer must render non-zero RGB pixel graphics (found ${nonZeroRgbCount} / 51200 non-zero RGB pixels)`);
-console.log(`✓ Zero-Copy Framebuffer ABI view & Graphics Rendering verified (${nonZeroRgbCount} active RGB pixels).`);
+assert(colorHistogram.size >= 3, `Framebuffer must render multiple distinct colors (found ${colorHistogram.size} distinct colors)`);
+console.log(`✓ Zero-Copy Framebuffer initial render verified (${nonZeroRgbCount} active RGB pixels, ${colorHistogram.size} distinct colors).`);
+
+// Verify dynamic pixel animation upon player movement
+const renderSim = new DandyApp();
+const fbPtrRender = renderSim.get_framebuffer_ptr();
+const fbBytesBefore = new Uint8Array(wasmInstance.memory.buffer.slice(fbPtrRender, fbPtrRender + fbSize));
+
+// Move player right 10 frames
+renderSim.set_action(0, PlayerAction.Right, true);
+for (let f = 0; f < 10; f++) {
+    renderSim.tick();
+}
+const fbBytesAfter = new Uint8Array(wasmInstance.memory.buffer.slice(fbPtrRender, fbPtrRender + fbSize));
+let diffPixels = 0;
+for (let i = 0; i < fbSize; i += 4) {
+    if (fbBytesBefore[i] !== fbBytesAfter[i] || fbBytesBefore[i+1] !== fbBytesAfter[i+1] || fbBytesBefore[i+2] !== fbBytesAfter[i+2]) {
+        diffPixels++;
+    }
+}
+assert(diffPixels > 50, `Player movement must visually animate/update framebuffer pixels (found ${diffPixels} changed pixels)`);
+console.log(`✓ Framebuffer dynamic movement animation verified (${diffPixels} pixels updated upon moving).`);
+
+// Verify arrow spawning visually renders into framebuffer
+const fbBeforeShoot = new Uint8Array(wasmInstance.memory.buffer.slice(fbPtrRender, fbPtrRender + fbSize));
+renderSim.set_action(0, PlayerAction.Right, false);
+renderSim.set_action(0, PlayerAction.Shoot, true);
+renderSim.tick();
+const fbAfterShoot = new Uint8Array(wasmInstance.memory.buffer.slice(fbPtrRender, fbPtrRender + fbSize));
+let diffArrowPixels = 0;
+for (let i = 0; i < fbSize; i += 4) {
+    if (fbBeforeShoot[i] !== fbAfterShoot[i] || fbBeforeShoot[i+1] !== fbAfterShoot[i+1] || fbBeforeShoot[i+2] !== fbAfterShoot[i+2]) {
+        diffArrowPixels++;
+    }
+}
+assert(diffArrowPixels > 0, `Spawning and rendering arrow must visually update framebuffer (found ${diffArrowPixels} changed pixels)`);
+console.log(`✓ Arrow projectile framebuffer visual rendering verified (${diffArrowPixels} pixels updated).`);
 
 // 9. POKEY Priority Audio Scheduler & Multi-Channel Allocation
 console.log("\nTesting POKEY Priority Audio Scheduler & Channel APIs...");
