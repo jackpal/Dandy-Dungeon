@@ -3,15 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Dandy Dungeon - Rust WebAssembly</title>
+    <title>Dandy Dungeon — Serverless 4-Player P2P Rollback Co-op (Rust WASM)</title>
     <style>
         :root {
             --bg-color: #121212;
             --surface-color: #1e1e1e;
+            --surface-accent: #2a2a2a;
             --text-color: #e0e0e0;
             --text-secondary: #b0b0b0;
             --accent-color: #ffa726;
             --border-color: #333;
+            --p1-color: #ef5350;
+            --p2-color: #42a5f5;
+            --p3-color: #66bb6a;
+            --p4-color: #ab47bc;
         }
 
         * {
@@ -26,8 +31,8 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            padding: 1.5rem 1rem;
-            line-height: 1.6;
+            padding: 1rem 0.5rem;
+            line-height: 1.5;
             touch-action: manipulation;
             overscroll-behavior: none;
             -webkit-user-select: none;
@@ -35,7 +40,7 @@
         }
 
         .container {
-            max-width: 800px;
+            max-width: 820px;
             width: 100%;
             display: flex;
             flex-direction: column;
@@ -44,22 +49,197 @@
 
         header {
             text-align: center;
-            margin-bottom: 1.5rem;
+            margin-bottom: 1rem;
         }
 
         h1 {
             color: var(--accent-color);
-            margin: 0 0 0.25rem 0;
-            font-size: 2.2rem;
+            margin: 0 0 0.2rem 0;
+            font-size: 2rem;
             letter-spacing: -0.02em;
+            text-transform: uppercase;
+        }
+
+        .badge-bar {
+            display: flex;
+            gap: 6px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-bottom: 0.4rem;
+        }
+
+        .badge {
+            background: #222;
+            border: 1px solid #444;
+            border-radius: 4px;
+            padding: 2px 8px;
+            font-size: 0.75rem;
+            font-weight: bold;
+            letter-spacing: 0.05em;
+            color: var(--accent-color);
         }
 
         p.subtitle {
             color: var(--text-secondary);
-            font-size: 1rem;
+            font-size: 0.9rem;
             margin: 0;
         }
 
+        /* Multiplayer Lobby Overlay */
+        #net-lobby {
+            width: 100%;
+            max-width: 660px;
+            background: var(--surface-color);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 0.75rem 1rem;
+            margin-bottom: 0.75rem;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .lobby-tabs {
+            display: flex;
+            gap: 8px;
+            border-bottom: 1px solid #333;
+            padding-bottom: 6px;
+        }
+
+        .tab-btn {
+            background: transparent;
+            border: 1px solid #444;
+            color: var(--text-secondary);
+            border-radius: 4px;
+            padding: 4px 12px;
+            font-size: 0.85rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+
+        .tab-btn.active {
+            background: var(--accent-color);
+            color: #000;
+            border-color: var(--accent-color);
+        }
+
+        .lobby-content {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .lobby-row {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            background: #333;
+            color: #fff;
+            border: 1px solid #555;
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-weight: bold;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: background 0.15s, border-color 0.15s;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn:hover {
+            background: #444;
+            border-color: var(--accent-color);
+        }
+
+        .btn-primary {
+            background: #e65100;
+            border-color: #f57c00;
+            color: #fff;
+        }
+
+        .btn-primary:hover {
+            background: #f57c00;
+        }
+
+        .input-code {
+            background: #000;
+            color: #fff;
+            border: 1px solid #444;
+            border-radius: 4px;
+            padding: 6px 10px;
+            font-family: 'Courier New', Courier, monospace;
+            font-weight: bold;
+            font-size: 0.95rem;
+            width: 140px;
+            text-transform: uppercase;
+        }
+
+        .net-stats-bar {
+            display: flex;
+            gap: 12px;
+            background: #111;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .net-stats-bar span b {
+            color: #fff;
+        }
+
+        .slots-indicator {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 6px;
+            width: 100%;
+        }
+
+        .slot-card {
+            background: #181818;
+            border: 1px solid #333;
+            border-radius: 6px;
+            padding: 6px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            font-size: 0.75rem;
+            position: relative;
+            transition: border-color 0.2s;
+        }
+
+        .slot-card.active {
+            border-color: currentColor;
+        }
+
+        .slot-card.p1 { color: var(--p1-color); }
+        .slot-card.p2 { color: var(--p2-color); }
+        .slot-card.p3 { color: var(--p3-color); }
+        .slot-card.p4 { color: var(--p4-color); }
+
+        .slot-name {
+            font-weight: bold;
+            font-size: 0.85rem;
+        }
+
+        .slot-badge {
+            font-size: 0.65rem;
+            padding: 1px 4px;
+            border-radius: 3px;
+            background: rgba(255,255,255,0.1);
+            margin-top: 2px;
+        }
+
+        /* Canvas Wrapper & HUD */
         .canvas-wrapper {
             position: relative;
             background: #000;
@@ -71,7 +251,7 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            max-width: 640px;
+            max-width: 660px;
             width: 100%;
             touch-action: none;
         }
@@ -84,36 +264,37 @@
             color: var(--accent-color);
             font-family: 'Courier New', Courier, monospace;
             font-weight: bold;
-            font-size: 0.9rem;
+            font-size: 0.85rem;
             border-bottom: 2px solid #222;
             margin-bottom: 4px;
             line-height: normal;
         }
 
         #hud th, #hud td {
-            padding: 0.4rem 0.2rem;
+            padding: 0.3rem 0.2rem;
         }
 
         #hud th {
-            width: 20%;
-            font-size: 0.75rem;
+            width: 18%;
+            font-size: 0.7rem;
             text-transform: uppercase;
             color: var(--text-secondary);
             font-weight: normal;
             border-bottom: 1px solid #222;
         }
 
-        .text-left {
-            text-align: left;
-        }
+        .text-left { text-align: left; }
+        .text-right { text-align: right; }
 
-        .text-right {
-            text-align: right;
-        }
+        .hud-row-p1 { color: var(--p1-color); }
+        .hud-row-p2 { color: var(--p2-color); }
+        .hud-row-p3 { color: var(--p3-color); }
+        .hud-row-p4 { color: var(--p4-color); }
 
-        .hud-p2-inactive {
-            color: #666;
+        .hud-inactive {
+            color: #555;
             font-style: italic;
+            font-size: 0.75rem;
             text-align: center;
         }
 
@@ -133,9 +314,9 @@
         #touch-controls {
             display: none;
             width: 100%;
-            max-width: 640px;
-            margin-top: 1rem;
-            padding: 0.5rem;
+            max-width: 660px;
+            margin-top: 0.75rem;
+            padding: 0.25rem;
             justify-content: space-between;
             align-items: center;
             touch-action: none;
@@ -229,10 +410,10 @@
 
         section {
             width: 100%;
-            max-width: 640px;
-            margin-top: 1.5rem;
+            max-width: 660px;
+            margin-top: 1rem;
             background: var(--surface-color);
-            padding: 1.25rem;
+            padding: 1rem;
             border-radius: 12px;
             box-sizing: border-box;
             box-shadow: 0 4px 6px rgba(0,0,0,0.3);
@@ -240,9 +421,9 @@
 
         h2 {
             border-bottom: 1px solid var(--border-color);
-            padding-bottom: 0.5rem;
+            padding-bottom: 0.4rem;
             margin-top: 0;
-            font-size: 1.15rem;
+            font-size: 1.1rem;
             color: var(--accent-color);
             text-transform: uppercase;
             letter-spacing: 0.05em;
@@ -250,49 +431,62 @@
 
         .controls-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-            gap: 1.2rem;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 0.75rem;
+        }
+
+        .control-card {
+            background: #181818;
+            border: 1px solid #333;
+            border-radius: 6px;
+            padding: 8px;
+        }
+
+        .control-card h3 {
+            margin: 0 0 6px 0;
+            font-size: 0.85rem;
         }
 
         .control-item {
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 6px;
+            margin-bottom: 4px;
         }
 
         .keys {
             display: flex;
-            gap: 4px;
+            gap: 3px;
         }
 
         kbd {
             background-color: #333;
-            border-radius: 4px;
+            border-radius: 3px;
             border: 1px solid #444;
-            box-shadow: 0 2px 0 #000;
+            box-shadow: 0 1px 0 #000;
             color: #fff;
             display: inline-block;
-            font-size: 0.85em;
+            font-size: 0.75em;
             font-weight: 700;
             font-family: inherit;
             line-height: 1;
-            padding: 4px 8px;
+            padding: 3px 6px;
             white-space: nowrap;
         }
 
         .control-label {
             color: var(--text-secondary);
-            font-size: 0.9rem;
+            font-size: 0.8rem;
         }
 
         footer {
-            margin-top: 3rem;
-            font-size: 0.85rem;
+            margin-top: 2rem;
+            font-size: 0.8rem;
             color: var(--text-secondary);
             text-align: center;
             border-top: 1px solid var(--border-color);
             width: 100%;
-            padding-top: 1.5rem;
+            padding-top: 1rem;
         }
 
         em {
@@ -300,16 +494,26 @@
             font-style: normal;
         }
 
-        @media (max-width: 600px) {
-            body {
-                padding: 0.75rem 0.5rem;
-            }
-            h1 {
-                font-size: 1.6rem;
-            }
-            .canvas-wrapper {
-                padding: 4px;
-            }
+        #sdp-modal {
+            display: none;
+            background: #161616;
+            border: 1px solid #444;
+            border-radius: 6px;
+            padding: 10px;
+            margin-top: 8px;
+        }
+
+        #sdp-text {
+            width: 100%;
+            height: 60px;
+            background: #000;
+            color: #4caf50;
+            font-family: monospace;
+            font-size: 0.75rem;
+            border: 1px solid #333;
+            border-radius: 4px;
+            padding: 4px;
+            box-sizing: border-box;
         }
     </style>
     <link data-trunk rel="rust" href="Cargo.toml" data-wasm-opt="0" />
@@ -317,15 +521,79 @@
 <body>
     <div class="container">
         <header>
-            <h1>DANDY DUNGEON</h1>
-            <p class="subtitle">A retro masterpiece, modernized in Rust WebAssembly.</p>
+            <h1>Dandy Dungeon</h1>
+            <div class="badge-bar">
+                <span class="badge">4-PLAYER CO-OP</span>
+                <span class="badge">WEBRTC DATACHANNELS</span>
+                <span class="badge">DETERMINISTIC ROLLBACK</span>
+                <span class="badge">RUST WASM</span>
+            </div>
+            <p class="subtitle">Classic dungeon crawl action with zero-latency peer-to-peer multiplayer netcode.</p>
         </header>
+
+        <!-- Multiplayer Lobby & Peer Connection Overlay -->
+        <div id="net-lobby">
+            <div class="lobby-tabs">
+                <button id="tab-local" class="tab-btn active">🎮 Local Co-op (1-4 Players)</button>
+                <button id="tab-online" class="tab-btn">🌐 Online P2P (WebRTC Rollback)</button>
+            </div>
+
+            <!-- Online P2P Controls Panel -->
+            <div id="online-panel" class="lobby-content" style="display: none;">
+                <div class="lobby-row">
+                    <button id="btn-create-room" class="btn btn-primary">⚡ Host Room</button>
+                    <button id="btn-share-link" class="btn" style="display: none;">🔗 Copy Invite Link</button>
+                    <span style="color: var(--text-secondary); font-size: 0.85rem;">or Join:</span>
+                    <input type="text" id="input-room-code" class="input-code" placeholder="ROOM-CODE" maxlength="10">
+                    <button id="btn-join-room" class="btn">Connect</button>
+                    <button id="btn-manual-sdp-toggle" class="btn" style="font-size: 0.75rem;">Manual SDP ⚙</button>
+                </div>
+
+                <div id="sdp-modal">
+                    <div style="font-size: 0.8rem; margin-bottom: 4px; color: var(--text-secondary);">Direct SDP Exchange (Serverless Fallback):</div>
+                    <textarea id="sdp-text" placeholder="Paste peer offer/answer JSON here..."></textarea>
+                    <div style="display: flex; gap: 6px; margin-top: 4px;">
+                        <button id="btn-sdp-copy" class="btn" style="padding: 3px 8px; font-size: 0.75rem;">Copy My SDP</button>
+                        <button id="btn-sdp-apply" class="btn btn-primary" style="padding: 3px 8px; font-size: 0.75rem;">Apply Remote SDP</button>
+                    </div>
+                </div>
+
+                <div class="net-stats-bar">
+                    <span>Room: <b id="net-stat-room">NONE</b></span>
+                    <span>Role: <b id="net-stat-role">LOCAL</b></span>
+                    <span>Frame: <b id="net-stat-frame">0</b></span>
+                    <span>Ping: <b id="net-stat-ping">-- ms</b></span>
+                    <span>Rollbacks: <b id="net-stat-rollbacks">0</b></span>
+                    <span>Status: <b id="net-stat-status" style="color: #4caf50;">Ready</b></span>
+                </div>
+            </div>
+
+            <!-- 4 Character Slots Status -->
+            <div class="slots-indicator">
+                <div class="slot-card p1 active" id="slot-p1">
+                    <div class="slot-name">P1: Warrior</div>
+                    <div class="slot-badge" id="slot-badge-p1">LOCAL [ME]</div>
+                </div>
+                <div class="slot-card p2" id="slot-p2">
+                    <div class="slot-name">P2: Valkyrie</div>
+                    <div class="slot-badge" id="slot-badge-p2">Press WASD</div>
+                </div>
+                <div class="slot-card p3" id="slot-p3">
+                    <div class="slot-name">P3: Wizard</div>
+                    <div class="slot-badge" id="slot-badge-p3">Press IJKL</div>
+                </div>
+                <div class="slot-card p4" id="slot-p4">
+                    <div class="slot-name">P4: Elf</div>
+                    <div class="slot-badge" id="slot-badge-p4">Press Num8</div>
+                </div>
+            </div>
+        </div>
 
         <main class="canvas-wrapper">
             <table id="hud">
                 <thead>
                     <tr>
-                        <th class="text-left">Player</th>
+                        <th class="text-left">Hero</th>
                         <th class="text-right">Score</th>
                         <th class="text-right">Health</th>
                         <th class="text-right">Keys</th>
@@ -333,15 +601,21 @@
                     </tr>
                 </thead>
                 <tbody>
-                    <tr id="hud-p1">
-                        <td class="text-left">P1</td>
+                    <tr id="hud-p1" class="hud-row-p1">
+                        <td class="text-left">P1 Warrior</td>
                         <td id="p1-score" class="text-right">0</td>
                         <td id="p1-health" class="text-right">100</td>
                         <td id="p1-keys" class="text-right">0</td>
                         <td id="p1-bombs" class="text-right">0</td>
                     </tr>
-                    <tr id="hud-p2">
-                        <td colspan="5" class="hud-p2-inactive">Player 2: Press WASD/F/G to Join</td>
+                    <tr id="hud-p2" class="hud-row-p2">
+                        <td colspan="5" class="hud-inactive">P2 Valkyrie: Press WASD/F/G to Join</td>
+                    </tr>
+                    <tr id="hud-p3" class="hud-row-p3">
+                        <td colspan="5" class="hud-inactive">P3 Wizard: Press IJKL/O/P to Join</td>
+                    </tr>
+                    <tr id="hud-p4" class="hud-row-p4">
+                        <td colspan="5" class="hud-inactive">P4 Elf: Press Numpad 8456/0/. to Join</td>
                     </tr>
                 </tbody>
             </table>
@@ -350,7 +624,7 @@
             </canvas>
         </main>
 
-        <!-- On-Screen Touch Controls for Mobile / Phones -->
+        <!-- On-Screen Touch Controls for Mobile / Tablets -->
         <div id="touch-controls" aria-label="Touch Controls">
             <div class="dpad">
                 <button class="dpad-btn dpad-up" data-action="Up" aria-label="Up">▲</button>
@@ -365,53 +639,98 @@
         </div>
 
         <section id="controls">
-            <h2>Controls</h2>
+            <h2>4-Player Local & Remote Controls</h2>
             <div class="controls-grid">
-                <div class="control-item">
-                    <div class="keys"><kbd>←</kbd><kbd>↑</kbd><kbd>↓</kbd><kbd>→</kbd></div>
-                    <span class="control-label">P1: Move</span>
+                <div class="control-card">
+                    <h3 style="color: var(--p1-color);">P1: Warrior (Red)</h3>
+                    <div class="control-item">
+                        <div class="keys"><kbd>←</kbd><kbd>↑</kbd><kbd>↓</kbd><kbd>→</kbd></div>
+                        <span class="control-label">Move</span>
+                    </div>
+                    <div class="control-item">
+                        <div class="keys"><kbd>Space</kbd></div>
+                        <span class="control-label">Fire Arrow</span>
+                    </div>
+                    <div class="control-item">
+                        <div class="keys"><kbd>B</kbd></div>
+                        <span class="control-label">Smart Bomb</span>
+                    </div>
                 </div>
-                <div class="control-item">
-                    <div class="keys"><kbd>Space</kbd></div>
-                    <span class="control-label">P1: Fire Arrow</span>
+
+                <div class="control-card">
+                    <h3 style="color: var(--p2-color);">P2: Valkyrie (Blue)</h3>
+                    <div class="control-item">
+                        <div class="keys"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></div>
+                        <span class="control-label">Move</span>
+                    </div>
+                    <div class="control-item">
+                        <div class="keys"><kbd>F</kbd></div>
+                        <span class="control-label">Fire Arrow</span>
+                    </div>
+                    <div class="control-item">
+                        <div class="keys"><kbd>G</kbd></div>
+                        <span class="control-label">Smart Bomb</span>
+                    </div>
                 </div>
-                <div class="control-item">
-                    <div class="keys"><kbd>B</kbd></div>
-                    <span class="control-label">P1: Smart Bomb</span>
+
+                <div class="control-card">
+                    <h3 style="color: var(--p3-color);">P3: Wizard (Green)</h3>
+                    <div class="control-item">
+                        <div class="keys"><kbd>I</kbd><kbd>J</kbd><kbd>K</kbd><kbd>L</kbd></div>
+                        <span class="control-label">Move</span>
+                    </div>
+                    <div class="control-item">
+                        <div class="keys"><kbd>O</kbd></div>
+                        <span class="control-label">Fire Arrow</span>
+                    </div>
+                    <div class="control-item">
+                        <div class="keys"><kbd>P</kbd></div>
+                        <span class="control-label">Smart Bomb</span>
+                    </div>
                 </div>
-                <div class="control-item">
-                    <div class="keys"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></div>
-                    <span class="control-label">P2: Move (Joins on Keypress)</span>
-                </div>
-                <div class="control-item">
-                    <div class="keys"><kbd>F</kbd></div>
-                    <span class="control-label">P2: Fire Arrow</span>
-                </div>
-                <div class="control-item">
-                    <div class="keys"><kbd>G</kbd></div>
-                    <span class="control-label">P2: Smart Bomb</span>
+
+                <div class="control-card">
+                    <h3 style="color: var(--p4-color);">P4: Elf (Purple)</h3>
+                    <div class="control-item">
+                        <div class="keys"><kbd>Num8</kbd><kbd>4</kbd><kbd>5</kbd><kbd>6</kbd></div>
+                        <span class="control-label">Move</span>
+                    </div>
+                    <div class="control-item">
+                        <div class="keys"><kbd>Num0</kbd></div>
+                        <span class="control-label">Fire Arrow</span>
+                    </div>
+                    <div class="control-item">
+                        <div class="keys"><kbd>Num.</kbd></div>
+                        <span class="control-label">Smart Bomb</span>
+                    </div>
                 </div>
             </div>
         </section>
 
         <section id="about">
-            <h2>About</h2>
+            <h2>About Dandy Online</h2>
             <p>
-                Experience the faithful Rust WebAssembly port of the classic Atari 800 game <em>Dandy Dungeon</em>. 
-                Navigate treacherous levels, collect keys, and blast monsters in this high-performance zero-copy WebAssembly implementation.
+                <strong>Dandy Online</strong> brings John Palevich's legendary Atari 800 roguelike dungeon crawl into modern web browsers with 
+                <strong>sub-frame deterministic rollback netcode</strong> over <strong>WebRTC DataChannels</strong>.
+                No backend game servers are required — game states and input streams synchronize peer-to-peer with zero lag, instant prediction, and automatic frame rollback recovery.
             </p>
         </section>
 
         <footer>
-            <p>&copy; 2009-2026 John H. Palevich. All Rights Reserved.</p>
+            <p>&copy; 2009-2026 John H. Palevich. Modernized with Rust WebAssembly & WebRTC Rollback Netcode.</p>
         </footer>
     </div>
+
+    <!-- WebRTC DataChannels & Rollback Multiplayer Orchestration -->
     <script type="module">
         window.addEventListener("TrunkApplicationStarted", (event) => {
             const wasm = event.detail.wasm;
             const { DandyApp, PlayerAction } = window.wasmBindings;
 
             const app = new DandyApp();
+            let isOnlineMode = false;
+            let localPlayerIdx = 0; // Host is 0 (Warrior), Joiners are 1, 2, 3
+            let currentRoomId = null;
             let sleeping = false;
             let loopRunning = true;
             const pressedKeys = new Set();
@@ -462,8 +781,11 @@
                 }
             }
 
-            // Keyboard Control Mapping
+            // -----------------------------------------------------------------
+            // Keyboard Control Mappings (All 4 Players)
+            // -----------------------------------------------------------------
             const controlRegistry = {
+                // P1: Warrior (Arrows, Space, B)
                 "ArrowUp": { player: 0, action: PlayerAction.Up },
                 "ArrowDown": { player: 0, action: PlayerAction.Down },
                 "ArrowLeft": { player: 0, action: PlayerAction.Left },
@@ -472,6 +794,7 @@
                 "b": { player: 0, action: PlayerAction.Bomb },
                 "B": { player: 0, action: PlayerAction.Bomb },
 
+                // P2: Valkyrie (WASD, F, G)
                 "w": { player: 1, action: PlayerAction.Up },
                 "W": { player: 1, action: PlayerAction.Up },
                 "s": { player: 1, action: PlayerAction.Down },
@@ -483,14 +806,43 @@
                 "f": { player: 1, action: PlayerAction.Shoot },
                 "F": { player: 1, action: PlayerAction.Shoot },
                 "g": { player: 1, action: PlayerAction.Bomb },
-                "G": { player: 1, action: PlayerAction.Bomb }
+                "G": { player: 1, action: PlayerAction.Bomb },
+
+                // P3: Wizard (IJKL, O, P)
+                "i": { player: 2, action: PlayerAction.Up },
+                "I": { player: 2, action: PlayerAction.Up },
+                "k": { player: 2, action: PlayerAction.Down },
+                "K": { player: 2, action: PlayerAction.Down },
+                "j": { player: 2, action: PlayerAction.Left },
+                "J": { player: 2, action: PlayerAction.Left },
+                "l": { player: 2, action: PlayerAction.Right },
+                "L": { player: 2, action: PlayerAction.Right },
+                "o": { player: 2, action: PlayerAction.Shoot },
+                "O": { player: 2, action: PlayerAction.Shoot },
+                "p": { player: 2, action: PlayerAction.Bomb },
+                "P": { player: 2, action: PlayerAction.Bomb },
+
+                // P4: Elf (Numpad 8456, Num0, Num.)
+                "8": { player: 3, action: PlayerAction.Up },
+                "5": { player: 3, action: PlayerAction.Down },
+                "4": { player: 3, action: PlayerAction.Left },
+                "6": { player: 3, action: PlayerAction.Right },
+                "0": { player: 3, action: PlayerAction.Shoot },
+                ".": { player: 3, action: PlayerAction.Bomb }
             };
 
             window.addEventListener("keydown", (e) => {
                 const bind = controlRegistry[e.key];
                 if (bind !== undefined) {
                     pressedKeys.add(e.key);
-                    app.set_action(bind.player, bind.action, true);
+
+                    if (isOnlineMode) {
+                        // In online mode, all keyboard inputs map to the local player's character slot
+                        app.net_set_local_action(bind.action, true);
+                    } else {
+                        // In local co-op mode, map to respective player slot 0..3
+                        app.set_action(bind.player, bind.action, true);
+                    }
                     wakeLoop();
 
                     if (e.key === " " || e.key.startsWith("Arrow")) {
@@ -503,11 +855,17 @@
                 const bind = controlRegistry[e.key];
                 if (bind !== undefined) {
                     pressedKeys.delete(e.key);
-                    app.set_action(bind.player, bind.action, false);
+                    if (isOnlineMode) {
+                        app.net_set_local_action(bind.action, false);
+                    } else {
+                        app.set_action(bind.player, bind.action, false);
+                    }
                 }
             });
 
-            // Touch / Mobile Controls Setup
+            // -----------------------------------------------------------------
+            // Touch Controls Setup
+            // -----------------------------------------------------------------
             const touchActionMap = {
                 "Up": PlayerAction.Up,
                 "Down": PlayerAction.Down,
@@ -525,22 +883,26 @@
 
                 const press = (e) => {
                     e.preventDefault();
-                    try {
-                        btn.setPointerCapture(e.pointerId);
-                    } catch (_) {}
+                    try { btn.setPointerCapture(e.pointerId); } catch (_) {}
                     btn.classList.add("active");
-                    app.set_action(0, action, true);
+                    if (isOnlineMode) {
+                        app.net_set_local_action(action, true);
+                    } else {
+                        app.set_action(0, action, true);
+                    }
                     activeTouches.set(e.pointerId, { btn, action });
                     wakeLoop();
                 };
 
                 const release = (e) => {
                     e.preventDefault();
-                    try {
-                        btn.releasePointerCapture(e.pointerId);
-                    } catch (_) {}
+                    try { btn.releasePointerCapture(e.pointerId); } catch (_) {}
                     btn.classList.remove("active");
-                    app.set_action(0, action, false);
+                    if (isOnlineMode) {
+                        app.net_set_local_action(action, false);
+                    } else {
+                        app.set_action(0, action, false);
+                    }
                     activeTouches.delete(e.pointerId);
                 };
 
@@ -549,19 +911,21 @@
                 btn.addEventListener("pointercancel", release);
             });
 
-            // Lifecycle Hygiene (Focus loss, Visibility Change, Tab switch)
+            // Reset inputs on blur / visibility change
             function resetAllInputs() {
                 pressedKeys.clear();
                 activeTouches.clear();
                 touchButtons.forEach((btn) => btn.classList.remove("active"));
-                for (const key in controlRegistry) {
-                    const bind = controlRegistry[key];
-                    app.set_action(bind.player, bind.action, false);
+                if (isOnlineMode) {
+                    app.net_set_local_input_mask(0);
+                } else {
+                    for (let i = 0; i < 4; i++) {
+                        app.set_player_input_mask(i, 0);
+                    }
                 }
             }
 
             window.addEventListener("blur", resetAllInputs);
-
             document.addEventListener("visibilitychange", () => {
                 if (document.hidden) {
                     loopRunning = false;
@@ -575,13 +939,753 @@
                 }
             });
 
+            // -----------------------------------------------------------------
+            // WebRTC DataChannel Mesh & Serverless Signaling
+            // -----------------------------------------------------------------
+            // -----------------------------------------------------------------
+            // WebRTC DataChannel Mesh & Serverless Signaling
+            // -----------------------------------------------------------------
+            const PEER_CONNECTIONS = new Map(); // peerId -> { pc, dc, playerIdx: number, ping: number }
+            const STUN_SERVERS = {
+                iceServers: [
+                    { urls: "stun:stun.l.google.com:19302" },
+                    { urls: "stun:global.stun.twilio.com:3478" }
+                ]
+            };
+
+            const pendingIceCandidates = new Map(); // peerId -> Array<candidate>
+
+            function queueIceCandidate(peerId, candidate) {
+                if (!pendingIceCandidates.has(peerId)) {
+                    pendingIceCandidates.set(peerId, []);
+                }
+                pendingIceCandidates.get(peerId).push(candidate);
+            }
+
+            async function flushQueuedIceCandidates(peerId, pc) {
+                const queue = pendingIceCandidates.get(peerId);
+                if (!queue || queue.length === 0) return;
+                pendingIceCandidates.delete(peerId);
+                for (const candidate of queue) {
+                    try {
+                        await pc.addIceCandidate(new RTCIceCandidate(candidate));
+                    } catch (err) {
+                        console.warn(`[ICE] Failed to add queued ICE candidate for peer ${peerId}:`, err);
+                    }
+                }
+            }
+
+            let joinRetryTimer = null;
+
+            function closeAllPeerConnections() {
+                if (joinRetryTimer) {
+                    clearInterval(joinRetryTimer);
+                    joinRetryTimer = null;
+                }
+                for (const [peerId, peer] of PEER_CONNECTIONS.entries()) {
+                    try {
+                        if (peer.dc) peer.dc.close();
+                        if (peer.pc) peer.pc.close();
+                    } catch (_) {}
+                }
+                PEER_CONNECTIONS.clear();
+                pendingIceCandidates.clear();
+                seenSignalingMsgIds.clear();
+            }
+
+            let lastPingSent = performance.now();
+            let measuredPing = 0;
+            const myPeerId = "PEER-" + Math.random().toString(36).slice(2, 8).toUpperCase();
+
+            function broadcastPacket(uint8Array, excludePeerId = null) {
+                for (const [peerId, peer] of PEER_CONNECTIONS.entries()) {
+                    if (peerId !== excludePeerId && peer.dc && peer.dc.readyState === "open") {
+                        try {
+                            peer.dc.send(uint8Array);
+                        } catch (err) {
+                            console.warn("DataChannel send failed:", err);
+                        }
+                    }
+                }
+            }
+
+            function sendInitialState(dc, assignedSlot) {
+                if (!dc || dc.readyState !== "open") return;
+                try {
+                    // 1. Send PKT_STATE_SYNC (0x04) with current host frame
+                    const currentFrame = app.net_get_current_frame();
+                    const stateBytes = app.save_state_bytes();
+                    const syncPkt = new Uint8Array(1 + 4 + stateBytes.length);
+                    syncPkt[0] = 0x04; // PKT_STATE_SYNC
+                    const dv = new DataView(syncPkt.buffer);
+                    dv.setUint32(1, currentFrame, false);
+                    syncPkt.set(stateBytes, 5);
+                    dc.send(syncPkt);
+
+                    // 2. Synchronize all currently active slots to the new peer
+                    for (let p = 0; p < 4; p++) {
+                        if (app.net_is_player_joined(p)) {
+                            dc.send(new Uint8Array([0x05, p, 1]));
+                        }
+                    }
+                } catch (err) {
+                    console.warn("[P2P] Failed to send initial state sync:", err);
+                }
+            }
+
+            function setupDataChannel(peerId, dc, assignedSlot) {
+                dc.binaryType = "arraybuffer";
+                const onOpenHandler = () => {
+                    console.log(`[P2P] DataChannel opened with peer ${peerId} (Slot P${assignedSlot + 1})`);
+                    if (localPlayerIdx === 0) {
+                        // Host
+                        app.net_set_player_joined(assignedSlot, true);
+                        updateSlotCards();
+                        sendInitialState(dc, assignedSlot);
+                        broadcastPacket(new Uint8Array([0x05, assignedSlot, 1]), peerId);
+                    } else {
+                        // Joiner
+                        app.net_set_player_joined(0, true); // Host is slot 0
+                        app.net_set_player_joined(localPlayerIdx, true); // Local player slot
+                        updateSlotCards();
+                        try {
+                            dc.send(new Uint8Array([0x05, localPlayerIdx, 1]));
+                        } catch (_) {}
+                    }
+                    wakeLoop();
+                    document.getElementById("net-stat-status").textContent = "Connected";
+                    document.getElementById("net-stat-status").style.color = "#4caf50";
+                };
+
+                dc.onopen = onOpenHandler;
+                if (dc.readyState === "open") {
+                    onOpenHandler();
+                }
+
+                dc.onclose = () => {
+                    console.log(`[P2P] DataChannel closed for peer ${peerId}`);
+                    if (localPlayerIdx === 0) {
+                        app.net_set_player_joined(assignedSlot, false);
+                        PEER_CONNECTIONS.delete(peerId);
+                        updateSlotCards();
+                        broadcastPacket(new Uint8Array([0x06, assignedSlot]));
+                    } else {
+                        PEER_CONNECTIONS.delete(peerId);
+                        updateSlotCards();
+                        document.getElementById("net-stat-status").textContent = "Disconnected";
+                        document.getElementById("net-stat-status").style.color = "#ef5350";
+                    }
+                    wakeLoop();
+                };
+
+                dc.onmessage = (event) => {
+                    if (event.data instanceof ArrayBuffer) {
+                        const bytes = new Uint8Array(event.data);
+                        if (bytes.length > 0) {
+                            const pktType = bytes[0];
+                            if (pktType === 0x01) { // PKT_INPUT
+                                app.net_receive_remote_packet(bytes);
+                                wakeLoop();
+                                // If Host (localPlayerIdx == 0), relay to all other connected peers!
+                                if (localPlayerIdx === 0) {
+                                    broadcastPacket(bytes, peerId);
+                                }
+                            } else if (pktType === 0x02) { // PKT_PING
+                                const pong = new Uint8Array([0x03, bytes[1], bytes[2], bytes[3], bytes[4]]);
+                                try { dc.send(pong); } catch (_) {}
+                            } else if (pktType === 0x03) { // PKT_PONG
+                                const sentTime = new DataView(bytes.buffer, 1).getUint32(0, false);
+                                measuredPing = Math.max(1, Math.round(performance.now() - sentTime));
+                                document.getElementById("net-stat-ping").textContent = `${measuredPing} ms`;
+                            } else if (pktType === 0x04) { // PKT_STATE_SYNC
+                                if (bytes.length >= 5) {
+                                    const dv = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+                                    const hostFrame = dv.getUint32(1, false);
+                                    const stateBytes = bytes.subarray(5);
+                                    app.net_load_sync_state(hostFrame, stateBytes);
+                                    wakeLoop();
+                                    updateSlotCards();
+                                } else {
+                                    const stateBytes = bytes.subarray(1);
+                                    app.load_state_bytes(stateBytes);
+                                    wakeLoop();
+                                    updateSlotCards();
+                                }
+                            } else if (pktType === 0x05) { // PKT_JOIN
+                                const slot = bytes[1];
+                                const joined = bytes.length > 2 ? (bytes[2] === 1) : true;
+                                app.net_set_player_joined(slot, joined);
+                                updateSlotCards();
+                                wakeLoop();
+                                if (localPlayerIdx === 0) {
+                                    broadcastPacket(bytes, peerId);
+                                }
+                            } else if (pktType === 0x06) { // PKT_LEAVE
+                                const slot = bytes[1];
+                                app.net_set_player_joined(slot, false);
+                                updateSlotCards();
+                                wakeLoop();
+                                if (localPlayerIdx === 0) {
+                                    broadcastPacket(bytes, peerId);
+                                }
+                            }
+                        }
+                    }
+                };
+            }
+
+            // -----------------------------------------------------------------
+            // Multi-Transport Resilient WebRTC Signaling
+            // (BroadcastChannel + LocalStorage for same-browser windows + WebSocket Relay)
+            // -----------------------------------------------------------------
+            let broadcastChannel = null;
+            let signalingWs = null;
+            const seenSignalingMsgIds = new Set();
+
+            function sendSignaling(msg) {
+                msg.roomId = currentRoomId;
+                msg.senderId = msg.senderId || (localPlayerIdx === 0 ? "HOST" : myPeerId);
+                msg.msgId = msg.msgId || (msg.senderId + "_" + Date.now() + "_" + Math.random().toString(36).substr(2, 6));
+
+                seenSignalingMsgIds.add(msg.msgId);
+                const jsonStr = JSON.stringify(msg);
+
+                // Tier 1: Instant local BroadcastChannel (cross-tab / cross-window on same browser)
+                if (broadcastChannel) {
+                    try {
+                        broadcastChannel.postMessage(msg);
+                    } catch (e) {
+                        console.warn("[Signaling] BroadcastChannel error", e);
+                    }
+                }
+
+                // Tier 2: LocalStorage storage events (fallback cross-window on same origin)
+                try {
+                    localStorage.setItem("dandy_sig_" + currentRoomId, JSON.stringify({ t: Date.now(), msg }));
+                } catch (_) {}
+
+                // Tier 3: Public WebSocket relay (if connected)
+                if (signalingWs && signalingWs.readyState === WebSocket.OPEN) {
+                    try {
+                        signalingWs.send(jsonStr);
+                    } catch (_) {}
+                }
+            }
+
+            async function handleSignalingMessage(msg) {
+                if (!msg || msg.roomId !== currentRoomId) return;
+                if (msg.msgId && seenSignalingMsgIds.has(msg.msgId)) return;
+                if (msg.msgId) seenSignalingMsgIds.add(msg.msgId);
+
+                // Prevent processing own messages
+                if (msg.senderId === myPeerId || (localPlayerIdx === 0 && msg.senderId === "HOST")) return;
+
+                try {
+                    if (localPlayerIdx === 0) {
+                        // ----------------- HOST ROLE -----------------
+                        if (msg.type === "join_request" && msg.senderId) {
+                            const existingPeer = PEER_CONNECTIONS.get(msg.senderId);
+                            if (existingPeer) {
+                                if (existingPeer.pc && (existingPeer.pc.connectionState === "failed" || existingPeer.pc.connectionState === "closed" || existingPeer.pc.iceConnectionState === "failed")) {
+                                    try { if (existingPeer.dc) existingPeer.dc.close(); if (existingPeer.pc) existingPeer.pc.close(); } catch (_) {}
+                                    PEER_CONNECTIONS.delete(msg.senderId);
+                                } else if (existingPeer.dc && existingPeer.dc.readyState === "open") {
+                                    sendInitialState(existingPeer.dc, existingPeer.playerIdx);
+                                    return;
+                                } else if (existingPeer.pc && existingPeer.pc.localDescription) {
+                                    console.log(`[Host] Re-sending offer to ${msg.senderId} (Slot P${existingPeer.playerIdx + 1})`);
+                                    sendSignaling({
+                                        senderId: "HOST",
+                                        targetId: msg.senderId,
+                                        assignedSlot: existingPeer.playerIdx,
+                                        type: "offer",
+                                        sdp: existingPeer.pc.localDescription
+                                    });
+                                    return;
+                                }
+                            }
+
+                            // Allocate next open player slot (1..3)
+                            const usedSlots = new Set([0]);
+                            for (const peer of PEER_CONNECTIONS.values()) {
+                                usedSlots.add(peer.playerIdx);
+                            }
+                            let nextSlot = null;
+                            for (let s = 1; s < 4; s++) {
+                                if (!usedSlots.has(s)) {
+                                    nextSlot = s;
+                                    break;
+                                }
+                            }
+                            if (nextSlot !== null) {
+                                console.log(`[Host] Accepting peer ${msg.senderId} as Player ${nextSlot + 1}`);
+                                await createHostPeerConnection(msg.senderId, nextSlot);
+                            } else {
+                                console.warn(`[Host] Room is full, ignoring join request from ${msg.senderId}`);
+                            }
+                        } else if (msg.type === "answer" && msg.targetId === "HOST") {
+                            const peer = PEER_CONNECTIONS.get(msg.senderId);
+                            if (peer && peer.pc) {
+                                await peer.pc.setRemoteDescription(new RTCSessionDescription(msg.sdp));
+                                await flushQueuedIceCandidates(msg.senderId, peer.pc);
+                            }
+                        } else if (msg.type === "ice" && (msg.targetId === "HOST" || !msg.targetId) && msg.candidate) {
+                            const peer = PEER_CONNECTIONS.get(msg.senderId);
+                            if (peer && peer.pc && peer.pc.remoteDescription) {
+                                try {
+                                    await peer.pc.addIceCandidate(new RTCIceCandidate(msg.candidate));
+                                } catch (err) {
+                                    console.warn("[ICE] Host addIceCandidate error:", err);
+                                }
+                            } else {
+                                queueIceCandidate(msg.senderId, msg.candidate);
+                            }
+                        }
+                    } else {
+                        // ----------------- JOINER ROLE -----------------
+                        if (msg.type === "offer" && (msg.targetId === myPeerId || !msg.targetId)) {
+                            const hostId = msg.senderId || "HOST";
+                            const existingPeer = PEER_CONNECTIONS.get(hostId);
+                            if (existingPeer) {
+                                if (existingPeer.dc && existingPeer.dc.readyState === "open") {
+                                    return; // Already established
+                                }
+                                if (existingPeer.pc && existingPeer.pc.localDescription && (existingPeer.pc.signalingState === "stable" || existingPeer.pc.signalingState === "have-local-pranswer")) {
+                                    console.log(`[Joiner] Re-sending answer to ${hostId}`);
+                                    sendSignaling({
+                                        senderId: myPeerId,
+                                        targetId: hostId,
+                                        type: "answer",
+                                        sdp: existingPeer.pc.localDescription
+                                    });
+                                    return;
+                                }
+                            }
+
+                            const assignedSlot = msg.assignedSlot || 1;
+                            localPlayerIdx = assignedSlot;
+                            app.net_init(localPlayerIdx);
+                            const classNames = ["Warrior", "Valkyrie", "Wizard", "Elf"];
+                            document.getElementById("net-stat-role").textContent = `P${localPlayerIdx + 1} ${classNames[localPlayerIdx].toUpperCase()}`;
+                            updateSlotCards();
+
+                            await createJoinerPeerConnection(hostId, msg.sdp, assignedSlot);
+                        } else if (msg.type === "ice" && (msg.targetId === myPeerId || !msg.targetId) && msg.candidate) {
+                            const hostId = msg.senderId || "HOST";
+                            const peer = PEER_CONNECTIONS.get(hostId);
+                            if (peer && peer.pc && peer.pc.remoteDescription) {
+                                try {
+                                    await peer.pc.addIceCandidate(new RTCIceCandidate(msg.candidate));
+                                } catch (err) {
+                                    console.warn("[ICE] Joiner addIceCandidate error:", err);
+                                }
+                            } else {
+                                queueIceCandidate(hostId, msg.candidate);
+                            }
+                        }
+                    }
+                } catch (err) {
+                    console.error("[Signaling] Message handling error:", err);
+                }
+            }
+
+            async function createHostPeerConnection(peerId, assignedSlot) {
+                const pc = new RTCPeerConnection(STUN_SERVERS);
+                const dc = pc.createDataChannel("dandy_input", {
+                    ordered: false,
+                    maxRetransmits: 0
+                });
+                setupDataChannel(peerId, dc, assignedSlot);
+
+                pc.onicecandidate = (e) => {
+                    if (e.candidate) {
+                        sendSignaling({
+                            senderId: "HOST",
+                            targetId: peerId,
+                            type: "ice",
+                            candidate: e.candidate
+                        });
+                    }
+                };
+
+                pc.onconnectionstatechange = () => {
+                    if (pc.connectionState === "failed" || pc.connectionState === "closed") {
+                        console.log(`[Host] Peer connection failed/closed for ${peerId}`);
+                        app.net_set_player_joined(assignedSlot, false);
+                        PEER_CONNECTIONS.delete(peerId);
+                        updateSlotCards();
+                        broadcastPacket(new Uint8Array([0x06, assignedSlot]));
+                        wakeLoop();
+                    }
+                };
+
+                PEER_CONNECTIONS.set(peerId, { pc, dc, playerIdx: assignedSlot, ping: 0 });
+
+                const offer = await pc.createOffer();
+                await pc.setLocalDescription(offer);
+
+                sendSignaling({
+                    senderId: "HOST",
+                    targetId: peerId,
+                    assignedSlot,
+                    type: "offer",
+                    sdp: offer
+                });
+
+                return pc;
+            }
+
+            async function createJoinerPeerConnection(targetId, offerSdp, assignedSlot) {
+                const existing = PEER_CONNECTIONS.get(targetId);
+                if (existing && existing.pc) {
+                    try { existing.pc.close(); } catch (_) {}
+                }
+
+                const pc = new RTCPeerConnection(STUN_SERVERS);
+                pc.ondatachannel = (e) => {
+                    const dc = e.channel;
+                    setupDataChannel(targetId, dc, 0); // Host is slot 0
+                    const entry = PEER_CONNECTIONS.get(targetId);
+                    if (entry) {
+                        entry.dc = dc;
+                    } else {
+                        PEER_CONNECTIONS.set(targetId, { pc, dc, playerIdx: 0, ping: 0 });
+                    }
+                };
+
+                pc.onicecandidate = (e) => {
+                    if (e.candidate) {
+                        sendSignaling({
+                            senderId: myPeerId,
+                            targetId,
+                            type: "ice",
+                            candidate: e.candidate
+                        });
+                    }
+                };
+
+                pc.onconnectionstatechange = () => {
+                    if (pc.connectionState === "failed" || pc.connectionState === "closed") {
+                        console.log(`[Joiner] Connection to host failed/closed`);
+                        PEER_CONNECTIONS.delete(targetId);
+                        updateSlotCards();
+                        document.getElementById("net-stat-status").textContent = "Disconnected";
+                        document.getElementById("net-stat-status").style.color = "#ef5350";
+                        wakeLoop();
+                    }
+                };
+
+                PEER_CONNECTIONS.set(targetId, { pc, dc: null, playerIdx: 0, ping: 0 });
+
+                await pc.setRemoteDescription(new RTCSessionDescription(offerSdp));
+                await flushQueuedIceCandidates(targetId, pc);
+
+                const answer = await pc.createAnswer();
+                await pc.setLocalDescription(answer);
+
+                sendSignaling({
+                    senderId: myPeerId,
+                    targetId,
+                    type: "answer",
+                    sdp: answer
+                });
+
+                return pc;
+            }
+
+            function connectSignaling(roomId, onReady) {
+                currentRoomId = roomId;
+                document.getElementById("net-stat-room").textContent = roomId;
+
+                // Close any existing channels
+                if (broadcastChannel) {
+                    try { broadcastChannel.close(); } catch (_) {}
+                }
+                if (signalingWs) {
+                    try { signalingWs.close(); } catch (_) {}
+                    signalingWs = null;
+                }
+
+                // 1. Initialize BroadcastChannel
+                try {
+                    if (typeof BroadcastChannel !== "undefined") {
+                        broadcastChannel = new BroadcastChannel("dandy_room_" + roomId);
+                        broadcastChannel.onmessage = (e) => {
+                            handleSignalingMessage(e.data);
+                        };
+                        console.log(`[Signaling] BroadcastChannel active for room ${roomId}`);
+                    }
+                } catch (e) {
+                    console.warn("[Signaling] BroadcastChannel not supported", e);
+                }
+
+                // 2. Initialize LocalStorage storage event listener
+                window.addEventListener("storage", (e) => {
+                    if (e.key === "dandy_sig_" + currentRoomId && e.newValue) {
+                        try {
+                            const data = JSON.parse(e.newValue);
+                            if (data && data.msg) {
+                                handleSignalingMessage(data.msg);
+                            }
+                        } catch (_) {}
+                    }
+                });
+
+                // 3. Fallback WebSocket Relay (non-blocking, suppressed errors)
+                const wsUrls = [
+                    `wss://socketsbay.com/wss/v2/100/${roomId}/`,
+                    `wss://broker.emqx.io:8084/mqtt`
+                ];
+
+                try {
+                    const wsUrl = wsUrls[0];
+                    signalingWs = new WebSocket(wsUrl);
+                    signalingWs.onopen = () => {
+                        console.log(`[Signaling] WebSocket connected to room ${roomId}`);
+                    };
+                    signalingWs.onmessage = (event) => {
+                        try {
+                            const msg = JSON.parse(event.data);
+                            handleSignalingMessage(msg);
+                        } catch (_) {}
+                    };
+                    signalingWs.onerror = () => {
+                        // Suppress error banner - local BroadcastChannel is active
+                        console.info("[Signaling] External WebSocket relay offline; using local BroadcastChannel.");
+                    };
+                } catch (_) {}
+
+                if (onReady) onReady();
+            }
+
+            // -----------------------------------------------------------------
+            // UI Mode Switching & Lobby Event Listeners
+            // -----------------------------------------------------------------
+            const tabLocal = document.getElementById("tab-local");
+            const tabOnline = document.getElementById("tab-online");
+            const onlinePanel = document.getElementById("online-panel");
+            const btnCreateRoom = document.getElementById("btn-create-room");
+            const btnShareLink = document.getElementById("btn-share-link");
+            const btnJoinRoom = document.getElementById("btn-join-room");
+            const inputRoomCode = document.getElementById("input-room-code");
+            const btnManualSdpToggle = document.getElementById("btn-manual-sdp-toggle");
+            const sdpModal = document.getElementById("sdp-modal");
+            const sdpText = document.getElementById("sdp-text");
+            const btnSdpCopy = document.getElementById("btn-sdp-copy");
+            const btnSdpApply = document.getElementById("btn-sdp-apply");
+
+            tabLocal.addEventListener("click", () => {
+                isOnlineMode = false;
+                closeAllPeerConnections();
+                if (broadcastChannel) {
+                    try { broadcastChannel.close(); } catch (_) {}
+                    broadcastChannel = null;
+                }
+                if (signalingWs) {
+                    try { signalingWs.close(); } catch (_) {}
+                    signalingWs = null;
+                }
+                currentRoomId = null;
+                tabLocal.classList.add("active");
+                tabOnline.classList.remove("active");
+                onlinePanel.style.display = "none";
+                document.getElementById("net-stat-role").textContent = "LOCAL";
+                document.getElementById("net-stat-status").textContent = "Ready";
+                document.getElementById("net-stat-room").textContent = "NONE";
+                updateSlotCards();
+                wakeLoop();
+            });
+
+            tabOnline.addEventListener("click", () => {
+                isOnlineMode = true;
+                tabOnline.classList.add("active");
+                tabLocal.classList.remove("active");
+                onlinePanel.style.display = "flex";
+                app.net_init(localPlayerIdx);
+                updateSlotCards();
+                wakeLoop();
+            });
+
+            btnCreateRoom.addEventListener("click", async () => {
+                closeAllPeerConnections();
+                const randomId = "DANDY-" + Math.floor(1000 + Math.random() * 9000);
+                isOnlineMode = true;
+                tabOnline.classList.add("active");
+                tabLocal.classList.remove("active");
+                onlinePanel.style.display = "flex";
+                localPlayerIdx = 0; // Host is P1 Warrior
+                app.net_init(0);
+                document.getElementById("net-stat-role").textContent = "P1 WARRIOR (HOST)";
+                document.getElementById("net-stat-status").textContent = "Waiting for peers...";
+                updateSlotCards();
+                wakeLoop();
+
+                connectSignaling(randomId, () => {
+                    btnShareLink.style.display = "inline-flex";
+                    btnShareLink.textContent = "📋 Copy Link (" + randomId + ")";
+                    window.location.hash = "room=" + randomId;
+                });
+            });
+
+            btnShareLink.addEventListener("click", () => {
+                const url = window.location.href;
+                navigator.clipboard.writeText(url).then(() => {
+                    btnShareLink.textContent = "✓ Link Copied!";
+                    setTimeout(() => {
+                        btnShareLink.textContent = "📋 Copy Link (" + currentRoomId + ")";
+                    }, 2000);
+                });
+            });
+
+            btnJoinRoom.addEventListener("click", async () => {
+                const code = inputRoomCode.value.trim().toUpperCase();
+                if (!code) return;
+
+                closeAllPeerConnections();
+                isOnlineMode = true;
+                tabOnline.classList.add("active");
+                tabLocal.classList.remove("active");
+                onlinePanel.style.display = "flex";
+                localPlayerIdx = 1; // Default joiner slot until assigned
+                app.net_init(localPlayerIdx);
+                document.getElementById("net-stat-status").textContent = "Connecting...";
+                updateSlotCards();
+                wakeLoop();
+
+                connectSignaling(code, () => {
+                    // Send join request immediately
+                    sendSignaling({
+                        roomId: currentRoomId,
+                        senderId: myPeerId,
+                        type: "join_request"
+                    });
+
+                    // Retry join request every 400ms for up to 6s or until connected
+                    if (joinRetryTimer) clearInterval(joinRetryTimer);
+                    let attempts = 0;
+                    joinRetryTimer = setInterval(() => {
+                        attempts++;
+                        const hostPeer = PEER_CONNECTIONS.get("HOST");
+                        if (attempts > 15 || (hostPeer && hostPeer.dc && hostPeer.dc.readyState === "open")) {
+                            clearInterval(joinRetryTimer);
+                            joinRetryTimer = null;
+                            return;
+                        }
+                        sendSignaling({
+                            roomId: currentRoomId,
+                            senderId: myPeerId,
+                            type: "join_request"
+                        });
+                    }, 400);
+                });
+            });
+
+            btnManualSdpToggle.addEventListener("click", () => {
+                sdpModal.style.display = sdpModal.style.display === "none" ? "block" : "none";
+            });
+
+            // Manual SDP Fallback Handlers
+            btnSdpCopy.addEventListener("click", async () => {
+                isOnlineMode = true;
+                wakeLoop();
+                if (localPlayerIdx === 0) {
+                    const pc = new RTCPeerConnection(STUN_SERVERS);
+                    const dc = pc.createDataChannel("dandy_input");
+                    setupDataChannel("MANUAL-PEER", dc, 1);
+                    PEER_CONNECTIONS.set("MANUAL-PEER", { pc, dc, playerIdx: 1, ping: 0 });
+                    const offer = await pc.createOffer();
+                    await pc.setLocalDescription(offer);
+                    sdpText.value = JSON.stringify({ type: "offer", assignedSlot: 1, sdp: offer });
+                } else {
+                    const peer = PEER_CONNECTIONS.get("MANUAL-HOST");
+                    if (peer && peer.pc && peer.pc.localDescription) {
+                        sdpText.value = JSON.stringify({ type: "answer", sdp: peer.pc.localDescription });
+                    }
+                }
+                updateSlotCards();
+            });
+
+            btnSdpApply.addEventListener("click", async () => {
+                try {
+                    isOnlineMode = true;
+                    wakeLoop();
+                    const data = JSON.parse(sdpText.value.trim());
+                    if (data.type === "offer") {
+                        localPlayerIdx = data.assignedSlot || 1;
+                        app.net_init(localPlayerIdx);
+                        await createJoinerPeerConnection("MANUAL-HOST", data.sdp, localPlayerIdx);
+                        sdpText.value = JSON.stringify({ type: "answer", sdp: PEER_CONNECTIONS.get("MANUAL-HOST").pc.localDescription });
+                    } else if (data.type === "answer") {
+                        const peer = PEER_CONNECTIONS.get("MANUAL-PEER");
+                        if (peer && peer.pc) {
+                            await peer.pc.setRemoteDescription(new RTCSessionDescription(data.sdp));
+                            await flushQueuedIceCandidates("MANUAL-PEER", peer.pc);
+                        }
+                    }
+                    updateSlotCards();
+                } catch (err) {
+                    alert("Invalid SDP payload: " + err.message);
+                }
+            });
+
+            function handleUrlHash() {
+                if (window.location.hash.includes("room=")) {
+                    const roomMatch = window.location.hash.match(/room=([A-Za-z0-9-]+)/);
+                    if (roomMatch) {
+                        const roomId = roomMatch[1];
+                        isOnlineMode = true;
+                        tabOnline.classList.add("active");
+                        tabLocal.classList.remove("active");
+                        onlinePanel.style.display = "flex";
+                        inputRoomCode.value = roomId;
+                        wakeLoop();
+                        if (currentRoomId !== roomId) {
+                            setTimeout(() => btnJoinRoom.click(), 100);
+                        }
+                    }
+                }
+            }
+
+            window.addEventListener("hashchange", handleUrlHash);
+            handleUrlHash();
+
+            function updateSlotCards() {
+                const classNames = ["Warrior", "Valkyrie", "Wizard", "Elf"];
+                const joinHints = ["LOCAL [ME]", "Press WASD", "Press IJKL", "Press Num8"];
+
+                for (let i = 0; i < 4; i++) {
+                    const card = document.getElementById("slot-p" + (i + 1));
+                    const badge = document.getElementById("slot-badge-p" + (i + 1));
+                    if (!card || !badge) continue;
+                    const isActive = isOnlineMode ? app.net_is_player_joined(i) : app.is_player_active(i);
+
+                    if (isActive) {
+                        card.classList.add("active");
+                        if (isOnlineMode) {
+                            badge.textContent = (i === localPlayerIdx) ? "LOCAL [ME]" : "CONNECTED";
+                        } else {
+                            badge.textContent = "ACTIVE";
+                        }
+                    } else {
+                        card.classList.remove("active");
+                        badge.textContent = isOnlineMode ? "OPEN SLOT" : joinHints[i];
+                    }
+                }
+            }
+
+            // -----------------------------------------------------------------
+            // Dynamic HUD Table Updates
+            // -----------------------------------------------------------------
+            const playerLabels = ["P1 Warrior", "P2 Valkyrie", "P3 Wizard", "P4 Elf"];
             const lastHuds = [
+                { active: false, score: -1, health: -1, keys: -1, bombs: -1 },
+                { active: false, score: -1, health: -1, keys: -1, bombs: -1 },
                 { active: false, score: -1, health: -1, keys: -1, bombs: -1 },
                 { active: false, score: -1, health: -1, keys: -1, bombs: -1 }
             ];
 
             function updateHUD(statsArray) {
-                for (let i = 0; i < 2; i++) {
+                for (let i = 0; i < 4; i++) {
                     const offset = i * 7;
                     const active = statsArray[offset] === 1;
                     const score = statsArray[offset + 3];
@@ -592,20 +1696,19 @@
                     const cache = lastHuds[i];
 
                     if (active !== cache.active) {
-                        if (i > 0) {
-                            const row = document.getElementById("hud-p2");
-                            if (row) {
-                                if (active) {
-                                    row.innerHTML = `
-                                        <td class="text-left">P2</td>
-                                        <td id="p2-score" class="text-right">0</td>
-                                        <td id="p2-health" class="text-right">100</td>
-                                        <td id="p2-keys" class="text-right">0</td>
-                                        <td id="p2-bombs" class="text-right">0</td>
-                                    `;
-                                } else {
-                                    row.innerHTML = `<td colspan="5" class="hud-p2-inactive">Player 2: Press WASD/F/G to Join</td>`;
-                                }
+                        const row = document.getElementById("hud-p" + (i + 1));
+                        if (row) {
+                            if (active) {
+                                row.innerHTML = `
+                                    <td class="text-left">${playerLabels[i]}</td>
+                                    <td id="p${i+1}-score" class="text-right">${score}</td>
+                                    <td id="p${i+1}-health" class="text-right">${health}</td>
+                                    <td id="p${i+1}-keys" class="text-right">${keys}</td>
+                                    <td id="p${i+1}-bombs" class="text-right">${bombs}</td>
+                                `;
+                            } else {
+                                const hint = (i === 0) ? "Warrior" : (i === 1 ? "WASD/F/G" : (i === 2 ? "IJKL/O/P" : "Num8456/0/."));
+                                row.innerHTML = `<td colspan="5" class="hud-inactive">${playerLabels[i]}: Press ${hint} to Join</td>`;
                             }
                         }
                         cache.active = active;
@@ -613,6 +1716,7 @@
                         cache.health = -1;
                         cache.keys = -1;
                         cache.bombs = -1;
+                        updateSlotCards();
                     }
 
                     if (active) {
@@ -636,10 +1740,38 @@
                 }
             }
 
+            // -----------------------------------------------------------------
+            // Main Simulation Game Loop
+            // -----------------------------------------------------------------
             function gameLoop() {
                 if (!loopRunning) return;
 
-                app.tick();
+                if (isOnlineMode) {
+                    // 1. Advance rollback netcode step
+                    const currentFrame = app.net_step();
+
+                    // 2. Broadcast local input packet to all peers over WebRTC DataChannels
+                    const inputPacket = app.net_encode_local_input_packet(currentFrame);
+                    broadcastPacket(inputPacket);
+
+                    // 3. Periodic Ping (every 1s)
+                    const now = performance.now();
+                    if (now - lastPingSent >= 1000) {
+                        lastPingSent = now;
+                        const pingBuf = new ArrayBuffer(5);
+                        const dv = new DataView(pingBuf);
+                        dv.setUint8(0, 0x02); // PKT_PING
+                        dv.setUint32(1, Math.round(now), false);
+                        broadcastPacket(new Uint8Array(pingBuf));
+                    }
+
+                    // Update netcode diagnostics HUD
+                    document.getElementById("net-stat-frame").textContent = currentFrame.toString();
+                    document.getElementById("net-stat-rollbacks").textContent = app.net_get_rollback_count().toString();
+                } else {
+                    // Local co-op step
+                    app.tick();
+                }
 
                 // Zero-copy render blit using cached ImageData view
                 const fbPtr = app.get_framebuffer_ptr();
@@ -653,7 +1785,7 @@
                 const statsArray = getStatsArray(wasm.memory, statsPtr, statsLen);
                 updateHUD(statsArray);
 
-                if (pressedKeys.size === 0 && activeTouches.size === 0 && app.can_sleep()) {
+                if (!isOnlineMode && pressedKeys.size === 0 && activeTouches.size === 0 && app.can_sleep()) {
                     sleeping = true;
                     return;
                 }
@@ -661,7 +1793,6 @@
                 requestAnimationFrame(gameLoop);
             }
 
-            // Expose route info & benchmark helper to window for introspection
             window.dandyApp = app;
             window.dandyBuildInfo = app.get_build_info();
             console.log(`[Dandy Dungeon] Loaded: ${window.dandyBuildInfo}`);

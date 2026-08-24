@@ -8,4 +8,5 @@ bin
 obj
 Thumbs.db
 .DS_Store
+.agents/
 

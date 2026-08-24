@@ -2,7 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import assert from 'assert';
 
-console.log("=== Running Dandy Dungeon WASM Built-Artifact Parity Suite ===");
+console.log("=== Running Dandy Dungeon WASM Built-Artifact Parity & Netcode Suite ===");
 
 const distDir = './dist';
 if (!fs.existsSync(distDir)) {
@@ -42,16 +42,31 @@ console.log(`[Build Info] ${buildInfo}`);
 assert(buildInfo.includes("wasm32"), "Build info must indicate wasm32");
 assert(routeInfo.includes("sm-pie"), "Route info must indicate sm-pie");
 assert(routeInfo.includes("parity=tier-2"), "Route info must indicate parity tier");
-console.log("✓ Route introspection (OP-ROUTE) verified.");
+assert(routeInfo.includes("rollback-4p"), "Route info must indicate rollback netcode");
+console.log("✓ Route introspection & capabilities verified.");
 
-// 3. Determinism & Parity Test (OP-PAR / Tier 1/2 Parity)
+// 3. 4-Player Slot & Character Metadata Introspection
+console.log("\nTesting 4-Player Character Slot APIs...");
+assert.strictEqual(app.get_player_class_name(0), "Warrior");
+assert.strictEqual(app.get_player_class_name(1), "Valkyrie");
+assert.strictEqual(app.get_player_class_name(2), "Wizard");
+assert.strictEqual(app.get_player_class_name(3), "Elf");
+assert.strictEqual(app.is_player_active(0), true, "P1 should start active");
+assert.strictEqual(app.is_player_active(1), false, "P2 should start inactive");
+
+app.spawn_player(2); // Spawn P3 Wizard
+assert.strictEqual(app.is_player_active(2), true, "P3 should now be active");
+app.remove_player(2);
+assert.strictEqual(app.is_player_active(2), false, "P3 should now be inactive");
+console.log("✓ 4-Player Character Slot APIs verified.");
+
+// 4. Determinism & Parity Test (OP-PAR / Tier 1/2 Parity)
 // Two separate DandyApp instances given identical input sequences must produce bit-identical states & framebuffers
 console.log("\nTesting Determinism & Multi-Instance Lockstep Parity (1000 frames)...");
 const simA = new DandyApp();
 const simB = new DandyApp();
 
 for (let frame = 0; frame < 1000; frame++) {
-    // Scripted pseudo-random multi-action input sequence across all PlayerAction variants
     const r = frame % 29;
     if (r === 0) {
         simA.set_action(0, PlayerAction.Right, true);
@@ -95,7 +110,7 @@ for (let frame = 0; frame < 1000; frame++) {
         simB.set_action(0, PlayerAction.Bomb, false);
     }
 
-    // Dynamic P2 join at frame 200 with concurrent inputs
+    // Dynamic P2 & P3 join with concurrent inputs
     if (frame === 200) {
         simA.set_action(1, PlayerAction.Right, true);
         simB.set_action(1, PlayerAction.Right, true);
@@ -107,12 +122,10 @@ for (let frame = 0; frame < 1000; frame++) {
         simA.set_action(1, PlayerAction.Up, false);
         simB.set_action(1, PlayerAction.Up, false);
     }
-    if (frame > 200 && frame % 23 === 0) {
-        simA.set_action(1, PlayerAction.Shoot, true);
-        simB.set_action(1, PlayerAction.Shoot, true);
-    } else if (frame > 200 && frame % 23 === 10) {
-        simA.set_action(1, PlayerAction.Shoot, false);
-        simB.set_action(1, PlayerAction.Shoot, false);
+
+    if (frame === 400) {
+        simA.set_action(2, PlayerAction.Down, true);
+        simB.set_action(2, PlayerAction.Down, true);
     }
 
     simA.tick();
@@ -151,11 +164,89 @@ for (let frame = 0; frame < 1000; frame++) {
 }
 console.log("✓ Lockstep Parity verified across 1000 frames: 100% bit-identical.");
 
-// 4. Boundary extraction zero-copy view validity
+// 5. State Snapshot Binary Serialization & Restoration
+console.log("\nTesting Full State Snapshot Serialization & Roundtrip...");
+const snapBytes = simA.save_state_bytes();
+assert(snapBytes.length > 1800, `Snapshot size ${snapBytes.length} bytes expected > 1800`);
+const restoredSim = new DandyApp();
+const ok = restoredSim.load_state_bytes(snapBytes);
+assert(ok, "load_state_bytes must succeed");
+assert.strictEqual(restoredSim.get_level(), simA.get_level());
+
+const restoredStats = new Int32Array(wasmInstance.memory.buffer, restoredSim.get_stats_ptr(), restoredSim.get_stats_len());
+const simAStats = new Int32Array(wasmInstance.memory.buffer, simA.get_stats_ptr(), simA.get_stats_len());
+for (let i = 0; i < restoredSim.get_stats_len(); i++) {
+    assert.strictEqual(restoredStats[i], simAStats[i], `Snapshot restored stats mismatch at ${i}`);
+}
+console.log(`✓ Full State Snapshot roundtrip verified (${snapBytes.length} bytes).`);
+
+// 6. Rollback Netcode Engine & Jitter Recovery Verification
+console.log("\nTesting Rollback Netcode Prediction & Late Packet Re-simulation...");
+const hostPeer = new DandyApp();
+hostPeer.net_init(0); // Host as P1 Warrior
+hostPeer.net_set_player_joined(1, true); // P2 Valkyrie joined
+
+const joinerPeer = new DandyApp();
+joinerPeer.net_init(1); // Joiner as P2 Valkyrie
+joinerPeer.net_set_player_joined(0, true);
+
+// Step 15 frames on host with P2 input delayed (predicting 0 on host)
+for (let f = 0; f < 15; f++) {
+    hostPeer.net_set_local_action(PlayerAction.Right, true);
+    hostPeer.net_step();
+}
+assert.strictEqual(hostPeer.net_get_current_frame(), 15);
+assert.strictEqual(hostPeer.net_get_rollback_count(), 0, "No rollback before packet arrival");
+
+// Joiner produced action Up at frame 5
+joinerPeer.net_set_local_action(PlayerAction.Up, true);
+const joinerPktFrame5 = joinerPeer.net_encode_local_input_packet(5);
+
+// Late arrival of Joiner's packet at frame 5 into Host (which is currently at frame 15)
+const didRollback = hostPeer.net_receive_remote_packet(joinerPktFrame5);
+assert.strictEqual(didRollback, true, "Host must execute rollback upon late packet arrival with differing input");
+assert.strictEqual(hostPeer.net_get_rollback_count(), 1, "Rollback count must increment to 1");
+assert.strictEqual(hostPeer.net_get_resimulated_frames() >= 10, true, "Host must have resimulated at least 10 frames");
+console.log(`✓ Rollback Netcode verified: Host rewound from frame 15 -> 5 and resimulated cleanly.`);
+
+// Test: Packet arrival where input matches prediction must NOT trigger unnecessary rollback
+const matchingPkt = hostPeer.net_encode_local_input_packet(15);
+const didMatchRollback = hostPeer.net_receive_remote_packet(matchingPkt);
+assert.strictEqual(didMatchRollback, false, "Packet matching local slot or current state must not trigger rollback");
+console.log("✓ Zero-rollback prediction match confirmed.");
+
+// Test: Out-of-order network packet delivery (Frame 8 arrives, then delayed Frame 6 arrives)
+const peerA = new DandyApp();
+peerA.net_init(0);
+peerA.net_set_player_joined(1, true);
+for (let f = 0; f < 12; f++) {
+    peerA.net_set_local_action(PlayerAction.Right, true);
+    peerA.net_step();
+}
+
+const peerB = new DandyApp();
+peerB.net_init(1);
+peerB.net_set_player_joined(0, true);
+
+// Send frame 8 first
+peerB.net_set_local_action(PlayerAction.Up, true);
+const pktFrame8 = peerB.net_encode_local_input_packet(8);
+const rb1 = peerA.net_receive_remote_packet(pktFrame8);
+assert.strictEqual(rb1, true, "Frame 8 packet must trigger rollback");
+
+// Now send frame 6 AFTER frame 8 (out-of-order packet arrival)
+peerB.net_set_local_action(PlayerAction.Left, true);
+const pktFrame6 = peerB.net_encode_local_input_packet(6);
+const rb2 = peerA.net_receive_remote_packet(pktFrame6);
+assert.strictEqual(rb2, true, "Out-of-order Frame 6 packet must trigger rollback even after Frame 8 arrived");
+assert.strictEqual(peerA.net_get_rollback_count(), 2, "Rollback count should be 2 after handling out-of-order packet");
+console.log("✓ Out-of-order packet rollback recovery verified.");
+
+// 7. Boundary extraction zero-copy view validity
 const fbPtr = app.get_framebuffer_ptr();
 const fbSize = app.get_framebuffer_size();
 const fbBytes = new Uint8ClampedArray(wasmInstance.memory.buffer, fbPtr, fbSize);
 assert.strictEqual(fbBytes.length, 320 * 160 * 4, "Framebuffer byte length must be 320*160*4");
 console.log("✓ Zero-Copy Framebuffer ABI view verified.");
 
-console.log("\n=== ALL BUILT-ARTIFACT PARITY TESTS PASSED ===");
+console.log("\n=== ALL BUILT-ARTIFACT PARITY & MULTIPLAYER TESTS PASSED ===");

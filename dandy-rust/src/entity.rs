@@ -1,13 +1,13 @@
 // Entity structures for Dandy Dungeon
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Arrow {
     pub x: i32,
     pub y: i32,
     pub dir: usize,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Player {
     #[allow(dead_code)]
     pub index: usize,

@@ -41,6 +41,10 @@ pub const DIR_TO_DELTA: [(i32, i32); 8] = [
 // Player spawn directions: P1 (North/Up), P2 (East/Right), P3 (South/Down), P4 (West/Left)
 pub const PLAYER_SPAWN_DIRS: [usize; 4] = [0, 2, 4, 6];
 
+pub const MAX_PLAYERS: usize = 4;
+pub const PLAYER_NAMES: [&str; 4] = ["Warrior", "Valkyrie", "Wizard", "Elf"];
+pub const PLAYER_COLORS: [&str; 4] = ["#e53935", "#1e88e5", "#43a047", "#8e24aa"]; // Red, Blue, Green, Purple
+
 // Player logical input actions (Bitmask)
 pub const ACTION_UP: u8 = 1 << 0;
 pub const ACTION_DOWN: u8 = 1 << 1;
@@ -48,3 +52,4 @@ pub const ACTION_LEFT: u8 = 1 << 2;
 pub const ACTION_RIGHT: u8 = 1 << 3;
 pub const ACTION_SHOOT: u8 = 1 << 4;
 pub const ACTION_BOMB: u8 = 1 << 5;
+

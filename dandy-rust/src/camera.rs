@@ -9,6 +9,7 @@ pub struct ActiveRect {
     pub height: i32,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Camera {
     pub cog_x: f64,
     pub cog_y: f64,

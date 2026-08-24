@@ -1,14 +1,15 @@
 // Map module for Dandy Dungeon
 use crate::consts::{MAP_WIDTH, MAP_HEIGHT, LOCK, SPACE};
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Map {
-    pub data: Vec<u8>,
+    pub data: [u8; (MAP_WIDTH * MAP_HEIGHT) as usize],
 }
 
 impl Map {
     pub fn new() -> Self {
         Self {
-            data: vec![0; (MAP_WIDTH * MAP_HEIGHT) as usize],
+            data: [0; (MAP_WIDTH * MAP_HEIGHT) as usize],
         }
     }
 

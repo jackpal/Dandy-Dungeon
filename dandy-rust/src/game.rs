@@ -5,9 +5,21 @@ use crate::map::Map;
 use crate::rand::LcgRng;
 use crate::camera::{Camera, ActiveRect, calculate_target_cog};
 
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct GameSnapshot {
+    pub map_data: [u8; (MAP_WIDTH * MAP_HEIGHT) as usize],
+    pub players: [Player; MAX_PLAYERS],
+    pub level: usize,
+    pub time: u32,
+    pub last_move_time: u32,
+    pub rotor: u8,
+    pub camera: Camera,
+    pub rng_state: u32,
+}
+
 pub struct Game {
     pub map: Map,
-    pub players: Vec<Player>,
+    pub players: [Player; MAX_PLAYERS],
     pub level: usize,
     pub time: u32,
     pub last_move_time: u32,
@@ -19,11 +31,13 @@ pub struct Game {
 
 impl Game {
     pub fn new() -> Self {
-        let mut players = Vec::new();
-        for i in 0..4 {
-            players.push(Player::new(i));
-        }
-        // Player 1 starts active
+        let mut players = [
+            Player::new(0),
+            Player::new(1),
+            Player::new(2),
+            Player::new(3),
+        ];
+        // Player 1 starts active by default in local single-player
         players[0].active = true;
         players[0].alive = true;
 
@@ -39,6 +53,78 @@ impl Game {
         }
     }
 
+    fn find_spawn_tile(&self, spawn: (i32, i32), preferred_dir: usize, player_idx: usize) -> (i32, i32) {
+        let delta = DIR_TO_DELTA[preferred_dir];
+        let px = spawn.0 + delta.0;
+        let py = spawn.1 + delta.1;
+
+        let curr = self.map.get(px, py);
+        if curr == SPACE || curr == (PLAYER + player_idx as u8) {
+            return (px, py);
+        }
+
+        // Find first available adjacent space
+        for test_dir in 0..8 {
+            let d = DIR_TO_DELTA[test_dir];
+            let tx = spawn.0 + d.0;
+            let ty = spawn.1 + d.1;
+            let v = self.map.get(tx, ty);
+            if v == SPACE || v == (PLAYER + player_idx as u8) {
+                return (tx, ty);
+            }
+        }
+
+        (px, py)
+    }
+
+    pub fn spawn_player(&mut self, player_idx: usize) {
+        if player_idx >= self.players.len() {
+            return;
+        }
+        if self.players[player_idx].active && self.players[player_idx].alive && !self.players[player_idx].escaped {
+            return;
+        }
+
+        let spawn = self.map.find(UP).unwrap_or((2, 2));
+        let dir = if player_idx < PLAYER_SPAWN_DIRS.len() {
+            PLAYER_SPAWN_DIRS[player_idx]
+        } else {
+            0
+        };
+
+        let (px, py) = self.find_spawn_tile(spawn, dir, player_idx);
+
+        self.players[player_idx].start(px, py, dir);
+        self.map.set(px, py, PLAYER + player_idx as u8);
+    }
+
+    pub fn remove_player(&mut self, player_idx: usize) {
+        if player_idx >= self.players.len() {
+            return;
+        }
+        if !self.players[player_idx].active {
+            return;
+        }
+
+        if self.players[player_idx].alive && !self.players[player_idx].escaped {
+            if self.map.get(self.players[player_idx].x, self.players[player_idx].y) == (PLAYER + player_idx as u8) {
+                self.map.set(self.players[player_idx].x, self.players[player_idx].y, SPACE);
+            }
+        }
+        if let Some(arrow) = self.players[player_idx].arrow {
+            let arrow_val = ARROW + (((arrow.dir + 3) & 7) as u8);
+            if self.map.get(arrow.x, arrow.y) == arrow_val {
+                self.map.set(arrow.x, arrow.y, SPACE);
+            }
+            self.players[player_idx].arrow = None;
+        }
+
+        self.players[player_idx].active = false;
+        self.players[player_idx].alive = false;
+        self.players[player_idx].escaped = false;
+        self.players[player_idx].input_mask = 0;
+    }
+
     pub fn load(&mut self) {
         self.map.load(self.level);
         self.rotor = 0;
@@ -46,12 +132,31 @@ impl Game {
         // Find player spawn (stairs UP)
         let spawn = self.map.find(UP).unwrap_or((2, 2));
         
-        // Start active players
+        // Start all active players
         for (i, player) in self.players.iter_mut().enumerate() {
             if player.active && i < PLAYER_SPAWN_DIRS.len() {
                 let dir = PLAYER_SPAWN_DIRS[i];
-                let px = spawn.0 + DIR_TO_DELTA[dir].0;
-                let py = spawn.1 + DIR_TO_DELTA[dir].1;
+                let (px, py) = {
+                    let delta = DIR_TO_DELTA[dir];
+                    let mut tx = spawn.0 + delta.0;
+                    let mut ty = spawn.1 + delta.1;
+                    let curr = self.map.get(tx, ty);
+                    if curr != SPACE && curr != (PLAYER + i as u8) {
+                        for test_dir in 0..8 {
+                            let d = DIR_TO_DELTA[test_dir];
+                            let candidate_x = spawn.0 + d.0;
+                            let candidate_y = spawn.1 + d.1;
+                            let v = self.map.get(candidate_x, candidate_y);
+                            if v == SPACE || v == (PLAYER + i as u8) {
+                                tx = candidate_x;
+                                ty = candidate_y;
+                                break;
+                            }
+                        }
+                    }
+                    (tx, ty)
+                };
+
                 player.start(px, py, dir);
                 self.map.set(px, py, PLAYER + i as u8);
             }
@@ -79,20 +184,10 @@ impl Game {
     pub fn step(&mut self) {
         self.time += 1;
 
-        // Handle Player 2 joining dynamically
-        if !self.players[1].active {
-            let p2_triggered = self.players[1].input_mask != 0;
-            
-            if p2_triggered {
-                self.players[1].active = true;
-                self.players[1].alive = true;
-                // Spawn P2 exactly 1 tile East of the UP stairs
-                let spawn = self.map.find(UP).unwrap_or((2, 2));
-                let dir = PLAYER_SPAWN_DIRS[1]; // East/Right (2)
-                let px = spawn.0 + DIR_TO_DELTA[dir].0;
-                let py = spawn.1 + DIR_TO_DELTA[dir].1;
-                self.players[1].start(px, py, dir);
-                self.map.set(px, py, PLAYER + 1);
+        // Handle any player joining dynamically on non-zero input
+        for i in 0..self.players.len() {
+            if !self.players[i].active && self.players[i].input_mask != 0 {
+                self.spawn_player(i);
             }
         }
 
@@ -105,7 +200,6 @@ impl Game {
             // Step each player
             for i in 0..self.players.len() {
                 if self.players[i].active && self.players[i].alive && !self.players[i].escaped {
-                    // Borrow only the single player mutably to satisfy borrow checker and API cleanliness
                     let player = &mut self.players[i];
                     crate::physics::step_player(i, player, &mut self.map, active_rect);
                 }
@@ -196,6 +290,230 @@ impl Game {
                 }
             }
         }
+
+        true
+    }
+
+    pub fn save_state(&self) -> GameSnapshot {
+        GameSnapshot {
+            map_data: self.map.data,
+            players: self.players,
+            level: self.level,
+            time: self.time,
+            last_move_time: self.last_move_time,
+            rotor: self.rotor,
+            camera: self.camera,
+            rng_state: self.rng.state(),
+        }
+    }
+
+    pub fn load_state(&mut self, snapshot: &GameSnapshot) {
+        self.map.data = snapshot.map_data;
+        self.players = snapshot.players;
+        self.level = snapshot.level;
+        self.time = snapshot.time;
+        self.last_move_time = snapshot.last_move_time;
+        self.rotor = snapshot.rotor;
+        self.camera = snapshot.camera;
+        self.rng.set_state(snapshot.rng_state);
+    }
+
+    pub fn save_state_bytes(&self) -> Vec<u8> {
+        let mut buf = Vec::with_capacity(1900);
+        // Magic
+        buf.extend_from_slice(b"DNDY");
+        // Version
+        buf.push(1);
+        // Level
+        buf.extend_from_slice(&(self.level as u16).to_le_bytes());
+        // Time & Last Move Time
+        buf.extend_from_slice(&self.time.to_le_bytes());
+        buf.extend_from_slice(&self.last_move_time.to_le_bytes());
+        // Rotor
+        buf.push(self.rotor);
+        // Rng state
+        buf.extend_from_slice(&self.rng.state().to_le_bytes());
+        // Camera cog
+        buf.extend_from_slice(&self.camera.cog_x.to_le_bytes());
+        buf.extend_from_slice(&self.camera.cog_y.to_le_bytes());
+
+        // Players count
+        buf.push(self.players.len() as u8);
+        for p in &self.players {
+            buf.push(p.index as u8);
+            buf.extend_from_slice(&p.x.to_le_bytes());
+            buf.extend_from_slice(&p.y.to_le_bytes());
+            buf.push(p.dir as u8);
+            buf.extend_from_slice(&p.score.to_le_bytes());
+            buf.extend_from_slice(&p.health.to_le_bytes());
+            buf.extend_from_slice(&p.bombs.to_le_bytes());
+            buf.extend_from_slice(&p.keys.to_le_bytes());
+
+            let mut flags = 0u8;
+            if p.active { flags |= 1 << 0; }
+            if p.alive { flags |= 1 << 1; }
+            if p.escaped { flags |= 1 << 2; }
+            if p.arrow.is_some() { flags |= 1 << 3; }
+            buf.push(flags);
+            buf.push(p.input_mask);
+
+            if let Some(arrow) = p.arrow {
+                buf.extend_from_slice(&arrow.x.to_le_bytes());
+                buf.extend_from_slice(&arrow.y.to_le_bytes());
+                buf.push(arrow.dir as u8);
+            }
+        }
+
+        // Map data
+        buf.extend_from_slice(&(self.map.data.len() as u32).to_le_bytes());
+        buf.extend_from_slice(&self.map.data);
+
+        buf
+    }
+
+    pub fn load_state_bytes(&mut self, bytes: &[u8]) -> bool {
+        if bytes.len() < 36 || &bytes[0..4] != b"DNDY" {
+            return false;
+        }
+        let version = bytes[4];
+        if version != 1 {
+            return false;
+        }
+
+        let mut offset = 5;
+        if offset + 2 + 4 + 4 + 1 + 4 + 8 + 8 + 1 > bytes.len() {
+            return false;
+        }
+
+        let level = u16::from_le_bytes([bytes[offset], bytes[offset + 1]]) as usize;
+        offset += 2;
+
+        let time = u32::from_le_bytes([bytes[offset], bytes[offset + 1], bytes[offset + 2], bytes[offset + 3]]);
+        offset += 4;
+
+        let last_move_time = u32::from_le_bytes([bytes[offset], bytes[offset + 1], bytes[offset + 2], bytes[offset + 3]]);
+        offset += 4;
+
+        let rotor = bytes[offset];
+        offset += 1;
+
+        let rng_state = u32::from_le_bytes([bytes[offset], bytes[offset + 1], bytes[offset + 2], bytes[offset + 3]]);
+        offset += 4;
+
+        let cog_x = f64::from_le_bytes([
+            bytes[offset], bytes[offset+1], bytes[offset+2], bytes[offset+3],
+            bytes[offset+4], bytes[offset+5], bytes[offset+6], bytes[offset+7]
+        ]);
+        offset += 8;
+
+        let cog_y = f64::from_le_bytes([
+            bytes[offset], bytes[offset+1], bytes[offset+2], bytes[offset+3],
+            bytes[offset+4], bytes[offset+5], bytes[offset+6], bytes[offset+7]
+        ]);
+        offset += 8;
+
+        let num_players = bytes[offset] as usize;
+        offset += 1;
+
+        let mut new_players = [
+            Player::new(0),
+            Player::new(1),
+            Player::new(2),
+            Player::new(3),
+        ];
+
+        for p_idx in 0..num_players.min(MAX_PLAYERS) {
+            if offset + 23 > bytes.len() {
+                return false;
+            }
+
+            let index = bytes[offset] as usize;
+            offset += 1;
+
+            let x = i32::from_le_bytes([bytes[offset], bytes[offset+1], bytes[offset+2], bytes[offset+3]]);
+            offset += 4;
+
+            let y = i32::from_le_bytes([bytes[offset], bytes[offset+1], bytes[offset+2], bytes[offset+3]]);
+            offset += 4;
+
+            let dir = bytes[offset] as usize;
+            offset += 1;
+
+            let score = i32::from_le_bytes([bytes[offset], bytes[offset+1], bytes[offset+2], bytes[offset+3]]);
+            offset += 4;
+
+            let health = i32::from_le_bytes([bytes[offset], bytes[offset+1], bytes[offset+2], bytes[offset+3]]);
+            offset += 4;
+
+            let bombs = i32::from_le_bytes([bytes[offset], bytes[offset+1], bytes[offset+2], bytes[offset+3]]);
+            offset += 4;
+
+            let keys = i32::from_le_bytes([bytes[offset], bytes[offset+1], bytes[offset+2], bytes[offset+3]]);
+            offset += 4;
+
+            let flags = bytes[offset];
+            offset += 1;
+
+            let input_mask = bytes[offset];
+            offset += 1;
+
+            let active = (flags & (1 << 0)) != 0;
+            let alive = (flags & (1 << 1)) != 0;
+            let escaped = (flags & (1 << 2)) != 0;
+            let has_arrow = (flags & (1 << 3)) != 0;
+
+            let arrow = if has_arrow {
+                if offset + 9 > bytes.len() {
+                    return false;
+                }
+                let ax = i32::from_le_bytes([bytes[offset], bytes[offset+1], bytes[offset+2], bytes[offset+3]]);
+                offset += 4;
+                let ay = i32::from_le_bytes([bytes[offset], bytes[offset+1], bytes[offset+2], bytes[offset+3]]);
+                offset += 4;
+                let adir = bytes[offset] as usize;
+                offset += 1;
+                Some(crate::entity::Arrow { x: ax, y: ay, dir: adir })
+            } else {
+                None
+            };
+
+            new_players[p_idx] = Player {
+                index,
+                x,
+                y,
+                dir,
+                score,
+                health,
+                bombs,
+                keys,
+                active,
+                alive,
+                escaped,
+                arrow,
+                input_mask,
+            };
+        }
+
+        if offset + 4 > bytes.len() {
+            return false;
+        }
+        let map_len = u32::from_le_bytes([bytes[offset], bytes[offset+1], bytes[offset+2], bytes[offset+3]]) as usize;
+        offset += 4;
+
+        if offset + map_len > bytes.len() || map_len != self.map.data.len() {
+            return false;
+        }
+        let map_bytes = &bytes[offset..offset + map_len];
+
+        self.level = level;
+        self.time = time;
+        self.last_move_time = last_move_time;
+        self.rotor = rotor;
+        self.rng.set_state(rng_state);
+        self.camera.cog_x = cog_x;
+        self.camera.cog_y = cog_y;
+        self.players = new_players;
+        self.map.data.copy_from_slice(map_bytes);
 
         true
     }
@@ -630,5 +948,109 @@ mod tests {
 
         // Wasm can now sleep
         assert!(game.can_sleep());
+    }
+
+    #[test]
+    fn test_4player_hot_join_and_leave() {
+        let mut game = Game::new();
+        game.load();
+
+        // P1 active, P2-P4 inactive
+        assert!(game.players[0].active);
+        assert!(!game.players[1].active);
+        assert!(!game.players[2].active);
+        assert!(!game.players[3].active);
+
+        // P3 (Wizard) joins on input
+        game.players[2].input_mask = ACTION_DOWN;
+        game.step();
+        assert!(game.players[2].active);
+        assert!(game.players[2].alive);
+        assert_eq!(game.map.get(game.players[2].x, game.players[2].y), PLAYER + 2);
+
+        // P4 (Elf) joins on input
+        game.players[3].input_mask = ACTION_LEFT;
+        game.step();
+        assert!(game.players[3].active);
+        assert!(game.players[3].alive);
+        assert_eq!(game.map.get(game.players[3].x, game.players[3].y), PLAYER + 3);
+
+        // Disconnect P3
+        let p3_x = game.players[2].x;
+        let p3_y = game.players[2].y;
+        game.remove_player(2);
+        assert!(!game.players[2].active);
+        assert!(!game.players[2].alive);
+        assert_eq!(game.map.get(p3_x, p3_y), SPACE);
+    }
+
+    #[test]
+    fn test_snapshot_save_and_load_parity() {
+        let mut game = Game::new();
+        game.load();
+        // Join P2 and simulate 20 frames
+        game.players[1].input_mask = ACTION_RIGHT;
+        for _ in 0..20 {
+            game.step();
+            game.update_camera();
+        }
+
+        let snap = game.save_state();
+
+        // Modify game further
+        for _ in 0..30 {
+            game.players[0].input_mask = ACTION_DOWN;
+            game.step();
+            game.update_camera();
+        }
+
+        assert_ne!(game.time, snap.time);
+
+        // Restore snapshot
+        game.load_state(&snap);
+
+        assert_eq!(game.time, snap.time);
+        assert_eq!(game.last_move_time, snap.last_move_time);
+        assert_eq!(game.level, snap.level);
+        assert_eq!(game.rotor, snap.rotor);
+        assert_eq!(game.rng.state(), snap.rng_state);
+        assert_eq!(game.map.data, snap.map_data);
+        assert_eq!(game.players, snap.players);
+        assert_eq!(game.camera, snap.camera);
+    }
+
+    #[test]
+    fn test_binary_state_serialization_roundtrip() {
+        let mut game_a = Game::new();
+        game_a.load();
+        // Activate P1, P2, P3, P4
+        game_a.spawn_player(1);
+        game_a.spawn_player(2);
+        game_a.spawn_player(3);
+
+        for _ in 0..16 {
+            game_a.players[0].input_mask = ACTION_RIGHT;
+            game_a.players[1].input_mask = ACTION_UP;
+            game_a.players[2].input_mask = ACTION_DOWN;
+            game_a.players[3].input_mask = ACTION_LEFT;
+            game_a.step();
+            game_a.update_camera();
+        }
+
+        let bytes = game_a.save_state_bytes();
+        assert!(!bytes.is_empty());
+
+        let mut game_b = Game::new();
+        let ok = game_b.load_state_bytes(&bytes);
+        assert!(ok, "load_state_bytes must succeed");
+
+        assert_eq!(game_a.time, game_b.time);
+        assert_eq!(game_a.level, game_b.level);
+        assert_eq!(game_a.rotor, game_b.rotor);
+        assert_eq!(game_a.rng.state(), game_b.rng.state());
+        assert_eq!(game_a.map.data, game_b.map.data);
+        assert_eq!(game_a.players, game_b.players);
+        assert_eq!(game_a.camera.cog_x, game_b.camera.cog_x);
+        assert_eq!(game_a.camera.cog_y, game_b.camera.cog_y);
     }
 }

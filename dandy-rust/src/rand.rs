@@ -14,4 +14,12 @@ impl LcgRng {
         let val = (self.state >> 16) & 0x7fff;
         (val as f64) / 32768.0
     }
+
+    pub fn state(&self) -> u32 {
+        self.state
+    }
+
+    pub fn set_state(&mut self, state: u32) {
+        self.state = state;
+    }
 }
