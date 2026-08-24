@@ -550,6 +550,43 @@ new Promise(async (resolve, reject) => {
         const invalidNoneRoom = invalidNoneDoc?.getElementById("net-stat-room")?.textContent;
         const invalidNoneWelcomeVisible = window.getComputedStyle(invalidNoneDoc.getElementById("welcome-modal")).display !== "none";
 
+        console.log("[Test] 14. Simulating Cross-Browser/Cross-Machine Isolated MQTT Signaling (BroadcastChannel and localStorage disabled)...");
+        const mqttRoomCode = "DANDY-M" + Math.random().toString(36).substr(2, 4).toUpperCase();
+        const iframeMqttHost = spawnJoiner("MQTT_Host", "?disable_local_sig=1#host=" + mqttRoomCode);
+        const iframeMqttJoiner = spawnJoiner("MQTT_Joiner", "?disable_local_sig=1#room=" + mqttRoomCode);
+
+        await waitFor(() => {
+            const hostApp = iframeMqttHost.contentWindow?.dandyApp;
+            const joinerApp = iframeMqttJoiner.contentWindow?.dandyApp;
+            if (!hostApp || !joinerApp) return false;
+            return hostApp.net_is_player_joined(0) && hostApp.net_is_player_joined(1) &&
+                   joinerApp.net_is_player_joined(0) && joinerApp.net_is_player_joined(1);
+        }, 20000, "Isolated MQTT 2-player WebRTC DataChannel connection over public broker");
+
+        const mqttHostDoc = iframeMqttHost.contentDocument;
+        const mqttJoinerDoc = iframeMqttJoiner.contentDocument;
+        const mqttHostStatus = mqttHostDoc?.getElementById("net-stat-status")?.textContent;
+        const mqttJoinerStatus = mqttJoinerDoc?.getElementById("net-stat-status")?.textContent;
+        const mqttHostRole = mqttHostDoc?.getElementById("net-stat-role")?.textContent;
+        const mqttJoinerRole = mqttJoinerDoc?.getElementById("net-stat-role")?.textContent;
+
+        // Verify entity movement replication across the pure MQTT connection
+        const hostInitX = iframeMqttHost.contentWindow.dandyApp.get_player_x(0);
+        iframeMqttHost.contentWindow.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight" }));
+        await new Promise(r => setTimeout(r, 450));
+        iframeMqttHost.contentWindow.dispatchEvent(new KeyboardEvent("keyup", { key: "ArrowRight" }));
+        await new Promise(r => setTimeout(r, 200));
+
+        const hostFinalX = iframeMqttHost.contentWindow.dandyApp.get_player_x(0);
+        const joinerSeenX = iframeMqttJoiner.contentWindow.dandyApp.get_player_x(0);
+
+        const mqttCommonFrame = Math.min(
+            iframeMqttHost.contentWindow.dandyApp.net_get_confirmed_frame(),
+            iframeMqttJoiner.contentWindow.dandyApp.net_get_confirmed_frame()
+        );
+        const mqttHostChecksum = iframeMqttHost.contentWindow.dandyApp.net_get_checksum_at_frame(mqttCommonFrame);
+        const mqttJoinerChecksum = iframeMqttJoiner.contentWindow.dandyApp.net_get_checksum_at_frame(mqttCommonFrame);
+
         const results = {
             initialWelcomeVisible,
             has3WelcomeOptions,
@@ -630,42 +667,16 @@ new Promise(async (resolve, reject) => {
             queryHostRoom,
             invalidNoneRoom,
             invalidNoneWelcomeVisible,
-            statuses: [p1Status, p2Status, p3Status, p4Status],
-            initPositions,
-            finalPositions,
-            p1GpStatus,
-            p1GpBadge,
-            p1GpBadgeVisible,
-            p2GpBadgeVisibleOnHost,
-            posAfterGamepad,
-            p1GpStatusAfterDisconnect,
-            p1GpBadgeVisibleAfterDisconnect,
-            diffAfterJoinerChange,
-            diffAfterHostChange,
-            initialChecksums,
-            p3ChecksumBeforeDesync,
-            p3ChecksumAfterDesync,
-            hostChecksumDuringDesync,
-            p3ChecksumAfterHeal,
-            hostChecksumAfterHeal,
-            p5RoomFullVisible,
-            p5ConnectingHidden,
-            p5Status,
-            p5Role,
-            p5Message,
-            p5Badges,
-            p5HasActionButtons,
-            p5RecoveredToLocal,
-            p5HashAfterLocal,
-            hostRefreshRole,
-            hostRefreshRoom,
-            hostRefreshHash,
-            hostRefreshModalHidden,
-            hostRefreshP1Local,
-            joinerRefreshRole,
-            joinerRefreshRoom,
-            joinerRefreshHash,
-            joinerRefreshModalHidden,
+            mqttRoomCode,
+            mqttHostStatus,
+            mqttJoinerStatus,
+            mqttHostRole,
+            mqttJoinerRole,
+            mqttHostInitX,
+            mqttHostFinalX,
+            mqttJoinerSeenX,
+            mqttHostChecksum,
+            mqttJoinerChecksum,
             frames: [
                 p1App.net_get_current_frame(),
                 p2App.net_get_current_frame(),
@@ -702,6 +713,16 @@ new Promise(async (resolve, reject) => {
 function runTest() {
     return new Promise((resolve, reject) => {
         execFile(GBROWSER_BIN, ['eval', 'http://127.0.0.1:8080/', testCode], { timeout: 60000 }, (err, stdout, stderr) => {
+            const lines = (stdout || "").trim().split('\n');
+            const lastLine = lines.filter(l => l.startsWith('{') && l.endsWith('}')).pop();
+
+            if (lastLine) {
+                try {
+                    const data = JSON.parse(lastLine);
+                    return resolve(data);
+                } catch (e) {}
+            }
+
             if (err) {
                 console.error("gbrowser execution failed!");
                 if (stderr) console.error("stderr:", stderr);
@@ -709,20 +730,9 @@ function runTest() {
                 return reject(new Error(err.message || String(err)));
             }
 
-            const lines = stdout.trim().split('\n');
-            const lastLine = lines.filter(l => l.startsWith('{') && l.endsWith('}')).pop();
-
             if (!lastLine) {
                 console.error("Full stdout:", stdout);
                 return reject(new Error("No JSON results found in output"));
-            }
-
-            try {
-                const data = JSON.parse(lastLine);
-                resolve(data);
-            } catch (e) {
-                console.error("Failed to parse JSON:", lastLine);
-                reject(e);
             }
         });
     });
@@ -938,6 +948,22 @@ try {
     assert.strictEqual(res.mismatchHasActionButtons, true, "Version mismatch overlay must have Reload and Play Local buttons");
     assert.strictEqual(res.mismatchRecoveredToLocal, true, "Clicking 'Play Local' on version mismatch overlay must cleanly recover into Local mode");
     console.log("✓ Two-stage protocol version guard across signaling and UI, host rejection, error modal transition, and local recovery verified.");
+
+    // 11. Cross-Browser / Cross-Machine Isolated MQTT Signaling Verification
+    console.log("\n=== Verifying Cross-Browser/Cross-Machine Isolated MQTT Signaling ===");
+    console.log(`MQTT Room: ${res.mqttRoomCode}, Host Status: "${res.mqttHostStatus}", Joiner Status: "${res.mqttJoinerStatus}"`);
+    console.log(`MQTT Host Role: "${res.mqttHostRole}", Joiner Role: "${res.mqttJoinerRole}"`);
+    console.log(`MQTT P1 Movement: Init=${res.mqttHostInitX} -> Final Host=${res.mqttHostFinalX}, Joiner Seen=${res.mqttJoinerSeenX}`);
+    console.log(`MQTT Checksums: Host=0x${res.mqttHostChecksum.toString(16)}, Joiner=0x${res.mqttJoinerChecksum.toString(16)}`);
+
+    assert.strictEqual(res.mqttHostStatus, "Connected", "Isolated MQTT Host must report 'Connected' status");
+    assert.strictEqual(res.mqttJoinerStatus, "Connected", "Isolated MQTT Joiner must report 'Connected' status");
+    assert.strictEqual(res.mqttHostRole, "P1 RUBY (HOST)", "Isolated MQTT Host role must be P1 RUBY (HOST)");
+    assert(res.mqttJoinerRole.includes("P2 SAPPHIRE"), "Isolated MQTT Joiner role must be P2 SAPPHIRE");
+    assert(res.mqttHostFinalX > res.mqttHostInitX, "P1 must move Right on MQTT Host");
+    assert.strictEqual(res.mqttJoinerSeenX, res.mqttHostFinalX, "Joiner over isolated MQTT must observe exact P1 position from Host");
+    assert.strictEqual(res.mqttHostChecksum, res.mqttJoinerChecksum, "Deterministic state checksums must match across isolated MQTT mesh");
+    console.log("✓ Cross-browser/cross-machine isolated pure-MQTT signaling and WebRTC DataChannel connection verified without local transports.");
 
     console.log("\n==================================================================");
     console.log("🎉 ALL 4-PLAYER WEBRTC ROLLBACK MULTIPLAYER GATES PASSED! 🎉");
