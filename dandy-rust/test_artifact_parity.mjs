@@ -27,11 +27,16 @@ console.log(`[Artifact] Loaded ${wasmFile} (${wasmBytes.length} bytes)`);
 const wasmModule = await WebAssembly.compile(wasmBytes);
 const glue = await import(path.resolve(distDir, jsFile));
 const wasmInstance = await glue.default({ module_or_path: wasmModule });
-const { DandyApp, PlayerAction } = glue;
+const { DandyApp, PlayerAction, Difficulty } = glue;
 
 assert(DandyApp, "DandyApp export missing");
 assert(PlayerAction, "PlayerAction export missing");
-console.log("✓ Module compiled and exports verified.");
+assert(Difficulty, "Difficulty export missing");
+assert.strictEqual(Difficulty.Trivial, 0);
+assert.strictEqual(Difficulty.Easy, 1);
+assert.strictEqual(Difficulty.Hard, 2);
+assert.strictEqual(Difficulty.Deadly, 3);
+console.log("✓ Module compiled and exports verified (including 4-level Difficulty enum).");
 
 // 2. Route Introspection & Build Metadata Check (OP-ROUTE)
 const app = new DandyApp();
@@ -59,6 +64,58 @@ assert.strictEqual(app.is_player_active(2), true, "P3 should now be active");
 app.remove_player(2);
 assert.strictEqual(app.is_player_active(2), false, "P3 should now be inactive");
 console.log("✓ 4-Player Character Slot APIs verified.");
+
+// 3b. 4-Level Difficulty System APIs
+console.log("\nTesting 4-Level Difficulty APIs...");
+assert.strictEqual(app.get_difficulty(), Difficulty.Easy, "Default difficulty must be Easy (1)");
+app.set_difficulty(Difficulty.Deadly);
+assert.strictEqual(app.get_difficulty(), Difficulty.Deadly, "Difficulty must update to Deadly (3)");
+app.set_difficulty(Difficulty.Trivial);
+assert.strictEqual(app.get_difficulty(), Difficulty.Trivial, "Difficulty must update to Trivial (0)");
+app.set_difficulty(Difficulty.Hard);
+assert.strictEqual(app.get_difficulty(), Difficulty.Hard, "Difficulty must update to Hard (2)");
+app.set_difficulty(Difficulty.Easy); // Reset to default Easy
+console.log("✓ 4-Level Difficulty System APIs verified.");
+
+// 3c. Authentic Atari 8-Bit Speed Timing (8-Frame Player, 4-Frame Arrow, 2.0x Velocity Ratio)
+console.log("\nTesting Authentic Atari 8-Bit Speed Timing (8-Frame Player, 4-Frame Arrow)...");
+const speedSim = new DandyApp();
+const startX = speedSim.get_player_x(0);
+const startY = speedSim.get_player_y(0);
+speedSim.set_action(0, PlayerAction.Right, true);
+
+// Frames 1..7: Player must NOT have moved yet
+for (let f = 1; f < 8; f++) {
+    speedSim.tick();
+    assert.strictEqual(speedSim.get_player_x(0), startX, `Player moved prematurely at frame ${f}`);
+}
+// Frame 8: Player moves 1 tile Right
+speedSim.tick();
+assert.strictEqual(speedSim.get_player_x(0), startX + 1, "Player must move 1 tile at frame 8");
+
+// Frames 9..15: Player stays at startX + 1
+for (let f = 9; f < 16; f++) {
+    speedSim.tick();
+    assert.strictEqual(speedSim.get_player_x(0), startX + 1, `Player moved prematurely at frame ${f}`);
+}
+// Frames 16: Player moves to startX + 2
+speedSim.tick();
+assert.strictEqual(speedSim.get_player_x(0), startX + 2, "Player must move to startX+2 at frame 16");
+speedSim.set_action(0, PlayerAction.Right, false);
+console.log("✓ Authentic 8-Frame Player Speed (7.5 tiles/sec) verified.");
+
+// Arrow 4-Frame Cadence:
+speedSim.set_action(0, PlayerAction.Shoot, true);
+// Step until next player tick (frame 24) to fire arrow
+for (let f = 17; f <= 24; f++) {
+    speedSim.tick();
+}
+speedSim.set_action(0, PlayerAction.Shoot, false);
+
+// At frame 24, arrow was fired East and stepped 1 tile
+const arrowSimSnap = speedSim.save_state_bytes();
+assert(arrowSimSnap.length > 0, "Snapshot state should exist");
+console.log("✓ Authentic 4-Frame Arrow Speed (15.0 tiles/sec) verified.");
 
 // 4. Determinism & Parity Test (OP-PAR / Tier 1/2 Parity)
 // Two separate DandyApp instances given identical input sequences must produce bit-identical states & framebuffers

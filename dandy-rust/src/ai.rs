@@ -139,20 +139,16 @@ pub fn step_generator(
     map: &mut Map,
     rng: &mut LcgRng,
 ) {
-    // 30% spawn rate
-    let ran = rng.next();
-    if ran < 0.3 {
-        // Pick random cardinal direction: 0, 2, 4, 6
-        let dir = ((rng.next() * 4.0).floor() as usize) * 2;
-        let delta = DIR_TO_DELTA[dir];
-        let nx = gx + delta.0;
-        let ny = gy + delta.1;
+    // Pick random cardinal direction: 0, 2, 4, 6
+    let dir = ((rng.next() * 4.0).floor() as usize) * 2;
+    let delta = DIR_TO_DELTA[dir];
+    let nx = gx + delta.0;
+    let ny = gy + delta.1;
 
-        if map.get(nx, ny) == SPACE {
-            // Spawn ghost corresponding to generator level
-            let new_ghost = GHOST + (gen_val - GENERATOR);
-            map.set(nx, ny, new_ghost);
-        }
+    if map.get(nx, ny) == SPACE {
+        // Spawn ghost corresponding to generator level
+        let new_ghost = GHOST + (gen_val - GENERATOR);
+        map.set(nx, ny, new_ghost);
     }
 }
 

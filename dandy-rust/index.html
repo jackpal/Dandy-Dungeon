@@ -696,9 +696,20 @@
 
         <!-- Multiplayer Lobby & Peer Connection Overlay -->
         <div id="net-lobby">
-            <div class="lobby-tabs">
-                <button id="tab-local" class="tab-btn active">🎮 Local Co-op (1-4 Players)</button>
-                <button id="tab-online" class="tab-btn">🌐 Online P2P (WebRTC Rollback)</button>
+            <div class="lobby-tabs" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+                <div style="display: flex; gap: 8px;">
+                    <button id="tab-local" class="tab-btn active">🎮 Local Co-op (1-4 Players)</button>
+                    <button id="tab-online" class="tab-btn">🌐 Online P2P (WebRTC Rollback)</button>
+                </div>
+                <div style="display: flex; align-items: center; gap: 6px; font-size: 0.85rem;">
+                    <label for="select-difficulty" style="color: var(--text-secondary); font-size: 0.75rem; font-weight: bold; letter-spacing: 0.05em;">DIFFICULTY:</label>
+                    <select id="select-difficulty" class="input-code" style="width: auto; padding: 3px 8px; font-size: 0.8rem; background: #222; border-color: #555; cursor: pointer;">
+                        <option value="0">Trivial (Delay 13)</option>
+                        <option value="1" selected>Easy (Delay 8)</option>
+                        <option value="2">Hard (Delay 5)</option>
+                        <option value="3">Deadly (Delay 2)</option>
+                    </select>
+                </div>
             </div>
 
             <!-- Online P2P Controls Panel -->
@@ -1539,9 +1550,17 @@
                 return cachedStatsArray;
             }
 
+            // 60 Hz Fixed Timestep Accumulator State
+            let lastTimestamp = 0;
+            let accumulator = 0;
+            const TIMESTEP = 1000 / 60; // 16.666666666666668 ms (60 Hz fixed timestep)
+            const MAX_DELTA = 100; // Clamp delta against spiral-of-death (max 100ms per frame)
+
             function wakeLoop() {
                 if (sleeping) {
                     sleeping = false;
+                    lastTimestamp = 0;
+                    accumulator = 0;
                     if (loopRunning) {
                         requestAnimationFrame(gameLoop);
                     }
@@ -2007,6 +2026,8 @@
                     if (!loopRunning) {
                         loopRunning = true;
                         sleeping = false;
+                        lastTimestamp = 0;
+                        accumulator = 0;
                         requestAnimationFrame(gameLoop);
                     }
                 }
@@ -3167,10 +3188,34 @@
             }
 
             // -----------------------------------------------------------------
-            // Main Simulation Game Loop
+            // Main Simulation Game Loop (Fixed 60 Hz Timestep Accumulator)
             // -----------------------------------------------------------------
-            function gameLoop() {
+            const difficultySelect = document.getElementById("select-difficulty");
+            if (difficultySelect) {
+                difficultySelect.value = app.get_difficulty().toString();
+                difficultySelect.addEventListener("change", (e) => {
+                    const val = parseInt(e.target.value, 10);
+                    app.set_difficulty(val);
+                });
+            }
+
+            function gameLoop(timestamp) {
                 if (!loopRunning) return;
+
+                if (!timestamp) {
+                    timestamp = performance.now();
+                }
+                if (!lastTimestamp) {
+                    lastTimestamp = timestamp;
+                }
+
+                let dt = timestamp - lastTimestamp;
+                lastTimestamp = timestamp;
+
+                if (dt < 0) dt = 0;
+                if (dt > MAX_DELTA) dt = MAX_DELTA;
+
+                accumulator += dt;
 
                 const hasGamepadInput = pollGamepads();
 
@@ -3179,38 +3224,46 @@
                         connectingOverlay.style.display = "flex";
                         ctx.fillStyle = "#121212";
                         ctx.fillRect(0, 0, 320, 160);
+                        accumulator = 0;
                         requestAnimationFrame(gameLoop);
                         return;
                     } else {
                         connectingOverlay.style.display = "none";
                     }
 
-                    // 1. Advance rollback netcode step
-                    const currentFrame = app.net_step();
+                    while (accumulator >= TIMESTEP) {
+                        accumulator -= TIMESTEP;
 
-                    // 2. Broadcast local input packets for all local player slots to peers
-                    const inputPackets = app.net_encode_all_local_input_packets(currentFrame);
-                    if (inputPackets.length > 0) {
-                        broadcastPacket(inputPackets);
+                        // 1. Advance rollback netcode step
+                        const currentFrame = app.net_step();
+
+                        // 2. Broadcast local input packets for all local player slots to peers
+                        const inputPackets = app.net_encode_all_local_input_packets(currentFrame);
+                        if (inputPackets.length > 0) {
+                            broadcastPacket(inputPackets);
+                        }
+
+                        // 3. Periodic Ping (every 1s)
+                        const now = performance.now();
+                        if (now - lastPingSent >= 1000) {
+                            lastPingSent = now;
+                            const pingBuf = new ArrayBuffer(5);
+                            const dv = new DataView(pingBuf);
+                            dv.setUint8(0, 0x02); // PKT_PING
+                            dv.setUint32(1, Math.round(now), false);
+                            broadcastPacket(new Uint8Array(pingBuf));
+                        }
+
+                        // Update netcode diagnostics HUD
+                        document.getElementById("net-stat-frame").textContent = currentFrame.toString();
+                        document.getElementById("net-stat-rollbacks").textContent = app.net_get_rollback_count().toString();
                     }
-
-                    // 3. Periodic Ping (every 1s)
-                    const now = performance.now();
-                    if (now - lastPingSent >= 1000) {
-                        lastPingSent = now;
-                        const pingBuf = new ArrayBuffer(5);
-                        const dv = new DataView(pingBuf);
-                        dv.setUint8(0, 0x02); // PKT_PING
-                        dv.setUint32(1, Math.round(now), false);
-                        broadcastPacket(new Uint8Array(pingBuf));
-                    }
-
-                    // Update netcode diagnostics HUD
-                    document.getElementById("net-stat-frame").textContent = currentFrame.toString();
-                    document.getElementById("net-stat-rollbacks").textContent = app.net_get_rollback_count().toString();
                 } else {
-                    // Local co-op step
-                    app.tick();
+                    // Local co-op fixed 60Hz step
+                    while (accumulator >= TIMESTEP) {
+                        accumulator -= TIMESTEP;
+                        app.tick();
+                    }
                 }
 
                 // Zero-copy render blit using cached ImageData view
@@ -3225,10 +3278,20 @@
                 const statsArray = getStatsArray(wasm.memory, statsPtr, statsLen);
                 updateHUD(statsArray);
 
+                // Keep difficulty selector in sync if state sync occurred
+                if (difficultySelect && document.activeElement !== difficultySelect) {
+                    const curDiff = app.get_difficulty();
+                    if (difficultySelect.value !== curDiff.toString()) {
+                        difficultySelect.value = curDiff.toString();
+                    }
+                }
+
                 const hasConnectedGamepads = lastGamepadConnectedCount > 0;
 
                 if (!isOnlineMode && pressedKeys.size === 0 && activeTouches.size === 0 && !hasGamepadInput && !hasConnectedGamepads && app.can_sleep()) {
                     sleeping = true;
+                    lastTimestamp = 0;
+                    accumulator = 0;
                     return;
                 }
 

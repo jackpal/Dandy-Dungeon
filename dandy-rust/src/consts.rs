@@ -53,3 +53,10 @@ pub const ACTION_RIGHT: u8 = 1 << 3;
 pub const ACTION_SHOOT: u8 = 1 << 4;
 pub const ACTION_BOMB: u8 = 1 << 5;
 
+// Speed and Timing Constants (60 Hz Fixed Timestep)
+pub const PLAYER_MOVE_INTERVAL: u32 = 8; // 1 tile every 8 frames (7.5 tiles/sec, 6502 fractional $20/256 speed)
+pub const ARROW_MOVE_INTERVAL: u32 = 4;  // 1 tile every 4 frames (15.0 tiles/sec, 2.0x player velocity)
+
+// 4-Level Difficulty Delays: Trivial (13), Easy (8), Hard (5), Deadly (2)
+pub const DIFFICULTY_DELAYS: [u32; 4] = [13, 8, 5, 2];
+

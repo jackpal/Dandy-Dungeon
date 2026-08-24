@@ -31,6 +31,36 @@ pub enum PlayerAction {
 }
 
 #[wasm_bindgen]
+#[repr(u8)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Difficulty {
+    Trivial = 0,
+    Easy = 1,
+    Hard = 2,
+    Deadly = 3,
+}
+
+impl Difficulty {
+    pub fn from_u8(val: u8) -> Self {
+        match val {
+            0 => Difficulty::Trivial,
+            2 => Difficulty::Hard,
+            3 => Difficulty::Deadly,
+            _ => Difficulty::Easy,
+        }
+    }
+
+    pub fn delay(self) -> u32 {
+        match self {
+            Difficulty::Trivial => 13,
+            Difficulty::Easy => 8,
+            Difficulty::Hard => 5,
+            Difficulty::Deadly => 2,
+        }
+    }
+}
+
+#[wasm_bindgen]
 pub struct DandyApp {
     game: Game,
     rollback: RollbackManager,
@@ -410,6 +440,14 @@ impl DandyApp {
 
     pub fn get_level(&self) -> usize {
         self.game.level
+    }
+
+    pub fn get_difficulty(&self) -> u8 {
+        self.game.difficulty as u8
+    }
+
+    pub fn set_difficulty(&mut self, val: u8) {
+        self.game.difficulty = Difficulty::from_u8(val);
     }
 
     fn render_framebuffer(&mut self) {

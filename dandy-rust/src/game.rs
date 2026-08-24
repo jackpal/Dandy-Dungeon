@@ -13,6 +13,7 @@ pub struct GameSnapshot {
     pub time: u32,
     pub last_move_time: u32,
     pub rotor: u8,
+    pub difficulty: crate::Difficulty,
     pub camera: Camera,
     pub rng_state: u32,
 }
@@ -24,9 +25,44 @@ pub struct Game {
     pub time: u32,
     pub last_move_time: u32,
     pub rotor: u8,
+    pub difficulty: crate::Difficulty,
     
     pub camera: Camera,
     pub rng: LcgRng,
+}
+
+#[inline(always)]
+fn read_u32(bytes: &[u8], offset: &mut usize) -> u32 {
+    let o = *offset;
+    *offset += 4;
+    u32::from_le_bytes([bytes[o], bytes[o + 1], bytes[o + 2], bytes[o + 3]])
+}
+
+#[inline(always)]
+fn read_i32(bytes: &[u8], offset: &mut usize) -> i32 {
+    let o = *offset;
+    *offset += 4;
+    i32::from_le_bytes([bytes[o], bytes[o + 1], bytes[o + 2], bytes[o + 3]])
+}
+
+#[inline(always)]
+fn read_f64(bytes: &[u8], offset: &mut usize) -> f64 {
+    let o = *offset;
+    *offset += 8;
+    f64::from_le_bytes([
+        bytes[o], bytes[o + 1], bytes[o + 2], bytes[o + 3],
+        bytes[o + 4], bytes[o + 5], bytes[o + 6], bytes[o + 7],
+    ])
+}
+
+#[inline(always)]
+fn write_u32(buf: &mut Vec<u8>, val: u32) {
+    buf.extend_from_slice(&val.to_le_bytes());
+}
+
+#[inline(always)]
+fn write_i32(buf: &mut Vec<u8>, val: i32) {
+    buf.extend_from_slice(&val.to_le_bytes());
 }
 
 impl Game {
@@ -48,6 +84,7 @@ impl Game {
             time: 0,
             last_move_time: 0,
             rotor: 0,
+            difficulty: crate::Difficulty::Easy,
             camera: Camera::new(0.0, 0.0),
             rng: LcgRng::new(12345), // Default seed
         }
@@ -191,59 +228,62 @@ impl Game {
             }
         }
 
-        // Perform steps every TICKS_PER_MOVE frames (4)
-        if self.time - self.last_move_time >= 4 {
+        let active_rect = self.get_active_rect();
+
+        // 1. Step players every PLAYER_MOVE_INTERVAL frames (8 frames = 7.5 tiles/sec)
+        if self.time % PLAYER_MOVE_INTERVAL == 0 {
             self.last_move_time = self.time;
-
-            let active_rect = self.get_active_rect();
-
-            // Step each player
             for i in 0..self.players.len() {
                 if self.players[i].active && self.players[i].alive && !self.players[i].escaped {
                     let player = &mut self.players[i];
                     crate::physics::step_player(i, player, &mut self.map, active_rect);
                 }
             }
+        }
 
-            // Step arrows for all active players unconditionally
+        // 2. Step arrows for all active players every ARROW_MOVE_INTERVAL frames (4 frames = 15.0 tiles/sec)
+        if self.time % ARROW_MOVE_INTERVAL == 0 {
             for i in 0..self.players.len() {
                 if self.players[i].active {
                     crate::physics::step_arrow(i, &mut self.players, &mut self.map, active_rect);
                 }
             }
+        }
 
+        // 3. Step enemies every DELAY frames according to difficulty (Trivial: 13, Easy: 8, Hard: 5, Deadly: 2)
+        if self.time % self.difficulty.delay() == 0 {
             crate::ai::step_enemies(&mut self.map, &mut self.players, active_rect, &mut self.rotor, &mut self.rng);
+        }
 
-            // Centralized Level Progression / Restart Check
-            let mut players_in_dungeon = false;
-            let mut any_escaped = false;
-            let mut any_joined = false;
-            let mut arrows_in_flight = false;
+        // 4. Centralized Level Progression / Restart Check
+        let mut players_in_dungeon = false;
+        let mut any_escaped = false;
+        let mut any_joined = false;
+        let mut arrows_in_flight = false;
 
-            for p in &self.players {
-                if p.active {
-                    any_joined = true;
-                    if p.alive && !p.escaped {
-                        players_in_dungeon = true;
-                    }
-                    if p.escaped {
-                        any_escaped = true;
-                    }
-                    if p.arrow.is_some() {
-                        arrows_in_flight = true;
-                    }
+        for p in &self.players {
+            if p.active {
+                any_joined = true;
+                if p.alive && !p.escaped {
+                    players_in_dungeon = true;
+                }
+                if p.escaped {
+                    any_escaped = true;
+                }
+                if p.arrow.is_some() {
+                    arrows_in_flight = true;
                 }
             }
+        }
 
-            if any_joined && !players_in_dungeon && !arrows_in_flight {
-                if any_escaped {
-                    // Progress to next level
-                    self.level = (self.level + 1).min(25);
-                    self.load();
-                } else {
-                    // Everyone died, restart
-                    self.load();
-                }
+        if any_joined && !players_in_dungeon && !arrows_in_flight {
+            if any_escaped {
+                // Progress to next level
+                self.level = (self.level + 1).min(25);
+                self.load();
+            } else {
+                // Everyone died, restart
+                self.load();
             }
         }
     }
@@ -302,6 +342,7 @@ impl Game {
             time: self.time,
             last_move_time: self.last_move_time,
             rotor: self.rotor,
+            difficulty: self.difficulty,
             camera: self.camera,
             rng_state: self.rng.state(),
         }
@@ -314,6 +355,7 @@ impl Game {
         self.time = snapshot.time;
         self.last_move_time = snapshot.last_move_time;
         self.rotor = snapshot.rotor;
+        self.difficulty = snapshot.difficulty;
         self.camera = snapshot.camera;
         self.rng.set_state(snapshot.rng_state);
     }
@@ -327,12 +369,14 @@ impl Game {
         // Level
         buf.extend_from_slice(&(self.level as u16).to_le_bytes());
         // Time & Last Move Time
-        buf.extend_from_slice(&self.time.to_le_bytes());
-        buf.extend_from_slice(&self.last_move_time.to_le_bytes());
+        write_u32(&mut buf, self.time);
+        write_u32(&mut buf, self.last_move_time);
         // Rotor
         buf.push(self.rotor);
+        // Difficulty
+        buf.push(self.difficulty as u8);
         // Rng state
-        buf.extend_from_slice(&self.rng.state().to_le_bytes());
+        write_u32(&mut buf, self.rng.state());
         // Camera cog
         buf.extend_from_slice(&self.camera.cog_x.to_le_bytes());
         buf.extend_from_slice(&self.camera.cog_y.to_le_bytes());
@@ -341,13 +385,13 @@ impl Game {
         buf.push(self.players.len() as u8);
         for p in &self.players {
             buf.push(p.index as u8);
-            buf.extend_from_slice(&p.x.to_le_bytes());
-            buf.extend_from_slice(&p.y.to_le_bytes());
+            write_i32(&mut buf, p.x);
+            write_i32(&mut buf, p.y);
             buf.push(p.dir as u8);
-            buf.extend_from_slice(&p.score.to_le_bytes());
-            buf.extend_from_slice(&p.health.to_le_bytes());
-            buf.extend_from_slice(&p.bombs.to_le_bytes());
-            buf.extend_from_slice(&p.keys.to_le_bytes());
+            write_i32(&mut buf, p.score);
+            write_i32(&mut buf, p.health);
+            write_i32(&mut buf, p.bombs);
+            write_i32(&mut buf, p.keys);
 
             let mut flags = 0u8;
             if p.active { flags |= 1 << 0; }
@@ -358,60 +402,41 @@ impl Game {
             buf.push(p.input_mask);
 
             if let Some(arrow) = p.arrow {
-                buf.extend_from_slice(&arrow.x.to_le_bytes());
-                buf.extend_from_slice(&arrow.y.to_le_bytes());
+                write_i32(&mut buf, arrow.x);
+                write_i32(&mut buf, arrow.y);
                 buf.push(arrow.dir as u8);
             }
         }
 
         // Map data
-        buf.extend_from_slice(&(self.map.data.len() as u32).to_le_bytes());
+        write_u32(&mut buf, self.map.data.len() as u32);
         buf.extend_from_slice(&self.map.data);
 
         buf
     }
 
     pub fn load_state_bytes(&mut self, bytes: &[u8]) -> bool {
-        if bytes.len() < 36 || &bytes[0..4] != b"DNDY" {
-            return false;
-        }
-        let version = bytes[4];
-        if version != 1 {
+        if bytes.len() < 37 || &bytes[0..4] != b"DNDY" || bytes[4] != 1 {
             return false;
         }
 
         let mut offset = 5;
-        if offset + 2 + 4 + 4 + 1 + 4 + 8 + 8 + 1 > bytes.len() {
+        if offset + 2 + 4 + 4 + 1 + 1 + 4 + 8 + 8 + 1 > bytes.len() {
             return false;
         }
 
         let level = u16::from_le_bytes([bytes[offset], bytes[offset + 1]]) as usize;
         offset += 2;
 
-        let time = u32::from_le_bytes([bytes[offset], bytes[offset + 1], bytes[offset + 2], bytes[offset + 3]]);
-        offset += 4;
-
-        let last_move_time = u32::from_le_bytes([bytes[offset], bytes[offset + 1], bytes[offset + 2], bytes[offset + 3]]);
-        offset += 4;
-
+        let time = read_u32(bytes, &mut offset);
+        let last_move_time = read_u32(bytes, &mut offset);
         let rotor = bytes[offset];
         offset += 1;
-
-        let rng_state = u32::from_le_bytes([bytes[offset], bytes[offset + 1], bytes[offset + 2], bytes[offset + 3]]);
-        offset += 4;
-
-        let cog_x = f64::from_le_bytes([
-            bytes[offset], bytes[offset+1], bytes[offset+2], bytes[offset+3],
-            bytes[offset+4], bytes[offset+5], bytes[offset+6], bytes[offset+7]
-        ]);
-        offset += 8;
-
-        let cog_y = f64::from_le_bytes([
-            bytes[offset], bytes[offset+1], bytes[offset+2], bytes[offset+3],
-            bytes[offset+4], bytes[offset+5], bytes[offset+6], bytes[offset+7]
-        ]);
-        offset += 8;
-
+        let difficulty = crate::Difficulty::from_u8(bytes[offset]);
+        offset += 1;
+        let rng_state = read_u32(bytes, &mut offset);
+        let cog_x = read_f64(bytes, &mut offset);
+        let cog_y = read_f64(bytes, &mut offset);
         let num_players = bytes[offset] as usize;
         offset += 1;
 
@@ -429,31 +454,16 @@ impl Game {
 
             let index = bytes[offset] as usize;
             offset += 1;
-
-            let x = i32::from_le_bytes([bytes[offset], bytes[offset+1], bytes[offset+2], bytes[offset+3]]);
-            offset += 4;
-
-            let y = i32::from_le_bytes([bytes[offset], bytes[offset+1], bytes[offset+2], bytes[offset+3]]);
-            offset += 4;
-
+            let x = read_i32(bytes, &mut offset);
+            let y = read_i32(bytes, &mut offset);
             let dir = bytes[offset] as usize;
             offset += 1;
-
-            let score = i32::from_le_bytes([bytes[offset], bytes[offset+1], bytes[offset+2], bytes[offset+3]]);
-            offset += 4;
-
-            let health = i32::from_le_bytes([bytes[offset], bytes[offset+1], bytes[offset+2], bytes[offset+3]]);
-            offset += 4;
-
-            let bombs = i32::from_le_bytes([bytes[offset], bytes[offset+1], bytes[offset+2], bytes[offset+3]]);
-            offset += 4;
-
-            let keys = i32::from_le_bytes([bytes[offset], bytes[offset+1], bytes[offset+2], bytes[offset+3]]);
-            offset += 4;
-
+            let score = read_i32(bytes, &mut offset);
+            let health = read_i32(bytes, &mut offset);
+            let bombs = read_i32(bytes, &mut offset);
+            let keys = read_i32(bytes, &mut offset);
             let flags = bytes[offset];
             offset += 1;
-
             let input_mask = bytes[offset];
             offset += 1;
 
@@ -466,10 +476,8 @@ impl Game {
                 if offset + 9 > bytes.len() {
                     return false;
                 }
-                let ax = i32::from_le_bytes([bytes[offset], bytes[offset+1], bytes[offset+2], bytes[offset+3]]);
-                offset += 4;
-                let ay = i32::from_le_bytes([bytes[offset], bytes[offset+1], bytes[offset+2], bytes[offset+3]]);
-                offset += 4;
+                let ax = read_i32(bytes, &mut offset);
+                let ay = read_i32(bytes, &mut offset);
                 let adir = bytes[offset] as usize;
                 offset += 1;
                 Some(crate::entity::Arrow { x: ax, y: ay, dir: adir })
@@ -497,8 +505,7 @@ impl Game {
         if offset + 4 > bytes.len() {
             return false;
         }
-        let map_len = u32::from_le_bytes([bytes[offset], bytes[offset+1], bytes[offset+2], bytes[offset+3]]) as usize;
-        offset += 4;
+        let map_len = read_u32(bytes, &mut offset) as usize;
 
         if offset + map_len > bytes.len() || map_len != self.map.data.len() {
             return false;
@@ -509,6 +516,7 @@ impl Game {
         self.time = time;
         self.last_move_time = last_move_time;
         self.rotor = rotor;
+        self.difficulty = difficulty;
         self.rng.set_state(rng_state);
         self.camera.cog_x = cog_x;
         self.camera.cog_y = cog_y;
@@ -608,8 +616,8 @@ mod tests {
         // Move P1 DOWN (into exit)
         game.players[0].input_mask = ACTION_DOWN;
         
-        // Step game (4 ticks to trigger move)
-        for _ in 0..4 {
+        // Step game (8 ticks to trigger move)
+        for _ in 0..8 {
             game.step();
         }
 
@@ -642,7 +650,7 @@ mod tests {
         game.players[0].input_mask = ACTION_DOWN;
 
         // Step game
-        for _ in 0..4 {
+        for _ in 0..8 {
             game.step();
         }
 
@@ -680,7 +688,7 @@ mod tests {
         game.players[0].input_mask = ACTION_DOWN;
 
         // Step game to make P1 escape
-        for _ in 0..4 {
+        for _ in 0..8 {
             game.step();
         }
         assert!(game.players[0].escaped);
@@ -693,7 +701,7 @@ mod tests {
 
         // Step game again to trigger check
         game.players[0].input_mask = 0;
-        for _ in 0..4 {
+        for _ in 0..8 {
             game.step();
         }
 
@@ -723,7 +731,7 @@ mod tests {
         game.map.set(game.players[1].x, game.players[1].y, SPACE);
 
         // Step game to trigger check
-        for _ in 0..4 {
+        for _ in 0..8 {
             game.step();
         }
 
@@ -903,8 +911,8 @@ mod tests {
         // Fire P1's arrow East (input ACTION_SHOOT)
         game.players[p1_idx].input_mask = ACTION_SHOOT;
         
-        // Step 4 times to trigger movement tick and fire arrow
-        for _ in 0..4 {
+        // Step 8 times to trigger player tick (fires arrow, takes 1st step to px + 1, py)
+        for _ in 0..8 {
             game.step();
         }
         
@@ -924,7 +932,7 @@ mod tests {
         // Verify Wasm cannot sleep while the arrow is in flight (even though player is dead)
         assert!(!game.can_sleep());
 
-        // Step 4 times to trigger next movement tick (arrow hits HEART at px + 2, py)
+        // Step 4 times to trigger arrow movement tick (arrow hits HEART at px + 2, py)
         for _ in 0..4 {
             game.step();
         }
@@ -948,6 +956,112 @@ mod tests {
 
         // Wasm can now sleep
         assert!(game.can_sleep());
+    }
+
+    #[test]
+    fn test_player_8_frame_cadence() {
+        let mut game = Game::new();
+        game.load();
+        // Clear map obstacles in front of P1
+        let px = game.players[0].x;
+        let py = game.players[0].y;
+        game.map.set(px + 1, py, SPACE);
+        game.map.set(px + 2, py, SPACE);
+
+        game.players[0].input_mask = ACTION_RIGHT;
+
+        // Frames 1..7: P1 does NOT move yet
+        for f in 1..8 {
+            game.step();
+            assert_eq!(game.players[0].x, px, "P1 must not move before frame 8 (at frame {})", f);
+        }
+
+        // Frame 8: P1 moves 1 tile Right
+        game.step();
+        assert_eq!(game.players[0].x, px + 1, "P1 must move 1 tile at frame 8");
+
+        // Frames 9..15: P1 stays at px + 1
+        for f in 9..16 {
+            game.step();
+            assert_eq!(game.players[0].x, px + 1, "P1 must stay at px+1 until frame 16 (at frame {})", f);
+        }
+
+        // Frame 16: P1 moves another tile Right
+        game.step();
+        assert_eq!(game.players[0].x, px + 2, "P1 must move to px+2 at frame 16");
+    }
+
+    #[test]
+    fn test_arrow_4_frame_cadence_and_velocity_ratio() {
+        let mut game = Game::new();
+        game.load();
+        let px = 10;
+        let py = 10;
+        game.map.set(game.players[0].x, game.players[0].y, SPACE);
+        game.players[0].x = px;
+        game.players[0].y = py;
+        game.players[0].dir = 2; // East
+        game.map.set(px, py, PLAYER);
+
+        for x in (px + 1)..(px + 10) {
+            game.map.set(x, py, SPACE);
+        }
+
+        // Frame 1..7: P1 charges Right
+        game.players[0].input_mask = ACTION_RIGHT;
+        for _ in 1..8 {
+            game.step();
+        }
+        // At frame 8: P1 fires arrow East
+        game.players[0].input_mask = ACTION_SHOOT;
+        game.step(); // frame 8: arrow created at (10, 10) and immediately moves to (11, 10)
+
+        assert!(game.players[0].arrow.is_some());
+        assert_eq!(game.players[0].arrow.unwrap().x, px + 1);
+
+        // Frame 9..11: Arrow remains at px + 1
+        game.players[0].input_mask = 0;
+        for f in 9..=11 {
+            game.step();
+            assert_eq!(game.players[0].arrow.unwrap().x, px + 1, "Arrow should stay at px+1 at frame {}", f);
+        }
+        // Frame 12 (4 frames after frame 8): arrow advances to px + 2
+        game.step();
+        assert_eq!(game.players[0].arrow.unwrap().x, px + 2, "Arrow should advance to px+2 at frame 12");
+
+        // Frame 13..15: Arrow remains at px + 2
+        for f in 13..=15 {
+            game.step();
+            assert_eq!(game.players[0].arrow.unwrap().x, px + 2, "Arrow should stay at px+2 at frame {}", f);
+        }
+        // Frame 16 (4 frames after frame 12): arrow advances to px + 3
+        game.step();
+        assert_eq!(game.players[0].arrow.unwrap().x, px + 3, "Arrow should advance to px+3 at frame 16");
+    }
+
+    #[test]
+    fn test_difficulty_delays_and_scaling() {
+        assert_eq!(crate::Difficulty::Trivial.delay(), 13);
+        assert_eq!(crate::Difficulty::Easy.delay(), 8);
+        assert_eq!(crate::Difficulty::Hard.delay(), 5);
+        assert_eq!(crate::Difficulty::Deadly.delay(), 2);
+
+        let mut game = Game::new();
+        assert_eq!(game.difficulty, crate::Difficulty::Easy);
+
+        game.difficulty = crate::Difficulty::Deadly;
+        let snap = game.save_state();
+        assert_eq!(snap.difficulty, crate::Difficulty::Deadly);
+
+        let mut game2 = Game::new();
+        game2.load_state(&snap);
+        assert_eq!(game2.difficulty, crate::Difficulty::Deadly);
+
+        let bytes = game.save_state_bytes();
+        let mut game3 = Game::new();
+        let ok = game3.load_state_bytes(&bytes);
+        assert!(ok);
+        assert_eq!(game3.difficulty, crate::Difficulty::Deadly);
     }
 
     #[test]
@@ -1013,6 +1127,7 @@ mod tests {
         assert_eq!(game.last_move_time, snap.last_move_time);
         assert_eq!(game.level, snap.level);
         assert_eq!(game.rotor, snap.rotor);
+        assert_eq!(game.difficulty, snap.difficulty);
         assert_eq!(game.rng.state(), snap.rng_state);
         assert_eq!(game.map.data, snap.map_data);
         assert_eq!(game.players, snap.players);
@@ -1023,6 +1138,7 @@ mod tests {
     fn test_binary_state_serialization_roundtrip() {
         let mut game_a = Game::new();
         game_a.load();
+        game_a.difficulty = crate::Difficulty::Hard;
         // Activate P1, P2, P3, P4
         game_a.spawn_player(1);
         game_a.spawn_player(2);
@@ -1047,6 +1163,7 @@ mod tests {
         assert_eq!(game_a.time, game_b.time);
         assert_eq!(game_a.level, game_b.level);
         assert_eq!(game_a.rotor, game_b.rotor);
+        assert_eq!(game_a.difficulty, game_b.difficulty);
         assert_eq!(game_a.rng.state(), game_b.rng.state());
         assert_eq!(game_a.map.data, game_b.map.data);
         assert_eq!(game_a.players, game_b.players);

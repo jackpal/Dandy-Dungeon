@@ -72,16 +72,20 @@ impl Framebuffer {
 }
 
 pub fn parse_bmp(bytes: &[u8]) -> Vec<u8> {
-    assert_eq!(&bytes[0..2], b"BM");
+    if bytes.len() < 54 || &bytes[0..2] != b"BM" {
+        return Vec::new();
+    }
     
-    let data_offset = u32::from_le_bytes(bytes[10..14].try_into().unwrap()) as usize;
-    let width = i32::from_le_bytes(bytes[18..22].try_into().unwrap()) as usize;
-    let raw_height = i32::from_le_bytes(bytes[22..26].try_into().unwrap());
+    let data_offset = u32::from_le_bytes([bytes[10], bytes[11], bytes[12], bytes[13]]) as usize;
+    let width = i32::from_le_bytes([bytes[18], bytes[19], bytes[20], bytes[21]]) as usize;
+    let raw_height = i32::from_le_bytes([bytes[22], bytes[23], bytes[24], bytes[25]]);
     let height = raw_height.unsigned_abs() as usize;
     let top_down = raw_height < 0;
     
-    let bpp = u16::from_le_bytes(bytes[28..30].try_into().unwrap());
-    assert_eq!(bpp, 24);
+    let bpp = u16::from_le_bytes([bytes[28], bytes[29]]);
+    if bpp != 24 {
+        return Vec::new();
+    }
     
     let mut rgba = vec![0u8; width * height * 4];
     let row_stride = (width * 3 + 3) & !3;
@@ -92,15 +96,17 @@ pub fn parse_bmp(bytes: &[u8]) -> Vec<u8> {
         
         for x in 0..width {
             let px_start = row_start + x * 3;
-            let b = bytes[px_start];
-            let g = bytes[px_start + 1];
-            let r = bytes[px_start + 2];
-            
-            let rgba_idx = (x + y * width) * 4;
-            rgba[rgba_idx] = r;
-            rgba[rgba_idx + 1] = g;
-            rgba[rgba_idx + 2] = b;
-            rgba[rgba_idx + 3] = 255;
+            if px_start + 2 < bytes.len() {
+                let b = bytes[px_start];
+                let g = bytes[px_start + 1];
+                let r = bytes[px_start + 2];
+                
+                let rgba_idx = (x + y * width) * 4;
+                rgba[rgba_idx] = r;
+                rgba[rgba_idx + 1] = g;
+                rgba[rgba_idx + 2] = b;
+                rgba[rgba_idx + 3] = 255;
+            }
         }
     }
     
