@@ -31,7 +31,7 @@ impl Default for InputEntry {
 }
 
 pub struct RollbackManager {
-    pub local_player_idx: usize,
+    pub local_player_mask: u8,
     pub current_frame: u32,
     pub confirmed_frame: u32,
     pub rollback_count: u32,
@@ -52,15 +52,26 @@ pub struct RollbackManager {
 
 impl RollbackManager {
     pub fn new(local_player_idx: usize, initial_game: &Game) -> Self {
+        let mask = if local_player_idx < MAX_PLAYERS {
+            1 << local_player_idx
+        } else {
+            0
+        };
+        Self::new_with_mask(mask, initial_game)
+    }
+
+    pub fn new_with_mask(local_player_mask: u8, initial_game: &Game) -> Self {
         let input_history = [[InputEntry::default(); INPUT_HISTORY_BUFFER_SIZE]; MAX_PLAYERS];
 
         let mut player_joined = [false; MAX_PLAYERS];
-        if local_player_idx < MAX_PLAYERS {
-            player_joined[local_player_idx] = true;
+        for p in 0..MAX_PLAYERS {
+            if (local_player_mask & (1 << p)) != 0 {
+                player_joined[p] = true;
+            }
         }
 
         let mut manager = Self {
-            local_player_idx,
+            local_player_mask,
             current_frame: 0,
             confirmed_frame: 0,
             rollback_count: 0,
@@ -76,8 +87,45 @@ impl RollbackManager {
         manager
     }
 
+    pub fn primary_local_player(&self) -> usize {
+        for p in 0..MAX_PLAYERS {
+            if (self.local_player_mask & (1 << p)) != 0 {
+                return p;
+            }
+        }
+        0
+    }
+
+    pub fn is_local_player(&self, player_idx: usize) -> bool {
+        if player_idx < MAX_PLAYERS {
+            (self.local_player_mask & (1 << player_idx)) != 0
+        } else {
+            false
+        }
+    }
+
+    pub fn set_local_player(&mut self, player_idx: usize, is_local: bool) {
+        if player_idx < MAX_PLAYERS {
+            if is_local {
+                self.local_player_mask |= 1 << player_idx;
+                self.player_joined[player_idx] = true;
+            } else {
+                self.local_player_mask &= !(1 << player_idx);
+            }
+        }
+    }
+
     pub fn reset(&mut self, local_player_idx: usize, initial_game: &Game) {
-        self.local_player_idx = local_player_idx;
+        let mask = if local_player_idx < MAX_PLAYERS {
+            1 << local_player_idx
+        } else {
+            0
+        };
+        self.reset_mask(mask, initial_game);
+    }
+
+    pub fn reset_mask(&mut self, local_player_mask: u8, initial_game: &Game) {
+        self.local_player_mask = local_player_mask;
         self.current_frame = 0;
         self.confirmed_frame = 0;
         self.rollback_count = 0;
@@ -92,7 +140,7 @@ impl RollbackManager {
                 entry.confirmed = false;
             }
             self.last_known_input[p] = 0;
-            self.player_joined[p] = p == local_player_idx;
+            self.player_joined[p] = (local_player_mask & (1 << p)) != 0;
         }
     }
 
@@ -109,11 +157,7 @@ impl RollbackManager {
                 entry.confirmed = false;
             }
             self.last_known_input[p] = 0;
-            self.player_joined[p] = game.players[p].active;
-        }
-
-        if self.local_player_idx < MAX_PLAYERS {
-            self.player_joined[self.local_player_idx] = true;
+            self.player_joined[p] = game.players[p].active || self.is_local_player(p);
         }
     }
 
@@ -124,6 +168,9 @@ impl RollbackManager {
     pub fn set_player_joined(&mut self, player_idx: usize, joined: bool) {
         if player_idx < MAX_PLAYERS {
             self.player_joined[player_idx] = joined;
+            if !joined && self.is_local_player(player_idx) {
+                self.local_player_mask &= !(1 << player_idx);
+            }
         }
     }
 
@@ -136,16 +183,20 @@ impl RollbackManager {
     }
 
     pub fn set_local_input(&mut self, frame: u32, mask: u8) {
-        let p = self.local_player_idx;
-        if p < MAX_PLAYERS {
+        let p = self.primary_local_player();
+        self.set_player_local_input(p, frame, mask);
+    }
+
+    pub fn set_player_local_input(&mut self, player_idx: usize, frame: u32, mask: u8) {
+        if player_idx < MAX_PLAYERS {
             let slot = (frame as usize) % INPUT_HISTORY_BUFFER_SIZE;
-            self.input_history[p][slot] = InputEntry {
+            self.input_history[player_idx][slot] = InputEntry {
                 frame,
                 mask,
                 confirmed: true,
             };
-            self.last_known_input[p] = mask;
-            self.player_joined[p] = true;
+            self.last_known_input[player_idx] = mask;
+            self.player_joined[player_idx] = true;
         }
     }
 
@@ -172,44 +223,18 @@ impl RollbackManager {
         mask: u8,
         game: &mut Game,
     ) -> bool {
-        if peer_idx >= MAX_PLAYERS || peer_idx == self.local_player_idx {
-            return false;
-        }
-
-        self.player_joined[peer_idx] = true;
-
-        // Ignore inputs that are older than our oldest retained snapshot
-        if frame < self.oldest_snapshot_frame() {
-            return false;
-        }
-
-        // Ignore inputs too far in the future
-        if frame > self.current_frame + (MAX_ROLLBACK_FRAMES as u32) {
-            return false;
-        }
-
-        let slot = (frame as usize) % INPUT_HISTORY_BUFFER_SIZE;
-        let prev_entry = &self.input_history[peer_idx][slot];
-        let was_different = (prev_entry.frame == frame && prev_entry.mask != mask)
-            || (prev_entry.frame != frame && self.last_known_input[peer_idx] != mask);
-
-        // Store the confirmed input
-        self.input_history[peer_idx][slot] = InputEntry {
-            frame,
-            mask,
-            confirmed: true,
+        let prev_mask = if frame > 0 {
+            let slot = ((frame - 1) as usize) % INPUT_HISTORY_BUFFER_SIZE;
+            let entry = &self.input_history[peer_idx][slot];
+            if entry.frame == frame - 1 {
+                entry.mask
+            } else {
+                self.last_known_input[peer_idx]
+            }
+        } else {
+            mask
         };
-        self.last_known_input[peer_idx] = mask;
-
-        let mut did_rollback = false;
-
-        // If the frame is in the past and our prediction differed, we MUST rollback and resimulate
-        if frame < self.current_frame && was_different {
-            did_rollback = self.execute_rollback(frame, game);
-        }
-
-        self.update_confirmed_frame();
-        did_rollback
+        self.receive_remote_packet(peer_idx, frame, mask, prev_mask, game)
     }
 
     /// Receives redundant packet `(peer_idx, frame, curr_mask, prev_mask)` and performs at most ONE rollback.
@@ -221,53 +246,52 @@ impl RollbackManager {
         prev_mask: u8,
         game: &mut Game,
     ) -> bool {
-        if peer_idx >= MAX_PLAYERS || peer_idx == self.local_player_idx {
-            return false;
-        }
-        self.player_joined[peer_idx] = true;
+        self.receive_remote_packets(&[(peer_idx, frame, curr_mask, prev_mask)], game)
+    }
 
+    /// Receives a batch of remote inputs and executes at most ONE rollback across all of them.
+    pub fn receive_remote_packets(
+        &mut self,
+        packets: &[(usize, u32, u8, u8)],
+        game: &mut Game,
+    ) -> bool {
         let oldest_snap = self.oldest_snapshot_frame();
-        let mut min_rollback_frame = None;
+        let max_f = self.current_frame + (MAX_ROLLBACK_FRAMES as u32);
+        let mut min_rollback_frame: Option<u32> = None;
 
-        // 1. Process frame - 1 (redundant previous frame input)
-        if frame > 0 && (frame - 1) >= oldest_snap && (frame - 1) <= self.current_frame + (MAX_ROLLBACK_FRAMES as u32) {
-            let prev_f = frame - 1;
-            let slot = (prev_f as usize) % INPUT_HISTORY_BUFFER_SIZE;
-            let entry = &self.input_history[peer_idx][slot];
-            let diff = (entry.frame == prev_f && entry.mask != prev_mask)
-                || (entry.frame != prev_f && self.last_known_input[peer_idx] != prev_mask);
-
-            self.input_history[peer_idx][slot] = InputEntry {
-                frame: prev_f,
-                mask: prev_mask,
-                confirmed: true,
-            };
-
-            if prev_f < self.current_frame && diff {
-                min_rollback_frame = Some(prev_f);
+        for &(peer_idx, frame, curr_mask, prev_mask) in packets {
+            if peer_idx >= MAX_PLAYERS || self.is_local_player(peer_idx) {
+                continue;
             }
-        }
+            self.player_joined[peer_idx] = true;
 
-        // 2. Process current frame input
-        if frame >= oldest_snap && frame <= self.current_frame + (MAX_ROLLBACK_FRAMES as u32) {
-            let slot = (frame as usize) % INPUT_HISTORY_BUFFER_SIZE;
-            let entry = &self.input_history[peer_idx][slot];
-            let diff = (entry.frame == frame && entry.mask != curr_mask)
-                || (entry.frame != frame && self.last_known_input[peer_idx] != curr_mask);
+            let ingest = |f: u32, mask: u8, min_rb: &mut Option<u32>, history: &mut [[InputEntry; INPUT_HISTORY_BUFFER_SIZE]; MAX_PLAYERS], last_known: &[u8; MAX_PLAYERS], cur_f: u32| {
+                if f >= oldest_snap && f <= max_f {
+                    let slot = (f as usize) % INPUT_HISTORY_BUFFER_SIZE;
+                    let entry = &history[peer_idx][slot];
+                    let diff = (entry.frame == f && entry.mask != mask)
+                        || (entry.frame != f && last_known[peer_idx] != mask);
 
-            self.input_history[peer_idx][slot] = InputEntry {
-                frame,
-                mask: curr_mask,
-                confirmed: true,
+                    history[peer_idx][slot] = InputEntry {
+                        frame: f,
+                        mask,
+                        confirmed: true,
+                    };
+
+                    if f < cur_f && diff {
+                        *min_rb = Some(match *min_rb {
+                            Some(c) => c.min(f),
+                            None => f,
+                        });
+                    }
+                }
             };
+
+            if frame > 0 {
+                ingest(frame - 1, prev_mask, &mut min_rollback_frame, &mut self.input_history, &self.last_known_input, self.current_frame);
+            }
+            ingest(frame, curr_mask, &mut min_rollback_frame, &mut self.input_history, &self.last_known_input, self.current_frame);
             self.last_known_input[peer_idx] = curr_mask;
-
-            if frame < self.current_frame && diff {
-                min_rollback_frame = Some(match min_rollback_frame {
-                    Some(f) => f.min(frame),
-                    None => frame,
-                });
-            }
         }
 
         let did_rollback = if let Some(rb_frame) = min_rollback_frame {
@@ -280,81 +304,7 @@ impl RollbackManager {
         did_rollback
     }
 
-    /// Rollback the game to snapshot at `rollback_to_frame` and re-simulate to `self.current_frame`.
-    fn execute_rollback(&mut self, rollback_to_frame: u32, game: &mut Game) -> bool {
-        // Find snapshot at or before rollback_to_frame
-        let mut target_idx = None;
-        for (i, (f, _)) in self.snapshot_history.iter().enumerate() {
-            if *f == rollback_to_frame {
-                target_idx = Some(i);
-                break;
-            }
-        }
-
-        let snap_idx = match target_idx {
-            Some(i) => i,
-            None => {
-                let mut best_i = None;
-                for (i, (f, _)) in self.snapshot_history.iter().enumerate() {
-                    if *f <= rollback_to_frame {
-                        best_i = Some(i);
-                    } else {
-                        break;
-                    }
-                }
-                match best_i {
-                    Some(i) => i,
-                    None => return false,
-                }
-            }
-        };
-
-        let (snap_frame, ref snapshot) = self.snapshot_history[snap_idx];
-        game.load_state(snapshot);
-        self.rollback_count += 1;
-
-        // Truncate future snapshots after snap_frame
-        self.snapshot_history.truncate(snap_idx + 1);
-
-        // Re-simulate ticks from snap_frame to current_frame
-        let end_frame = self.current_frame;
-        for f in snap_frame..end_frame {
-            // Apply inputs for each player at frame f
-            for p in 0..MAX_PLAYERS {
-                if self.player_joined[p] {
-                    let slot = (f as usize) % INPUT_HISTORY_BUFFER_SIZE;
-                    let input_to_apply = if self.input_history[p][slot].frame == f {
-                        self.input_history[p][slot].mask
-                    } else {
-                        let pred = self.last_known_input[p];
-                        self.input_history[p][slot] = InputEntry {
-                            frame: f,
-                            mask: pred,
-                            confirmed: false,
-                        };
-                        pred
-                    };
-                    game.players[p].input_mask = input_to_apply;
-                }
-            }
-
-            // Step game simulation
-            game.step();
-            game.update_camera();
-            self.resimulated_frames_total += 1;
-
-            // Record updated snapshot for f + 1
-            self.snapshot_history.push((f + 1, game.save_state()));
-        }
-
-        true
-    }
-
-    /// Steps one frame forward in time, applying local and predicted remote inputs.
-    pub fn step_frame(&mut self, game: &mut Game) -> u32 {
-        let frame = self.current_frame;
-
-        // Apply inputs for all players, recording predicted inputs in history
+    fn apply_inputs_and_step(&mut self, game: &mut Game, frame: u32) {
         for p in 0..MAX_PLAYERS {
             if self.player_joined[p] {
                 let slot = (frame as usize) % INPUT_HISTORY_BUFFER_SIZE;
@@ -372,20 +322,49 @@ impl RollbackManager {
                 game.players[p].input_mask = mask;
             }
         }
-
-        // Step simulation and camera
         game.step();
         game.update_camera();
+    }
 
+    /// Rollback the game to snapshot at `rollback_to_frame` and re-simulate to `self.current_frame`.
+    fn execute_rollback(&mut self, rollback_to_frame: u32, game: &mut Game) -> bool {
+        // Find snapshot at or before rollback_to_frame
+        let snap_idx = match self
+            .snapshot_history
+            .iter()
+            .rposition(|(f, _)| *f <= rollback_to_frame)
+        {
+            Some(i) => i,
+            None => return false,
+        };
+
+        let (snap_frame, ref snapshot) = self.snapshot_history[snap_idx];
+        game.load_state(snapshot);
+        self.rollback_count += 1;
+
+        // Truncate future snapshots after snap_frame
+        self.snapshot_history.truncate(snap_idx + 1);
+
+        // Re-simulate ticks from snap_frame to current_frame
+        let end_frame = self.current_frame;
+        for f in snap_frame..end_frame {
+            self.apply_inputs_and_step(game, f);
+            self.resimulated_frames_total += 1;
+            self.snapshot_history.push((f + 1, game.save_state()));
+        }
+
+        true
+    }
+
+    /// Steps one frame forward in time, applying local and predicted remote inputs.
+    pub fn step_frame(&mut self, game: &mut Game) -> u32 {
+        let frame = self.current_frame;
+        self.apply_inputs_and_step(game, frame);
         self.current_frame += 1;
 
-        // Store snapshot for the new frame
         self.snapshot_history.push((self.current_frame, game.save_state()));
-
-        // Prune oldest snapshots beyond MAX_ROLLBACK_FRAMES
         if self.snapshot_history.len() > MAX_ROLLBACK_FRAMES {
-            let overflow = self.snapshot_history.len() - MAX_ROLLBACK_FRAMES;
-            self.snapshot_history.drain(0..overflow);
+            self.snapshot_history.remove(0);
         }
 
         self.current_frame
@@ -396,7 +375,7 @@ impl RollbackManager {
         let mut any_peer = false;
 
         for p in 0..MAX_PLAYERS {
-            if p != self.local_player_idx && self.player_joined[p] {
+            if !self.is_local_player(p) && self.player_joined[p] {
                 any_peer = true;
                 let mut peer_confirmed = 0;
                 let oldest = self.oldest_snapshot_frame();
@@ -550,5 +529,41 @@ mod tests {
         let did_rb = rollback.receive_remote_packet(1, 5, ACTION_UP, ACTION_LEFT, &mut game);
         assert!(did_rb);
         assert_eq!(rollback.rollback_count, 1, "Should execute exactly one rollback for both redundant frames");
+    }
+
+    #[test]
+    fn test_hybrid_multi_local_rollback() {
+        let mut game_a = Game::new();
+        game_a.load();
+        game_a.spawn_player(1);
+        game_a.spawn_player(2);
+        game_a.spawn_player(3);
+
+        // Host controls P1 (slot 0) and P2 (slot 1) locally
+        let mut host_rollback = RollbackManager::new_with_mask(0b0011, &game_a);
+        host_rollback.set_player_joined(2, true);
+        host_rollback.set_player_joined(3, true);
+
+        // Step 10 frames on Host: P1 moves Right, P2 moves Down
+        for f in 0..10 {
+            host_rollback.set_player_local_input(0, f, ACTION_RIGHT);
+            host_rollback.set_player_local_input(1, f, ACTION_DOWN);
+            host_rollback.step_frame(&mut game_a);
+        }
+        assert_eq!(host_rollback.current_frame, 10);
+        assert_eq!(host_rollback.rollback_count, 0);
+
+        // Remote peer (controlling P3 slot 2 and P4 slot 3) sends delayed inputs for frame 4
+        let rb_p3 = host_rollback.receive_remote_input(2, 4, ACTION_LEFT, &mut game_a);
+        assert!(rb_p3, "Delayed remote P3 input must trigger rollback on Host");
+        assert_eq!(host_rollback.rollback_count, 1);
+
+        let rb_p4 = host_rollback.receive_remote_input(3, 4, ACTION_UP, &mut game_a);
+        assert!(rb_p4, "Delayed remote P4 input must trigger rollback on Host");
+        assert_eq!(host_rollback.rollback_count, 2);
+
+        // Ensure host local slots (0 and 1) were not overridden by remote receive
+        assert!(!host_rollback.receive_remote_input(0, 4, ACTION_UP, &mut game_a), "Host cannot receive remote input for local slot 0");
+        assert!(!host_rollback.receive_remote_input(1, 4, ACTION_UP, &mut game_a), "Host cannot receive remote input for local slot 1");
     }
 }

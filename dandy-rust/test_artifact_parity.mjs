@@ -242,6 +242,64 @@ assert.strictEqual(rb2, true, "Out-of-order Frame 6 packet must trigger rollback
 assert.strictEqual(peerA.net_get_rollback_count(), 2, "Rollback count should be 2 after handling out-of-order packet");
 console.log("✓ Out-of-order packet rollback recovery verified.");
 
+// Test: Hybrid Multi-Local Rollback & Concatenated Input Packets
+console.log("\nTesting Hybrid Multi-Local Netcode (Host 2 Local + Joiner 2 Local)...");
+const hybridHost = new DandyApp();
+hybridHost.net_init_mask(0b0011); // Host controls P1 & P2
+hybridHost.net_set_player_joined(2, true); // P3 joined
+hybridHost.net_set_player_joined(3, true); // P4 joined
+
+assert.strictEqual(hybridHost.net_is_local_player(0), true);
+assert.strictEqual(hybridHost.net_is_local_player(1), true);
+assert.strictEqual(hybridHost.net_is_local_player(2), false);
+assert.strictEqual(hybridHost.net_is_local_player(3), false);
+assert.strictEqual(hybridHost.net_get_local_player_mask(), 0b0011);
+
+const hybridJoiner = new DandyApp();
+hybridJoiner.net_init_mask(0b1100); // Joiner controls P3 & P4
+hybridJoiner.net_set_player_joined(0, true);
+hybridJoiner.net_set_player_joined(1, true);
+
+// Host steps with inputs for P1 and P2
+for (let f = 0; f < 10; f++) {
+    hybridHost.net_set_player_local_action(0, PlayerAction.Right, true);
+    hybridHost.net_set_player_local_action(1, PlayerAction.Down, true);
+    hybridHost.net_step();
+}
+assert.strictEqual(hybridHost.net_get_current_frame(), 10);
+
+// Joiner encodes 16-byte multi-local input packet for frame 4 (P3: Left, P4: Up)
+hybridJoiner.net_set_player_local_action(2, PlayerAction.Left, true);
+hybridJoiner.net_set_player_local_action(3, PlayerAction.Up, true);
+const multiPktFrame4 = hybridJoiner.net_encode_all_local_input_packets(4);
+assert.strictEqual(multiPktFrame4.length, 16, "Multi-local input packet for 2 players must be 16 bytes");
+
+// Test: Net Init Mask Entity Lifecycle Sync
+const maskTestApp = new DandyApp();
+assert.strictEqual(maskTestApp.is_player_active(0), true, "P1 starts active by default");
+maskTestApp.net_init_mask(0); // Pre-connection empty mask
+assert.strictEqual(maskTestApp.is_player_active(0), false, "P1 should be deactivated when mask is 0");
+assert.strictEqual(maskTestApp.net_is_local_player(0), false);
+assert.strictEqual(maskTestApp.net_get_local_player_mask(), 0);
+
+maskTestApp.net_init_mask(0b0010); // Assigned P2 Sapphire
+assert.strictEqual(maskTestApp.is_player_active(0), false, "P1 should be inactive");
+assert.strictEqual(maskTestApp.is_player_active(1), true, "P2 should be spawned active");
+assert.strictEqual(maskTestApp.net_is_local_player(1), true);
+
+// Test: State snapshot sync on joiner activates joiner's local player even if inactive in host snapshot
+const hostSnapshotApp = new DandyApp();
+hostSnapshotApp.net_init_mask(0b0001); // Host has only P1 active
+const hostSnap = hostSnapshotApp.save_state_bytes();
+
+const joinerSyncApp = new DandyApp();
+joinerSyncApp.net_init_mask(0b0010); // Joiner is P2
+joinerSyncApp.net_load_sync_state(0, hostSnap);
+assert.strictEqual(joinerSyncApp.is_player_active(0), true, "Host P1 should be active from snapshot");
+assert.strictEqual(joinerSyncApp.is_player_active(1), true, "Joiner P2 should be active after sync");
+console.log("✓ Net Init Mask & Snapshot Sync Player Lifecycle Parity verified.");
+console.log("✓ Hybrid Multi-Local Netcode verified (2 local host + 2 local joiner).");
+
 // 7. Boundary extraction zero-copy view validity
 const fbPtr = app.get_framebuffer_ptr();
 const fbSize = app.get_framebuffer_size();

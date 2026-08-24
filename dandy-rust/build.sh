@@ -27,7 +27,7 @@ fi
 
 echo "Compressing artifacts..."
 for f in dist/*_bg.wasm; do
-    gzip -k -f "$f"
+    gzip -9 -k -f "$f"
     raw_size=$(stat -c%s "$f")
     gz_size=$(stat -c%s "${f}.gz")
     echo "Artifact size: $(basename "$f") -> ${raw_size} B raw, ${gz_size} B gzip"

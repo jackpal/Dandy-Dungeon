@@ -168,39 +168,102 @@ impl DandyApp {
     // -------------------------------------------------------------------------
 
     pub fn net_init(&mut self, local_player_idx: usize) {
-        self.rollback.reset(local_player_idx, &self.game);
+        let mask = if local_player_idx < MAX_PLAYERS { 1 << local_player_idx } else { 0 };
+        self.net_init_mask(mask);
+    }
+
+    pub fn net_init_mask(&mut self, local_player_mask: u8) {
+        for p in 0..MAX_PLAYERS {
+            if (local_player_mask & (1 << p)) != 0 {
+                if !self.game.players[p].active {
+                    self.game.spawn_player(p);
+                }
+            } else if self.game.players[p].active {
+                self.game.remove_player(p);
+            }
+        }
+        self.rollback.reset_mask(local_player_mask, &self.game);
+        self.render_framebuffer();
+        self.update_stats_buffer();
+    }
+
+    pub fn net_set_is_local_player(&mut self, player_idx: usize, is_local: bool) {
+        self.rollback.set_local_player(player_idx, is_local);
+        if is_local {
+            self.game.spawn_player(player_idx);
+        }
+        self.update_stats_buffer();
+    }
+
+    pub fn net_is_local_player(&self, player_idx: usize) -> bool {
+        self.rollback.is_local_player(player_idx)
+    }
+
+    pub fn net_get_local_player_mask(&self) -> u8 {
+        self.rollback.local_player_mask
     }
 
     pub fn net_set_local_action(&mut self, action: PlayerAction, pressed: bool) {
-        let p = self.rollback.local_player_idx;
-        if p < MAX_PLAYERS {
+        let p = self.rollback.primary_local_player();
+        self.net_set_player_local_action(p, action, pressed);
+    }
+
+    pub fn net_set_player_local_action(&mut self, player_idx: usize, action: PlayerAction, pressed: bool) {
+        if player_idx < MAX_PLAYERS {
             let bit = 1 << (action as u8);
-            let mut mask = self.rollback.last_known_input[p];
+            let mut mask = self.rollback.last_known_input[player_idx];
             if pressed {
                 mask |= bit;
             } else {
                 mask &= !bit;
             }
             let frame = self.rollback.current_frame;
-            self.rollback.set_local_input(frame, mask);
+            self.rollback.set_player_local_input(player_idx, frame, mask);
         }
     }
 
     pub fn net_set_local_input_mask(&mut self, mask: u8) {
+        let p = self.rollback.primary_local_player();
+        self.net_set_player_local_input_mask(p, mask);
+    }
+
+    pub fn net_set_player_local_input_mask(&mut self, player_idx: usize, mask: u8) {
         let frame = self.rollback.current_frame;
-        self.rollback.set_local_input(frame, mask);
+        self.rollback.set_player_local_input(player_idx, frame, mask);
     }
 
     pub fn net_get_local_input_mask(&self, frame: u32) -> u8 {
-        self.rollback.get_input(self.rollback.local_player_idx, frame)
+        self.net_get_player_input_mask(self.rollback.primary_local_player(), frame)
+    }
+
+    pub fn net_get_player_input_mask(&self, player_idx: usize, frame: u32) -> u8 {
+        self.rollback.get_input(player_idx, frame)
     }
 
     pub fn net_encode_local_input_packet(&self, frame: u32) -> Vec<u8> {
-        let p = self.rollback.local_player_idx as u8;
-        let curr_mask = self.rollback.get_input(self.rollback.local_player_idx, frame);
+        self.net_encode_player_input_packet(self.rollback.primary_local_player(), frame)
+    }
+
+    pub fn net_encode_player_input_packet(&self, player_idx: usize, frame: u32) -> Vec<u8> {
+        let p = player_idx as u8;
+        let curr_mask = self.rollback.get_input(player_idx, frame);
         let prev_frame = if frame > 0 { frame - 1 } else { 0 };
-        let prev_mask = self.rollback.get_input(self.rollback.local_player_idx, prev_frame);
+        let prev_mask = self.rollback.get_input(player_idx, prev_frame);
         netcode::encode_input_packet(p, frame, curr_mask, prev_mask).to_vec()
+    }
+
+    pub fn net_encode_all_local_input_packets(&self, frame: u32) -> Vec<u8> {
+        let mut buf = Vec::with_capacity(32);
+        for p in 0..MAX_PLAYERS {
+            if self.rollback.is_local_player(p) && self.rollback.is_player_joined(p) {
+                let curr_mask = self.rollback.get_input(p, frame);
+                let prev_frame = if frame > 0 { frame - 1 } else { 0 };
+                let prev_mask = self.rollback.get_input(p, prev_frame);
+                let pkt = netcode::encode_input_packet(p as u8, frame, curr_mask, prev_mask);
+                buf.extend_from_slice(&pkt);
+            }
+        }
+        buf
     }
 
     pub fn net_receive_remote_input(&mut self, peer_idx: usize, frame: u32, mask: u8) -> bool {
@@ -213,16 +276,25 @@ impl DandyApp {
     }
 
     pub fn net_receive_remote_packet(&mut self, bytes: &[u8]) -> bool {
-        if let Some((peer_idx, frame, curr_mask, prev_mask)) = netcode::decode_input_packet(bytes) {
-            let p = peer_idx as usize;
-            let did_rollback = self.rollback.receive_remote_packet(p, frame, curr_mask, prev_mask, &mut self.game);
-            if did_rollback {
-                self.render_framebuffer();
-                self.update_stats_buffer();
+        let mut parsed = [(0usize, 0u32, 0u8, 0u8); 4];
+        let mut count = 0;
+        for chunk in bytes.chunks_exact(8) {
+            if let Some((peer_idx, frame, curr_mask, prev_mask)) = netcode::decode_input_packet(chunk) {
+                if count < 4 {
+                    parsed[count] = (peer_idx as usize, frame, curr_mask, prev_mask);
+                    count += 1;
+                }
             }
-            return did_rollback;
         }
-        false
+        if count == 0 {
+            return false;
+        }
+        let did_rollback = self.rollback.receive_remote_packets(&parsed[..count], &mut self.game);
+        if did_rollback {
+            self.render_framebuffer();
+            self.update_stats_buffer();
+        }
+        did_rollback
     }
 
     pub fn net_step(&mut self) -> u32 {
@@ -265,6 +337,11 @@ impl DandyApp {
     pub fn net_load_sync_state(&mut self, frame: u32, bytes: &[u8]) -> bool {
         let success = self.game.load_state_bytes(bytes);
         if success {
+            for p in 0..MAX_PLAYERS {
+                if self.rollback.is_local_player(p) && !self.game.players[p].active {
+                    self.game.spawn_player(p);
+                }
+            }
             self.rollback.sync_state(frame, &self.game);
             self.render_framebuffer();
             self.update_stats_buffer();

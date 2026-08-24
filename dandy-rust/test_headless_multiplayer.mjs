@@ -221,10 +221,10 @@ try {
     console.log("✓ All 4 player instances report 'Connected' status.");
 
     // 2. Slot Badges (Full 4x4 matrix assertion)
-    assert.deepStrictEqual(res.p1Badges, ["LOCAL [ME]", "CONNECTED", "CONNECTED", "CONNECTED"], "P1 badges matrix mismatch");
-    assert.deepStrictEqual(res.p2Badges, ["CONNECTED", "LOCAL [ME]", "CONNECTED", "CONNECTED"], "P2 badges matrix mismatch");
-    assert.deepStrictEqual(res.p3Badges, ["CONNECTED", "CONNECTED", "LOCAL [ME]", "CONNECTED"], "P3 badges matrix mismatch");
-    assert.deepStrictEqual(res.p4Badges, ["CONNECTED", "CONNECTED", "CONNECTED", "LOCAL [ME]"], "P4 badges matrix mismatch");
+    assert.deepStrictEqual(res.p1Badges, ["LOCAL [ME]", "REMOTE", "REMOTE", "REMOTE"], "P1 badges matrix mismatch");
+    assert.deepStrictEqual(res.p2Badges, ["REMOTE", "LOCAL [ME]", "REMOTE", "REMOTE"], "P2 badges matrix mismatch");
+    assert.deepStrictEqual(res.p3Badges, ["REMOTE", "REMOTE", "LOCAL [ME]", "REMOTE"], "P3 badges matrix mismatch");
+    assert.deepStrictEqual(res.p4Badges, ["REMOTE", "REMOTE", "REMOTE", "LOCAL [ME]"], "P4 badges matrix mismatch");
     console.log("✓ Dynamic Slot Cards and Badges verified across all 4 player instances (Full 4x4 Matrix).");
 
     // 3. Frame Advance

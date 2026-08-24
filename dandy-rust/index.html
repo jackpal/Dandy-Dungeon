@@ -1256,6 +1256,7 @@
             const app = new DandyApp();
             let isOnlineMode = false;
             let localPlayerIdx = 0; // Host is 0 (Ruby), Joiners are 1, 2, 3
+            let isWaitingForHostSync = false;
             let currentRoomId = null;
             let sleeping = false;
             let loopRunning = true;
@@ -1361,13 +1362,28 @@
                 const bind = controlRegistry[e.key];
                 if (bind !== undefined) {
                     pressedKeys.add(e.key);
+                    const targetPlayer = bind.player;
 
                     if (isOnlineMode) {
-                        // In online mode, all keyboard inputs map to the local player's character slot
-                        app.net_set_local_action(bind.action, true);
+                        if (isWaitingForHostSync) {
+                            // Suppress movement while waiting for host snapshot state sync
+                        } else if (app.net_is_local_player(targetPlayer)) {
+                            app.net_set_player_local_action(targetPlayer, bind.action, true);
+                        } else if (!app.net_is_player_joined(targetPlayer)) {
+                            // Hot-join this open slot locally!
+                            app.net_set_is_local_player(targetPlayer, true);
+                            app.net_set_player_joined(targetPlayer, true);
+                            app.net_set_player_local_action(targetPlayer, bind.action, true);
+                            broadcastPacket(new Uint8Array([0x05, targetPlayer, 1]));
+                            updateSlotCards();
+                        }
                     } else {
                         // In local co-op mode, map to respective player slot 0..3
-                        app.set_action(bind.player, bind.action, true);
+                        if (!app.is_player_active(targetPlayer)) {
+                            app.spawn_player(targetPlayer);
+                            updateSlotCards();
+                        }
+                        app.set_action(targetPlayer, bind.action, true);
                     }
                     wakeLoop();
 
@@ -1381,10 +1397,13 @@
                 const bind = controlRegistry[e.key];
                 if (bind !== undefined) {
                     pressedKeys.delete(e.key);
+                    const targetPlayer = bind.player;
                     if (isOnlineMode) {
-                        app.net_set_local_action(bind.action, false);
+                        if (app.net_is_local_player(targetPlayer)) {
+                            app.net_set_player_local_action(targetPlayer, bind.action, false);
+                        }
                     } else {
-                        app.set_action(bind.player, bind.action, false);
+                        app.set_action(targetPlayer, bind.action, false);
                     }
                 }
             });
@@ -1412,7 +1431,9 @@
                     try { btn.setPointerCapture(e.pointerId); } catch (_) {}
                     btn.classList.add("active");
                     if (isOnlineMode) {
-                        app.net_set_local_action(action, true);
+                        if (!isWaitingForHostSync) {
+                            app.net_set_local_action(action, true);
+                        }
                     } else {
                         app.set_action(0, action, true);
                     }
@@ -1425,7 +1446,9 @@
                     try { btn.releasePointerCapture(e.pointerId); } catch (_) {}
                     btn.classList.remove("active");
                     if (isOnlineMode) {
-                        app.net_set_local_action(action, false);
+                        if (!isWaitingForHostSync) {
+                            app.net_set_local_action(action, false);
+                        }
                     } else {
                         app.set_action(0, action, false);
                     }
@@ -1443,7 +1466,11 @@
                 activeTouches.clear();
                 touchButtons.forEach((btn) => btn.classList.remove("active"));
                 if (isOnlineMode) {
-                    app.net_set_local_input_mask(0);
+                    for (let i = 0; i < 4; i++) {
+                        if (app.net_is_local_player(i)) {
+                            app.net_set_player_local_input_mask(i, 0);
+                        }
+                    }
                 } else {
                     for (let i = 0; i < 4; i++) {
                         app.set_player_input_mask(i, 0);
@@ -1566,21 +1593,23 @@
                     if (localPlayerIdx === 0) {
                         // Host
                         app.net_set_player_joined(assignedSlot, true);
+                        document.getElementById("net-stat-status").textContent = "Connected";
+                        document.getElementById("net-stat-status").style.color = "#4caf50";
                         updateSlotCards();
                         sendInitialState(dc, assignedSlot);
                         broadcastPacket(new Uint8Array([0x05, assignedSlot, 1]), peerId);
                     } else {
                         // Joiner
-                        app.net_set_player_joined(0, true); // Host is slot 0
-                        app.net_set_player_joined(localPlayerIdx, true); // Local player slot
                         updateSlotCards();
-                        try {
-                            dc.send(new Uint8Array([0x05, localPlayerIdx, 1]));
-                        } catch (_) {}
+                        for (let p = 0; p < 4; p++) {
+                            if (app.net_is_local_player(p)) {
+                                try {
+                                    dc.send(new Uint8Array([0x05, p, 1]));
+                                } catch (_) {}
+                            }
+                        }
                     }
                     wakeLoop();
-                    document.getElementById("net-stat-status").textContent = "Connected";
-                    document.getElementById("net-stat-status").style.color = "#4caf50";
                 };
 
                 dc.onopen = onOpenHandler;
@@ -1591,10 +1620,14 @@
                 dc.onclose = () => {
                     console.log(`[P2P] DataChannel closed for peer ${peerId}`);
                     if (localPlayerIdx === 0) {
-                        app.net_set_player_joined(assignedSlot, false);
+                        const peer = PEER_CONNECTIONS.get(peerId);
+                        const slotsToFree = peer && peer.ownedSlots ? Array.from(peer.ownedSlots) : [assignedSlot];
+                        for (const s of slotsToFree) {
+                            app.net_set_player_joined(s, false);
+                            broadcastPacket(new Uint8Array([0x06, s]));
+                        }
                         PEER_CONNECTIONS.delete(peerId);
                         updateSlotCards();
-                        broadcastPacket(new Uint8Array([0x06, assignedSlot]));
                     } else {
                         PEER_CONNECTIONS.delete(peerId);
                         updateSlotCards();
@@ -1629,31 +1662,48 @@
                                     const hostFrame = dv.getUint32(1, false);
                                     const stateBytes = bytes.subarray(5);
                                     app.net_load_sync_state(hostFrame, stateBytes);
-                                    wakeLoop();
-                                    updateSlotCards();
                                 } else {
                                     const stateBytes = bytes.subarray(1);
                                     app.load_state_bytes(stateBytes);
-                                    wakeLoop();
-                                    updateSlotCards();
                                 }
+                                isWaitingForHostSync = false;
+                                document.getElementById("net-stat-status").textContent = "Connected";
+                                document.getElementById("net-stat-status").style.color = "#4caf50";
+                                updateSlotCards();
+                                wakeLoop();
                             } else if (pktType === 0x05) { // PKT_JOIN
                                 const slot = bytes[1];
                                 const joined = bytes.length > 2 ? (bytes[2] === 1) : true;
-                                app.net_set_player_joined(slot, joined);
-                                updateSlotCards();
-                                wakeLoop();
+                                if (!app.net_is_local_player(slot)) {
+                                    app.net_set_player_joined(slot, joined);
+                                }
                                 if (localPlayerIdx === 0) {
+                                    const peer = PEER_CONNECTIONS.get(peerId);
+                                    if (peer && peer.ownedSlots) {
+                                        if (joined) {
+                                            peer.ownedSlots.add(slot);
+                                        } else {
+                                            peer.ownedSlots.delete(slot);
+                                        }
+                                    }
                                     broadcastPacket(bytes, peerId);
                                 }
+                                updateSlotCards();
+                                wakeLoop();
                             } else if (pktType === 0x06) { // PKT_LEAVE
                                 const slot = bytes[1];
-                                app.net_set_player_joined(slot, false);
-                                updateSlotCards();
-                                wakeLoop();
+                                if (!app.net_is_local_player(slot)) {
+                                    app.net_set_player_joined(slot, false);
+                                }
                                 if (localPlayerIdx === 0) {
+                                    const peer = PEER_CONNECTIONS.get(peerId);
+                                    if (peer && peer.ownedSlots) {
+                                        peer.ownedSlots.delete(slot);
+                                    }
                                     broadcastPacket(bytes, peerId);
                                 }
+                                updateSlotCards();
+                                wakeLoop();
                             }
                         }
                     }
@@ -1731,8 +1781,13 @@
                                 }
                             }
 
-                            // Allocate next open player slot (1..3)
-                            const usedSlots = new Set([0]);
+                            // Allocate next open player slot (1..3) not local to host and not taken by peers
+                            const usedSlots = new Set();
+                            for (let s = 0; s < 4; s++) {
+                                if (app.net_is_local_player(s)) {
+                                    usedSlots.add(s);
+                                }
+                            }
                             for (const peer of PEER_CONNECTIONS.values()) {
                                 usedSlots.add(peer.playerIdx);
                             }
@@ -1790,9 +1845,10 @@
 
                             const assignedSlot = msg.assignedSlot || 1;
                             localPlayerIdx = assignedSlot;
-                            app.net_init(localPlayerIdx);
+                            app.net_init_mask(1 << assignedSlot);
+                            isWaitingForHostSync = true;
                             const classNames = ["Ruby", "Sapphire", "Topaz", "Emerald"];
-                            document.getElementById("net-stat-role").textContent = `P${localPlayerIdx + 1} ${classNames[localPlayerIdx].toUpperCase()}`;
+                            document.getElementById("net-stat-role").textContent = `P${localPlayerIdx + 1} ${classNames[localPlayerIdx].toUpperCase()} [ME]`;
                             updateSlotCards();
 
                             await createJoinerPeerConnection(hostId, msg.sdp, assignedSlot);
@@ -1834,18 +1890,24 @@
                     }
                 };
 
+                const ownedSlots = new Set([assignedSlot]);
+
                 pc.onconnectionstatechange = () => {
                     if (pc.connectionState === "failed" || pc.connectionState === "closed") {
                         console.log(`[Host] Peer connection failed/closed for ${peerId}`);
-                        app.net_set_player_joined(assignedSlot, false);
+                        const peer = PEER_CONNECTIONS.get(peerId);
+                        const slotsToFree = peer && peer.ownedSlots ? Array.from(peer.ownedSlots) : Array.from(ownedSlots);
+                        for (const s of slotsToFree) {
+                            app.net_set_player_joined(s, false);
+                            broadcastPacket(new Uint8Array([0x06, s]));
+                        }
                         PEER_CONNECTIONS.delete(peerId);
                         updateSlotCards();
-                        broadcastPacket(new Uint8Array([0x06, assignedSlot]));
                         wakeLoop();
                     }
                 };
 
-                PEER_CONNECTIONS.set(peerId, { pc, dc, playerIdx: assignedSlot, ping: 0 });
+                PEER_CONNECTIONS.set(peerId, { pc, dc, playerIdx: assignedSlot, ownedSlots, ping: 0 });
 
                 const offer = await pc.createOffer();
                 await pc.setLocalDescription(offer);
@@ -2002,6 +2064,7 @@
 
             tabLocal.addEventListener("click", () => {
                 isOnlineMode = false;
+                isWaitingForHostSync = false;
                 closeAllPeerConnections();
                 if (broadcastChannel) {
                     try { broadcastChannel.close(); } catch (_) {}
@@ -2012,6 +2075,9 @@
                     signalingWs = null;
                 }
                 currentRoomId = null;
+                if (window.location.hash) {
+                    try { history.replaceState(null, "", window.location.pathname); } catch (_) {}
+                }
                 tabLocal.classList.add("active");
                 tabOnline.classList.remove("active");
                 onlinePanel.style.display = "none";
@@ -2019,6 +2085,7 @@
                 btnShowQr.style.display = "none";
                 document.getElementById("net-stat-role").textContent = "LOCAL";
                 document.getElementById("net-stat-status").textContent = "Ready";
+                document.getElementById("net-stat-status").style.color = "#4caf50";
                 document.getElementById("net-stat-room").textContent = "NONE";
                 updateSlotCards();
                 wakeLoop();
@@ -2062,10 +2129,16 @@
 
             tabOnline.addEventListener("click", () => {
                 isOnlineMode = true;
+                isWaitingForHostSync = false;
                 tabOnline.classList.add("active");
                 tabLocal.classList.remove("active");
                 onlinePanel.style.display = "flex";
-                app.net_init(localPlayerIdx);
+                localPlayerIdx = 0;
+                app.net_init_mask(0b0001);
+                document.getElementById("net-stat-role").textContent = "P1 RUBY [ME]";
+                document.getElementById("net-stat-status").textContent = "Ready";
+                document.getElementById("net-stat-status").style.color = "#4caf50";
+                document.getElementById("net-stat-room").textContent = currentRoomId || "NONE";
                 updateSlotCards();
                 wakeLoop();
             });
@@ -2074,13 +2147,15 @@
                 closeAllPeerConnections();
                 const randomId = "DANDY-" + Math.floor(1000 + Math.random() * 9000);
                 isOnlineMode = true;
+                isWaitingForHostSync = false;
                 tabOnline.classList.add("active");
                 tabLocal.classList.remove("active");
                 onlinePanel.style.display = "flex";
                 localPlayerIdx = 0; // Host is P1 Ruby
-                app.net_init(0);
+                app.net_init_mask(0b0001);
                 document.getElementById("net-stat-role").textContent = "P1 RUBY (HOST)";
                 document.getElementById("net-stat-status").textContent = "Waiting for peers...";
+                document.getElementById("net-stat-status").style.color = "#4caf50";
                 updateSlotCards();
                 wakeLoop();
 
@@ -2109,12 +2184,15 @@
 
                 closeAllPeerConnections();
                 isOnlineMode = true;
+                isWaitingForHostSync = true;
                 tabOnline.classList.add("active");
                 tabLocal.classList.remove("active");
                 onlinePanel.style.display = "flex";
-                localPlayerIdx = 1; // Default joiner slot until assigned
-                app.net_init(localPlayerIdx);
-                document.getElementById("net-stat-status").textContent = "Connecting...";
+                localPlayerIdx = 1; // Provisional joiner slot until assigned
+                app.net_init_mask(0); // Empty mask until host offer & sync
+                document.getElementById("net-stat-role").textContent = "CONNECTING...";
+                document.getElementById("net-stat-status").textContent = "Connecting to room " + code + "...";
+                document.getElementById("net-stat-status").style.color = "#ffa726";
                 updateSlotCards();
                 wakeLoop();
 
@@ -2178,7 +2256,7 @@
                     const data = JSON.parse(sdpText.value.trim());
                     if (data.type === "offer") {
                         localPlayerIdx = data.assignedSlot || 1;
-                        app.net_init(localPlayerIdx);
+                        app.net_init_mask(1 << localPlayerIdx);
                         await createJoinerPeerConnection("MANUAL-HOST", data.sdp, localPlayerIdx);
                         sdpText.value = JSON.stringify({ type: "answer", sdp: PEER_CONNECTIONS.get("MANUAL-HOST").pc.localDescription });
                     } else if (data.type === "answer") {
@@ -2199,11 +2277,20 @@
                     const roomMatch = window.location.hash.match(/room=([A-Za-z0-9-]+)/);
                     if (roomMatch) {
                         const roomId = roomMatch[1];
+                        if (currentRoomId === roomId && localPlayerIdx === 0) {
+                            // Host already created and initialized this room, ignore hash event
+                            return;
+                        }
                         isOnlineMode = true;
+                        isWaitingForHostSync = true;
                         tabOnline.classList.add("active");
                         tabLocal.classList.remove("active");
                         onlinePanel.style.display = "flex";
                         inputRoomCode.value = roomId;
+                        document.getElementById("net-stat-role").textContent = "CONNECTING...";
+                        document.getElementById("net-stat-status").textContent = "Connecting to room " + roomId + "...";
+                        document.getElementById("net-stat-status").style.color = "#ffa726";
+                        updateSlotCards();
                         wakeLoop();
                         if (currentRoomId !== roomId) {
                             setTimeout(() => btnJoinRoom.click(), 100);
@@ -2217,20 +2304,28 @@
 
             function updateSlotCards() {
                 const classNames = ["Ruby", "Sapphire", "Topaz", "Emerald"];
-                const joinHints = ["LOCAL [ME]", "Press WASD", "Press IJKL", "Press Num8"];
+                const joinHints = ["Arrows/Space/B", "Press WASD", "Press IJKL", "Press Num8"];
 
                 for (let i = 0; i < 4; i++) {
                     const card = document.getElementById("slot-p" + (i + 1));
                     const badge = document.getElementById("slot-badge-p" + (i + 1));
                     if (!card || !badge) continue;
+
+                    if (isOnlineMode && isWaitingForHostSync) {
+                        card.classList.remove("active");
+                        badge.textContent = "Connecting...";
+                        continue;
+                    }
+
                     const isActive = isOnlineMode ? app.net_is_player_joined(i) : app.is_player_active(i);
+                    const isLocal = isOnlineMode ? app.net_is_local_player(i) : (i === 0 || app.is_player_active(i));
 
                     if (isActive) {
                         card.classList.add("active");
                         if (isOnlineMode) {
-                            badge.textContent = (i === localPlayerIdx) ? "LOCAL [ME]" : "CONNECTED";
+                            badge.textContent = isLocal ? "LOCAL [ME]" : "REMOTE";
                         } else {
-                            badge.textContent = "ACTIVE";
+                            badge.textContent = (i === 0) ? "LOCAL [ME]" : "ACTIVE";
                         }
                     } else {
                         card.classList.remove("active");
@@ -2251,6 +2346,21 @@
             ];
 
             function updateHUD(statsArray) {
+                if (isOnlineMode && isWaitingForHostSync) {
+                    for (let i = 0; i < 4; i++) {
+                        const row = document.getElementById("hud-p" + (i + 1));
+                        if (row) {
+                            row.innerHTML = `<td colspan="5" class="hud-inactive">${playerLabels[i]}: Connecting...</td>`;
+                        }
+                        lastHuds[i].active = false;
+                        lastHuds[i].score = -1;
+                        lastHuds[i].health = -1;
+                        lastHuds[i].keys = -1;
+                        lastHuds[i].bombs = -1;
+                    }
+                    return;
+                }
+
                 for (let i = 0; i < 4; i++) {
                     const offset = i * 7;
                     const active = statsArray[offset] === 1;
@@ -2313,12 +2423,29 @@
                 if (!loopRunning) return;
 
                 if (isOnlineMode) {
+                    if (isWaitingForHostSync) {
+                        ctx.fillStyle = "#121212";
+                        ctx.fillRect(0, 0, 320, 160);
+                        ctx.fillStyle = "#ffa726";
+                        ctx.font = "bold 12px 'Courier New', monospace";
+                        ctx.textAlign = "center";
+                        ctx.fillText("CONNECTING TO ROOM...", 160, 70);
+                        ctx.fillStyle = "#b0b0b0";
+                        ctx.font = "9px 'Courier New', monospace";
+                        ctx.fillText("Waiting for host snapshot state sync...", 160, 95);
+                        ctx.textAlign = "start";
+                        requestAnimationFrame(gameLoop);
+                        return;
+                    }
+
                     // 1. Advance rollback netcode step
                     const currentFrame = app.net_step();
 
-                    // 2. Broadcast local input packet to all peers over WebRTC DataChannels
-                    const inputPacket = app.net_encode_local_input_packet(currentFrame);
-                    broadcastPacket(inputPacket);
+                    // 2. Broadcast local input packets for all local player slots to peers
+                    const inputPackets = app.net_encode_all_local_input_packets(currentFrame);
+                    if (inputPackets.length > 0) {
+                        broadcastPacket(inputPackets);
+                    }
 
                     // 3. Periodic Ping (every 1s)
                     const now = performance.now();
