@@ -9,7 +9,7 @@ const GBROWSER_BIN = "/google/bin/releases/gemini-agents-gbrowser/gbrowser";
 const testCode = `
 new Promise(async (resolve, reject) => {
     try {
-        console.log("[Test] 1. Initializing Host (P1 Warrior)...");
+        console.log("[Test] 1. Initializing Host (P1 Ruby)...");
         document.getElementById("tab-online").click();
         document.getElementById("btn-create-room").click();
         await new Promise(r => setTimeout(r, 200));
@@ -31,7 +31,7 @@ new Promise(async (resolve, reject) => {
             return iframe;
         }
 
-        console.log("[Test] 2. Spawning P2 (Valkyrie), P3 (Wizard), and P4 (Elf)...");
+        console.log("[Test] 2. Spawning P2 (Sapphire), P3 (Topaz), and P4 (Emerald)...");
         const iframeP2 = spawnJoiner("P2", "#room=" + roomCode);
         const iframeP3 = spawnJoiner("P3", "#room=" + roomCode);
         const iframeP4 = spawnJoiner("P4", "#room=" + roomCode);

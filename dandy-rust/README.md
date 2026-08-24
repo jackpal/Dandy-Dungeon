@@ -15,10 +15,10 @@ Features full **4-player serverless P2P co-op** powered by **WebRTC DataChannels
 
 ### 2. Serverless 4-Player P2P Co-op & Rollback Netcode
 *   **4-Player Characters**:
-    *   **P1**: Warrior (Blue)
-    *   **P2**: Valkyrie (Teal)
-    *   **P3**: Wizard (Red)
-    *   **P4**: Elf (Green)
+    *   **P1**: Ruby (Red)
+    *   **P2**: Sapphire (Blue)
+    *   **P3**: Topaz (Yellow)
+    *   **P4**: Emerald (Green)
 *   **Deterministic Rollback Engine (`src/netcode.rs`)**:
     *   Maintains a 256-frame input ring buffer and 64-frame snapshot history.
     *   Zero-allocation stack snapshots (`GameSnapshot` and `Map` derive `Copy`).
@@ -102,7 +102,7 @@ Static build artifacts are written to `dist/` and compressed to under **30 KB gz
 | **Shoot Arrow** | `Spacebar` | `F` | **FIRE** Button |
 | **Smart Bomb** | `B` | `G` | **BOMB** Button |
 
-*Pressing any Player 2 key locally dynamically spawns the Valkyrie next to Player 1.*
+*Pressing any Player 2 key locally dynamically spawns Sapphire next to Player 1.*
 
 ---
 
@@ -111,7 +111,7 @@ Static build artifacts are written to `dist/` and compressed to under **30 KB gz
 #### Hosting a Game
 1. Click **Host Game** in the top multiplayer bar.
 2. Copy the generated **Room Link** or **Room Code** and send it to your friends.
-3. As players connect, their slot cards (P2 Valkyrie, P3 Wizard, P4 Elf) will turn active in real-time.
+3. As players connect, their slot cards (P2 Sapphire, P3 Topaz, P4 Emerald) will turn active in real-time.
 4. Play! The rollback engine keeps all player simulations perfectly synchronized.
 
 #### Joining a Game

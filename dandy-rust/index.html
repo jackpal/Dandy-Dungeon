@@ -571,19 +571,19 @@
             <!-- 4 Character Slots Status -->
             <div class="slots-indicator">
                 <div class="slot-card p1 active" id="slot-p1">
-                    <div class="slot-name">P1: Warrior</div>
+                    <div class="slot-name">P1: Ruby</div>
                     <div class="slot-badge" id="slot-badge-p1">LOCAL [ME]</div>
                 </div>
                 <div class="slot-card p2" id="slot-p2">
-                    <div class="slot-name">P2: Valkyrie</div>
+                    <div class="slot-name">P2: Sapphire</div>
                     <div class="slot-badge" id="slot-badge-p2">Press WASD</div>
                 </div>
                 <div class="slot-card p3" id="slot-p3">
-                    <div class="slot-name">P3: Wizard</div>
+                    <div class="slot-name">P3: Topaz</div>
                     <div class="slot-badge" id="slot-badge-p3">Press IJKL</div>
                 </div>
                 <div class="slot-card p4" id="slot-p4">
-                    <div class="slot-name">P4: Elf</div>
+                    <div class="slot-name">P4: Emerald</div>
                     <div class="slot-badge" id="slot-badge-p4">Press Num8</div>
                 </div>
             </div>
@@ -602,20 +602,20 @@
                 </thead>
                 <tbody>
                     <tr id="hud-p1" class="hud-row-p1">
-                        <td class="text-left">P1 Warrior</td>
+                        <td class="text-left">P1 Ruby</td>
                         <td id="p1-score" class="text-right">0</td>
                         <td id="p1-health" class="text-right">100</td>
                         <td id="p1-keys" class="text-right">0</td>
                         <td id="p1-bombs" class="text-right">0</td>
                     </tr>
                     <tr id="hud-p2" class="hud-row-p2">
-                        <td colspan="5" class="hud-inactive">P2 Valkyrie: Press WASD/F/G to Join</td>
+                        <td colspan="5" class="hud-inactive">P2 Sapphire: Press WASD/F/G to Join</td>
                     </tr>
                     <tr id="hud-p3" class="hud-row-p3">
-                        <td colspan="5" class="hud-inactive">P3 Wizard: Press IJKL/O/P to Join</td>
+                        <td colspan="5" class="hud-inactive">P3 Topaz: Press IJKL/O/P to Join</td>
                     </tr>
                     <tr id="hud-p4" class="hud-row-p4">
-                        <td colspan="5" class="hud-inactive">P4 Elf: Press Numpad 8456/0/. to Join</td>
+                        <td colspan="5" class="hud-inactive">P4 Emerald: Press Numpad 8456/0/. to Join</td>
                     </tr>
                 </tbody>
             </table>
@@ -642,7 +642,7 @@
             <h2>4-Player Local & Remote Controls</h2>
             <div class="controls-grid">
                 <div class="control-card">
-                    <h3 style="color: var(--p1-color);">P1: Warrior (Red)</h3>
+                    <h3 style="color: var(--p1-color);">P1: Ruby (Red)</h3>
                     <div class="control-item">
                         <div class="keys"><kbd>←</kbd><kbd>↑</kbd><kbd>↓</kbd><kbd>→</kbd></div>
                         <span class="control-label">Move</span>
@@ -658,7 +658,7 @@
                 </div>
 
                 <div class="control-card">
-                    <h3 style="color: var(--p2-color);">P2: Valkyrie (Blue)</h3>
+                    <h3 style="color: var(--p2-color);">P2: Sapphire (Blue)</h3>
                     <div class="control-item">
                         <div class="keys"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></div>
                         <span class="control-label">Move</span>
@@ -674,7 +674,7 @@
                 </div>
 
                 <div class="control-card">
-                    <h3 style="color: var(--p3-color);">P3: Wizard (Green)</h3>
+                    <h3 style="color: var(--p3-color);">P3: Topaz (Yellow)</h3>
                     <div class="control-item">
                         <div class="keys"><kbd>I</kbd><kbd>J</kbd><kbd>K</kbd><kbd>L</kbd></div>
                         <span class="control-label">Move</span>
@@ -690,7 +690,7 @@
                 </div>
 
                 <div class="control-card">
-                    <h3 style="color: var(--p4-color);">P4: Elf (Purple)</h3>
+                    <h3 style="color: var(--p4-color);">P4: Emerald (Green)</h3>
                     <div class="control-item">
                         <div class="keys"><kbd>Num8</kbd><kbd>4</kbd><kbd>5</kbd><kbd>6</kbd></div>
                         <span class="control-label">Move</span>
@@ -729,7 +729,7 @@
 
             const app = new DandyApp();
             let isOnlineMode = false;
-            let localPlayerIdx = 0; // Host is 0 (Warrior), Joiners are 1, 2, 3
+            let localPlayerIdx = 0; // Host is 0 (Ruby), Joiners are 1, 2, 3
             let currentRoomId = null;
             let sleeping = false;
             let loopRunning = true;
@@ -785,7 +785,7 @@
             // Keyboard Control Mappings (All 4 Players)
             // -----------------------------------------------------------------
             const controlRegistry = {
-                // P1: Warrior (Arrows, Space, B)
+                // P1: Ruby (Arrows, Space, B)
                 "ArrowUp": { player: 0, action: PlayerAction.Up },
                 "ArrowDown": { player: 0, action: PlayerAction.Down },
                 "ArrowLeft": { player: 0, action: PlayerAction.Left },
@@ -794,7 +794,7 @@
                 "b": { player: 0, action: PlayerAction.Bomb },
                 "B": { player: 0, action: PlayerAction.Bomb },
 
-                // P2: Valkyrie (WASD, F, G)
+                // P2: Sapphire (WASD, F, G)
                 "w": { player: 1, action: PlayerAction.Up },
                 "W": { player: 1, action: PlayerAction.Up },
                 "s": { player: 1, action: PlayerAction.Down },
@@ -808,7 +808,7 @@
                 "g": { player: 1, action: PlayerAction.Bomb },
                 "G": { player: 1, action: PlayerAction.Bomb },
 
-                // P3: Wizard (IJKL, O, P)
+                // P3: Topaz (IJKL, O, P)
                 "i": { player: 2, action: PlayerAction.Up },
                 "I": { player: 2, action: PlayerAction.Up },
                 "k": { player: 2, action: PlayerAction.Down },
@@ -822,7 +822,7 @@
                 "p": { player: 2, action: PlayerAction.Bomb },
                 "P": { player: 2, action: PlayerAction.Bomb },
 
-                // P4: Elf (Numpad 8456, Num0, Num.)
+                // P4: Emerald (Numpad 8456, Num0, Num.)
                 "8": { player: 3, action: PlayerAction.Up },
                 "5": { player: 3, action: PlayerAction.Down },
                 "4": { player: 3, action: PlayerAction.Left },
@@ -1265,7 +1265,7 @@
                             const assignedSlot = msg.assignedSlot || 1;
                             localPlayerIdx = assignedSlot;
                             app.net_init(localPlayerIdx);
-                            const classNames = ["Warrior", "Valkyrie", "Wizard", "Elf"];
+                            const classNames = ["Ruby", "Sapphire", "Topaz", "Emerald"];
                             document.getElementById("net-stat-role").textContent = `P${localPlayerIdx + 1} ${classNames[localPlayerIdx].toUpperCase()}`;
                             updateSlotCards();
 
@@ -1513,9 +1513,9 @@
                 tabOnline.classList.add("active");
                 tabLocal.classList.remove("active");
                 onlinePanel.style.display = "flex";
-                localPlayerIdx = 0; // Host is P1 Warrior
+                localPlayerIdx = 0; // Host is P1 Ruby
                 app.net_init(0);
-                document.getElementById("net-stat-role").textContent = "P1 WARRIOR (HOST)";
+                document.getElementById("net-stat-role").textContent = "P1 RUBY (HOST)";
                 document.getElementById("net-stat-status").textContent = "Waiting for peers...";
                 updateSlotCards();
                 wakeLoop();
@@ -1650,7 +1650,7 @@
             handleUrlHash();
 
             function updateSlotCards() {
-                const classNames = ["Warrior", "Valkyrie", "Wizard", "Elf"];
+                const classNames = ["Ruby", "Sapphire", "Topaz", "Emerald"];
                 const joinHints = ["LOCAL [ME]", "Press WASD", "Press IJKL", "Press Num8"];
 
                 for (let i = 0; i < 4; i++) {
@@ -1676,7 +1676,7 @@
             // -----------------------------------------------------------------
             // Dynamic HUD Table Updates
             // -----------------------------------------------------------------
-            const playerLabels = ["P1 Warrior", "P2 Valkyrie", "P3 Wizard", "P4 Elf"];
+            const playerLabels = ["P1 Ruby", "P2 Sapphire", "P3 Topaz", "P4 Emerald"];
             const lastHuds = [
                 { active: false, score: -1, health: -1, keys: -1, bombs: -1 },
                 { active: false, score: -1, health: -1, keys: -1, bombs: -1 },
@@ -1707,7 +1707,7 @@
                                     <td id="p${i+1}-bombs" class="text-right">${bombs}</td>
                                 `;
                             } else {
-                                const hint = (i === 0) ? "Warrior" : (i === 1 ? "WASD/F/G" : (i === 2 ? "IJKL/O/P" : "Num8456/0/."));
+                                const hint = (i === 0) ? "Arrows/Space/B" : (i === 1 ? "WASD/F/G" : (i === 2 ? "IJKL/O/P" : "Num8456/0/."));
                                 row.innerHTML = `<td colspan="5" class="hud-inactive">${playerLabels[i]}: Press ${hint} to Join</td>`;
                             }
                         }

@@ -961,14 +961,14 @@ mod tests {
         assert!(!game.players[2].active);
         assert!(!game.players[3].active);
 
-        // P3 (Wizard) joins on input
+        // P3 (Topaz) joins on input
         game.players[2].input_mask = ACTION_DOWN;
         game.step();
         assert!(game.players[2].active);
         assert!(game.players[2].alive);
         assert_eq!(game.map.get(game.players[2].x, game.players[2].y), PLAYER + 2);
 
-        // P4 (Elf) joins on input
+        // P4 (Emerald) joins on input
         game.players[3].input_mask = ACTION_LEFT;
         game.step();
         assert!(game.players[3].active);

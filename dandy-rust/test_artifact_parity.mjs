@@ -47,14 +47,14 @@ console.log("✓ Route introspection & capabilities verified.");
 
 // 3. 4-Player Slot & Character Metadata Introspection
 console.log("\nTesting 4-Player Character Slot APIs...");
-assert.strictEqual(app.get_player_class_name(0), "Warrior");
-assert.strictEqual(app.get_player_class_name(1), "Valkyrie");
-assert.strictEqual(app.get_player_class_name(2), "Wizard");
-assert.strictEqual(app.get_player_class_name(3), "Elf");
+assert.strictEqual(app.get_player_class_name(0), "Ruby");
+assert.strictEqual(app.get_player_class_name(1), "Sapphire");
+assert.strictEqual(app.get_player_class_name(2), "Topaz");
+assert.strictEqual(app.get_player_class_name(3), "Emerald");
 assert.strictEqual(app.is_player_active(0), true, "P1 should start active");
 assert.strictEqual(app.is_player_active(1), false, "P2 should start inactive");
 
-app.spawn_player(2); // Spawn P3 Wizard
+app.spawn_player(2); // Spawn P3 Topaz
 assert.strictEqual(app.is_player_active(2), true, "P3 should now be active");
 app.remove_player(2);
 assert.strictEqual(app.is_player_active(2), false, "P3 should now be inactive");
@@ -183,11 +183,11 @@ console.log(`✓ Full State Snapshot roundtrip verified (${snapBytes.length} byt
 // 6. Rollback Netcode Engine & Jitter Recovery Verification
 console.log("\nTesting Rollback Netcode Prediction & Late Packet Re-simulation...");
 const hostPeer = new DandyApp();
-hostPeer.net_init(0); // Host as P1 Warrior
-hostPeer.net_set_player_joined(1, true); // P2 Valkyrie joined
+hostPeer.net_init(0); // Host as P1 Ruby
+hostPeer.net_set_player_joined(1, true); // P2 Sapphire joined
 
 const joinerPeer = new DandyApp();
-joinerPeer.net_init(1); // Joiner as P2 Valkyrie
+joinerPeer.net_init(1); // Joiner as P2 Sapphire
 joinerPeer.net_set_player_joined(0, true);
 
 // Step 15 frames on host with P2 input delayed (predicting 0 on host)

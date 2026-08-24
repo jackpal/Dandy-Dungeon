@@ -42,8 +42,8 @@ pub const DIR_TO_DELTA: [(i32, i32); 8] = [
 pub const PLAYER_SPAWN_DIRS: [usize; 4] = [0, 2, 4, 6];
 
 pub const MAX_PLAYERS: usize = 4;
-pub const PLAYER_NAMES: [&str; 4] = ["Warrior", "Valkyrie", "Wizard", "Elf"];
-pub const PLAYER_COLORS: [&str; 4] = ["#e53935", "#1e88e5", "#43a047", "#8e24aa"]; // Red, Blue, Green, Purple
+pub const PLAYER_NAMES: [&str; 4] = ["Ruby", "Sapphire", "Topaz", "Emerald"];
+pub const PLAYER_COLORS: [&str; 4] = ["#ff3344", "#33aaff", "#ffcc00", "#33dd66"]; // Red (Ruby), Blue (Sapphire), Yellow (Topaz), Green (Emerald)
 
 // Player logical input actions (Bitmask)
 pub const ACTION_UP: u8 = 1 << 0;
