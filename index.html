@@ -977,8 +977,8 @@
     </style>
     
 <script type="module">
-import init, * as bindings from './dandy-rust-607c43dbe2d7a263.js';
-const wasm = await init({ module_or_path: './dandy-rust-607c43dbe2d7a263_bg.wasm' });
+import init, * as bindings from './dandy-rust-56bac02d9a5a180.js';
+const wasm = await init({ module_or_path: './dandy-rust-56bac02d9a5a180_bg.wasm' });
 
 
 window.wasmBindings = bindings;
@@ -987,7 +987,7 @@ window.wasmBindings = bindings;
 dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
 
 </script>
-<link rel="modulepreload" href="./dandy-rust-607c43dbe2d7a263.js" crossorigin="anonymous" integrity="sha384-CdzftEjHA0rI1Y2R2HRXSgZZ+H5CsQAyrGzbo614Ix/P5KZ4JszJEkamYEiwN+5F"><link rel="preload" href="./dandy-rust-607c43dbe2d7a263_bg.wasm" crossorigin="anonymous" integrity="sha384-QtbVaXWji6Wp6fFL6gF0HmxamuCV7RM+QL38jj6ID5neONLKLMPYeC8Hn8Ck5glk" as="fetch" type="application/wasm"></head>
+<link rel="modulepreload" href="./dandy-rust-56bac02d9a5a180.js" crossorigin="anonymous" integrity="sha384-CdzftEjHA0rI1Y2R2HRXSgZZ+H5CsQAyrGzbo614Ix/P5KZ4JszJEkamYEiwN+5F"><link rel="preload" href="./dandy-rust-56bac02d9a5a180_bg.wasm" crossorigin="anonymous" integrity="sha384-zKwBge/3wmCREaOkOvthP9AFA6umsPu+LAO+jJ/M0wNVCMyomNqfH3opmds9i3u7" as="fetch" type="application/wasm"></head>
 <body>
     <div class="container">
         <header>
@@ -3083,6 +3083,7 @@ dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
             let lastPingSent = performance.now();
             let measuredPing = 0;
             const myPeerId = "PEER-" + Math.random().toString(36).slice(2, 8).toUpperCase();
+            window.myPeerId = myPeerId;
 
             function broadcastPacket(uint8Array, excludePeerId = null) {
                 for (const [peerId, peer] of PEER_CONNECTIONS.entries()) {
@@ -5341,6 +5342,7 @@ dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
 
             window.dandyApp = app;
             window.dandyBuildInfo = app.get_build_info();
+            window.myPeerId = myPeerId;
             console.log(`[Dandy Dungeon] Loaded: ${window.dandyBuildInfo}`);
 
             requestAnimationFrame(gameLoop);
