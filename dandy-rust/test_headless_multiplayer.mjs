@@ -69,6 +69,13 @@ new Promise(async (resolve, reject) => {
             throw new Error("Failed to create room code");
         }
 
+        const hostHash = window.location.hash;
+        const btnShareLink = document.getElementById("btn-share-link");
+        const btnShareLinkText = btnShareLink?.textContent;
+        const btnShareLinkVisible = btnShareLink && window.getComputedStyle(btnShareLink).display !== "none";
+        const btnShowQr = document.getElementById("btn-show-qr");
+        const btnShowQrVisible = btnShowQr && window.getComputedStyle(btnShowQr).display !== "none";
+
         // Helper to spawn a joiner iframe
         function spawnJoiner(slotName, hash) {
             const iframe = document.createElement("iframe");
@@ -339,6 +346,118 @@ new Promise(async (resolve, reject) => {
         const p3ChecksumAfterHeal = iframeP3.contentWindow.dandyApp.net_get_checksum_at_frame(latestConfirmedF);
         const hostChecksumAfterHeal = window.dandyApp.net_get_checksum_at_frame(latestConfirmedF);
 
+        console.log("[Test] 8. Simulating 5th player join attempt against full 4/4 room...");
+        const iframeP5 = spawnJoiner("P5_Attempt", "#room=" + roomCode);
+
+        await waitFor(() => {
+            const p5Doc = iframeP5.contentDocument;
+            if (!p5Doc) return false;
+            const roomFullOverlay = p5Doc.getElementById("room-full-overlay");
+            const connectingOverlay = p5Doc.getElementById("connecting-overlay");
+            const statusEl = p5Doc.getElementById("net-stat-status");
+            const isFullOverlayVisible = roomFullOverlay && window.getComputedStyle(roomFullOverlay).display !== "none";
+            const isConnectingHidden = connectingOverlay && window.getComputedStyle(connectingOverlay).display === "none";
+            const isStatusRoomFull = statusEl && statusEl.textContent.includes("Room Full (4/4)");
+            return isFullOverlayVisible && isConnectingHidden && isStatusRoomFull;
+        }, 10000, "5th player room-full rejection and error state transition");
+
+        const p5Doc = iframeP5.contentDocument;
+        const p5RoomFullVisible = window.getComputedStyle(p5Doc.getElementById("room-full-overlay")).display !== "none";
+        const p5ConnectingHidden = window.getComputedStyle(p5Doc.getElementById("connecting-overlay")).display === "none";
+        const p5Status = p5Doc.getElementById("net-stat-status")?.textContent;
+        const p5Role = p5Doc.getElementById("net-stat-role")?.textContent;
+        const p5Message = p5Doc.getElementById("room-full-message")?.textContent;
+        const p5Badges = [1, 2, 3, 4].map(i => p5Doc.getElementById("slot-badge-p" + i)?.textContent);
+
+        const btnPlayLocal = p5Doc.getElementById("btn-full-play-local");
+        const btnHostRoom = p5Doc.getElementById("btn-full-host-room");
+        const btnTryAgain = p5Doc.getElementById("btn-full-try-again");
+        const p5HasActionButtons = Boolean(btnPlayLocal && btnHostRoom && btnTryAgain);
+
+        // Test clicking "Play Local" on rejected instance to ensure clean recovery
+        btnPlayLocal.click();
+        await new Promise(r => setTimeout(r, 200));
+        const p5RecoveredToLocal = window.getComputedStyle(p5Doc.getElementById("room-full-overlay")).display === "none" &&
+                                  p5Doc.getElementById("net-stat-role")?.textContent === "LOCAL" &&
+                                  p5Doc.getElementById("net-stat-status")?.textContent === "Ready";
+        const p5HashAfterLocal = iframeP5.contentWindow?.location.hash;
+
+        // 9. Host and Joiner Refresh Persistence Tests
+        console.log("[Test] 9. Simulating Host Refresh persistence with #host= hash...");
+        const iframeHostRefresh = spawnJoiner("Host_Refresh", "#host=DANDY-7777");
+        await waitFor(() => {
+            const doc = iframeHostRefresh.contentDocument;
+            if (!doc) return false;
+            const roleEl = doc.getElementById("net-stat-role");
+            const roomEl = doc.getElementById("net-stat-room");
+            const shareBtn = doc.getElementById("btn-share-link");
+            return roleEl && roleEl.textContent === "P1 RUBY (HOST)" &&
+                   roomEl && roomEl.textContent === "DANDY-7777" &&
+                   shareBtn && window.getComputedStyle(shareBtn).display !== "none";
+        }, 10000, "Host refresh persistence on #host=DANDY-7777");
+
+        const hostRefreshDoc = iframeHostRefresh.contentDocument;
+        const hostRefreshRole = hostRefreshDoc.getElementById("net-stat-role")?.textContent;
+        const hostRefreshRoom = hostRefreshDoc.getElementById("net-stat-room")?.textContent;
+        const hostRefreshHash = iframeHostRefresh.contentWindow?.location.hash;
+        const hostRefreshModalHidden = window.getComputedStyle(hostRefreshDoc.getElementById("welcome-modal")).display === "none";
+        const hostRefreshP1Local = iframeHostRefresh.contentWindow?.dandyApp?.net_is_local_player(0);
+
+        console.log("[Test] 10. Simulating Joiner Refresh persistence with #join= hash...");
+        const iframeJoinerRefresh = spawnJoiner("Joiner_Refresh", "#join=DANDY-8888");
+        await waitFor(() => {
+            const doc = iframeJoinerRefresh.contentDocument;
+            if (!doc) return false;
+            const roleEl = doc.getElementById("net-stat-role");
+            const roomEl = doc.getElementById("net-stat-room");
+            return roleEl && roleEl.textContent === "CONNECTING..." &&
+                   roomEl && roomEl.textContent === "DANDY-8888";
+        }, 10000, "Joiner refresh persistence on #join=DANDY-8888");
+
+        const joinerRefreshDoc = iframeJoinerRefresh.contentDocument;
+        const joinerRefreshRole = joinerRefreshDoc.getElementById("net-stat-role")?.textContent;
+        const joinerRefreshRoom = joinerRefreshDoc.getElementById("net-stat-room")?.textContent;
+        const joinerRefreshHash = iframeJoinerRefresh.contentWindow?.location.hash;
+        const joinerRefreshModalHidden = window.getComputedStyle(joinerRefreshDoc.getElementById("welcome-modal")).display === "none";
+
+        console.log("[Test] 11. Simulating Bare Room Code URL Join (#DANDY-6666)...");
+        const iframeBareJoin = spawnJoiner("Bare_Join", "#DANDY-6666");
+        await waitFor(() => {
+            const doc = iframeBareJoin.contentDocument;
+            if (!doc) return false;
+            const roleEl = doc.getElementById("net-stat-role");
+            const roomEl = doc.getElementById("net-stat-room");
+            return roleEl && roleEl.textContent === "CONNECTING..." &&
+                   roomEl && roomEl.textContent === "DANDY-6666";
+        }, 10000, "Bare room code URL join on #DANDY-6666");
+
+        const bareJoinDoc = iframeBareJoin.contentDocument;
+        const bareJoinRole = bareJoinDoc.getElementById("net-stat-role")?.textContent;
+        const bareJoinRoom = bareJoinDoc.getElementById("net-stat-room")?.textContent;
+        const bareJoinHash = iframeBareJoin.contentWindow?.location.hash;
+
+        console.log("[Test] 12. Simulating Query-Style Host URL (#room=DANDY-9999&role=host)...");
+        const iframeQueryHost = spawnJoiner("Query_Host", "#room=DANDY-9999&role=host");
+        await waitFor(() => {
+            const doc = iframeQueryHost.contentDocument;
+            if (!doc) return false;
+            const roleEl = doc.getElementById("net-stat-role");
+            const roomEl = doc.getElementById("net-stat-room");
+            return roleEl && roleEl.textContent === "P1 RUBY (HOST)" &&
+                   roomEl && roomEl.textContent === "DANDY-9999";
+        }, 10000, "Query-style host URL persistence on #room=DANDY-9999&role=host");
+
+        const queryHostDoc = iframeQueryHost.contentDocument;
+        const queryHostRole = queryHostDoc.getElementById("net-stat-role")?.textContent;
+        const queryHostRoom = queryHostDoc.getElementById("net-stat-room")?.textContent;
+
+        console.log("[Test] 13. Simulating Invalid #host=NONE Hash Filter...");
+        const iframeInvalidNone = spawnJoiner("Invalid_None", "#host=NONE");
+        await new Promise(r => setTimeout(r, 600));
+        const invalidNoneDoc = iframeInvalidNone.contentDocument;
+        const invalidNoneRoom = invalidNoneDoc?.getElementById("net-stat-room")?.textContent;
+        const invalidNoneWelcomeVisible = window.getComputedStyle(invalidNoneDoc.getElementById("welcome-modal")).display !== "none";
+
         const results = {
             initialWelcomeVisible,
             has3WelcomeOptions,
@@ -348,6 +467,10 @@ new Promise(async (resolve, reject) => {
             optionCardClickTestPassed,
             hostWelcomeVisibleAfterHost,
             roomCode,
+            hostHash,
+            btnShareLinkText,
+            btnShareLinkVisible,
+            btnShowQrVisible,
             p1Badges,
             p2Badges,
             p3Badges,
@@ -371,6 +494,67 @@ new Promise(async (resolve, reject) => {
             hostChecksumDuringDesync,
             p3ChecksumAfterHeal,
             hostChecksumAfterHeal,
+            p5RoomFullVisible,
+            p5ConnectingHidden,
+            p5Status,
+            p5Role,
+            p5Message,
+            p5Badges,
+            p5HasActionButtons,
+            p5RecoveredToLocal,
+            p5HashAfterLocal,
+            hostRefreshRole,
+            hostRefreshRoom,
+            hostRefreshHash,
+            hostRefreshModalHidden,
+            hostRefreshP1Local,
+            joinerRefreshRole,
+            joinerRefreshRoom,
+            joinerRefreshHash,
+            joinerRefreshModalHidden,
+            bareJoinRole,
+            bareJoinRoom,
+            bareJoinHash,
+            queryHostRole,
+            queryHostRoom,
+            invalidNoneRoom,
+            invalidNoneWelcomeVisible,
+            statuses: [p1Status, p2Status, p3Status, p4Status],
+            initPositions,
+            finalPositions,
+            p1GpStatus,
+            p1GpBadge,
+            p1GpBadgeVisible,
+            p2GpBadgeVisibleOnHost,
+            posAfterGamepad,
+            p1GpStatusAfterDisconnect,
+            p1GpBadgeVisibleAfterDisconnect,
+            diffAfterJoinerChange,
+            diffAfterHostChange,
+            initialChecksums,
+            p3ChecksumBeforeDesync,
+            p3ChecksumAfterDesync,
+            hostChecksumDuringDesync,
+            p3ChecksumAfterHeal,
+            hostChecksumAfterHeal,
+            p5RoomFullVisible,
+            p5ConnectingHidden,
+            p5Status,
+            p5Role,
+            p5Message,
+            p5Badges,
+            p5HasActionButtons,
+            p5RecoveredToLocal,
+            p5HashAfterLocal,
+            hostRefreshRole,
+            hostRefreshRoom,
+            hostRefreshHash,
+            hostRefreshModalHidden,
+            hostRefreshP1Local,
+            joinerRefreshRole,
+            joinerRefreshRoom,
+            joinerRefreshHash,
+            joinerRefreshModalHidden,
             frames: [
                 p1App.net_get_current_frame(),
                 p2App.net_get_current_frame(),
@@ -453,6 +637,31 @@ try {
     assert.strictEqual(res.optionCardClickTestPassed, true, "Clicking option card body must trigger mode action");
     assert.strictEqual(res.hostWelcomeVisibleAfterHost, true, "Welcome modal must dismiss after hosting room");
     console.log("✓ Welcome Modal flow, 3-option play picker, Mode Switcher, Escape key, card delegators, and Progressive Diagnostics verified.");
+
+    // 0b. Stateful URL & Host/Joiner Refresh Persistence Verification
+    console.log("\n=== Verifying Stateful URL & Refresh Persistence ===");
+    assert.strictEqual(res.hostHash, "#host=" + res.roomCode, "Host browser URL hash must be #host=DANDY-XXXX");
+    assert.strictEqual(res.btnShareLinkVisible, true, "Share link button must be visible on Host");
+    assert.strictEqual(res.btnShareLinkText, "📋 Copy Link (" + res.roomCode + ")", "Share link text must match room code");
+    assert.strictEqual(res.btnShowQrVisible, true, "QR code button must be visible on Host");
+    assert.strictEqual(res.hostRefreshRole, "P1 RUBY (HOST)", "Reloading with #host=DANDY-XXXX must resume Host role");
+    assert.strictEqual(res.hostRefreshRoom, "DANDY-7777", "Host refresh must preserve room ID");
+    assert.strictEqual(res.hostRefreshHash, "#host=DANDY-7777", "Host refresh must retain #host= URL hash");
+    assert.strictEqual(res.hostRefreshModalHidden, true, "Welcome modal must be hidden when loading with #host= hash");
+    assert.strictEqual(res.hostRefreshP1Local, true, "Host instance must assign P1 Ruby as local player");
+    assert.strictEqual(res.joinerRefreshRole, "CONNECTING...", "Reloading with joiner hash must boot into Joiner role");
+    assert.strictEqual(res.joinerRefreshRoom, "DANDY-8888", "Joiner refresh must preserve room ID");
+    assert.strictEqual(res.joinerRefreshHash, "#room=DANDY-8888", "Joiner URL hash must be normalized to #room=DANDY-XXXX");
+    assert.strictEqual(res.joinerRefreshModalHidden, true, "Welcome modal must be hidden when loading with joiner hash");
+    assert.strictEqual(res.bareJoinRole, "CONNECTING...", "Bare #DANDY-6666 URL must boot into Joiner role");
+    assert.strictEqual(res.bareJoinRoom, "DANDY-6666", "Bare room code URL must connect to DANDY-6666");
+    assert.strictEqual(res.bareJoinHash, "#room=DANDY-6666", "Bare room code URL must normalize hash to #room=DANDY-6666");
+    assert.strictEqual(res.queryHostRole, "P1 RUBY (HOST)", "Query style #room=DANDY-9999&role=host must boot into Host role");
+    assert.strictEqual(res.queryHostRoom, "DANDY-9999", "Query style host room must preserve room ID DANDY-9999");
+    assert.strictEqual(res.invalidNoneRoom, "NONE", "Invalid #host=NONE hash must not set active room");
+    assert.strictEqual(res.invalidNoneWelcomeVisible, true, "Invalid #host=NONE hash must default to showing Welcome modal");
+    assert.strictEqual(res.p5HashAfterLocal, "", "Switching to Local mode must clear the URL hash");
+    console.log("✓ Stateful URL hashing, #host= vs #room= role reflection, Share links, QR code, and Host/Joiner refresh persistence verified.");
 
     // 1. Connection statuses
     assert(res.statuses.every(s => s === "Connected"), "All peers must have 'Connected' status");
@@ -570,6 +779,19 @@ try {
     assert.deepStrictEqual(res.fbSizes, [204800, 204800, 204800, 204800], "320x160x4 Framebuffer integrity");
     assert.deepStrictEqual(res.statsLens, [28, 28, 28, 28], "4x7 stats array integrity");
     console.log("✓ Zero-Copy Framebuffer and Stats memory boundaries intact on all instances.");
+
+    // 9. 5th Player Room-Full Rejection & Recovery
+    console.log("\n=== Verifying 5th Player Room-Full Rejection & Recovery ===");
+    console.log(`P5 Rejection: Visible=${res.p5RoomFullVisible}, ConnectingHidden=${res.p5ConnectingHidden}, Status="${res.p5Status}", Role="${res.p5Role}", Message="${res.p5Message}"`);
+    assert.strictEqual(res.p5RoomFullVisible, true, "5th player must display #room-full-overlay when attempting to join a full 4/4 room");
+    assert.strictEqual(res.p5ConnectingHidden, true, "5th player must transition out of 'Connecting...' spinner overlay upon rejection");
+    assert.strictEqual(res.p5Status, "Room Full (4/4)", "5th player net-stat-status must be 'Room Full (4/4)'");
+    assert.strictEqual(res.p5Role, "ROOM FULL (4/4)", "5th player net-stat-role must be 'ROOM FULL (4/4)'");
+    assert(res.p5Message.includes("Room is full") || res.p5Message.includes("occupied"), "5th player message must describe room full / all slots occupied");
+    assert.deepStrictEqual(res.p5Badges, ["ROOM FULL", "ROOM FULL", "ROOM FULL", "ROOM FULL"], "5th player slot badges must indicate ROOM FULL");
+    assert.strictEqual(res.p5HasActionButtons, true, "5th player overlay must provide Play Local, Host Room, and Try Again buttons");
+    assert.strictEqual(res.p5RecoveredToLocal, true, "Clicking 'Play Local' on rejected player must cleanly recover into Local mode");
+    console.log("✓ 5th player full-room rejection, explicit signaling message, error overlay transition, and local recovery verified.");
 
     console.log("\n==================================================================");
     console.log("🎉 ALL 4-PLAYER WEBRTC ROLLBACK MULTIPLAYER GATES PASSED! 🎉");

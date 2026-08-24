@@ -10,6 +10,7 @@ pub fn step_enemies(
     active: ActiveRect,
     rotor: &mut u8,
     rng: &mut LcgRng,
+    sounds: &mut Vec<u8>,
 ) {
     *rotor = (*rotor + 1) & 3;
     
@@ -27,7 +28,7 @@ pub fn step_enemies(
         while x < x_end {
             let v = map.get(x, y);
             if (GHOST..=GHOST + 2).contains(&v) {
-                step_ghost(x, y, v, map, players);
+                step_ghost(x, y, v, map, players, sounds);
             } else if (GENERATOR..=GENERATOR + 2).contains(&v) {
                 step_generator(x, y, v, map, rng);
             }
@@ -43,6 +44,7 @@ pub fn step_ghost(
     ghost_val: u8,
     map: &mut Map,
     players: &mut [Player],
+    sounds: &mut Vec<u8>,
 ) {
     // Find closest active & alive player
     let mut best_p_idx = None;
@@ -99,7 +101,8 @@ pub fn step_ghost(
             // Hurt player!
             let p_index = (nv - PLAYER) as usize;
             let pain = 10 * (ghost_val - GHOST + 1) as i32;
-            hurt_player(p_index, pain, map, players);
+            sounds.push(SOUND_MONSTER_BITE);
+            hurt_player(p_index, pain, map, players, sounds);
             map.set(gx, gy, SPACE);
             break;
         } else if (ARROW..=ARROW + 7).contains(&nv) {
@@ -114,12 +117,14 @@ pub fn hurt_player(
     pain: i32,
     map: &mut Map,
     players: &mut [Player],
+    sounds: &mut Vec<u8>,
 ) {
     if players[index].health > pain {
         players[index].health -= pain;
     } else {
         players[index].health = 0;
         players[index].alive = false;
+        sounds.push(SOUND_DEAD_PLAYER);
         
         // If player dies, drop a key if they had keys
         let remains = if players[index].keys > 0 {

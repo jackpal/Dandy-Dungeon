@@ -360,6 +360,16 @@ impl DandyApp {
         self.update_stats_buffer();
     }
 
+    pub fn net_hot_join(&mut self, player_idx: usize) {
+        if player_idx < MAX_PLAYERS {
+            self.rollback.set_player_joined(player_idx, true);
+            if !self.game.players[player_idx].active {
+                self.game.spawn_player(player_idx);
+            }
+            self.update_stats_buffer();
+        }
+    }
+
     pub fn net_is_player_joined(&self, player_idx: usize) -> bool {
         self.rollback.is_player_joined(player_idx)
     }
@@ -368,7 +378,7 @@ impl DandyApp {
         let success = self.game.load_state_bytes(bytes);
         if success {
             for p in 0..MAX_PLAYERS {
-                if self.rollback.is_local_player(p) && !self.game.players[p].active {
+                if (self.rollback.is_local_player(p) || self.rollback.is_player_joined(p)) && !self.game.players[p].active {
                     self.game.spawn_player(p);
                 }
             }
@@ -425,6 +435,11 @@ impl DandyApp {
     pub fn load_state_bytes(&mut self, bytes: &[u8]) -> bool {
         let success = self.game.load_state_bytes(bytes);
         if success {
+            for p in 0..MAX_PLAYERS {
+                if (self.rollback.is_local_player(p) || self.rollback.is_player_joined(p)) && !self.game.players[p].active {
+                    self.game.spawn_player(p);
+                }
+            }
             self.rollback.snapshot_history.clear();
             self.rollback.snapshot_history.push((self.rollback.current_frame, self.game.save_state()));
             self.render_framebuffer();
@@ -459,6 +474,44 @@ impl DandyApp {
 
     pub fn set_difficulty(&mut self, val: u8) {
         self.game.difficulty = Difficulty::from_u8(val);
+    }
+
+    pub fn get_sound_mask(&self) -> u32 {
+        let mut mask = 0u32;
+        for &s in &self.game.sounds {
+            if s < 32 {
+                mask |= 1 << s;
+            }
+        }
+        mask
+    }
+
+    pub fn get_sound_events_ptr(&self) -> *const u8 {
+        self.game.sounds.as_ptr()
+    }
+
+    pub fn get_sound_events_len(&self) -> usize {
+        self.game.sounds.len()
+    }
+
+    pub fn get_sound_events(&self) -> Vec<u8> {
+        self.game.sounds.clone()
+    }
+
+    pub fn get_audio_channel_sound(&self, ch: usize) -> u8 {
+        self.game.audio_scheduler.get_channel_sound(ch)
+    }
+
+    pub fn is_audio_channel_active(&self, ch: usize) -> bool {
+        self.game.audio_scheduler.is_channel_active(ch)
+    }
+
+    pub fn get_sound_priority(sound_id: u8) -> u8 {
+        sound_priority(sound_id)
+    }
+
+    pub fn get_sound_pokey_channel(sound_id: u8) -> usize {
+        sound_pokey_channel(sound_id)
     }
 
     fn render_framebuffer(&mut self) {

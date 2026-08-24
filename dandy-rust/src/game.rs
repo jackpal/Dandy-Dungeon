@@ -76,6 +76,8 @@ pub struct Game {
     
     pub camera: Camera,
     pub rng: LcgRng,
+    pub sounds: Vec<u8>,
+    pub audio_scheduler: PokeyAudioScheduler,
 }
 
 #[inline(always)]
@@ -134,6 +136,8 @@ impl Game {
             difficulty: crate::Difficulty::Easy,
             camera: Camera::new(0.0, 0.0),
             rng: LcgRng::new(12345), // Default seed
+            sounds: Vec::with_capacity(16),
+            audio_scheduler: PokeyAudioScheduler::new(),
         }
     }
 
@@ -267,6 +271,8 @@ impl Game {
 
     pub fn step(&mut self) {
         self.time += 1;
+        self.sounds.clear();
+        self.audio_scheduler.tick_frame();
 
         // Handle any player joining dynamically on non-zero input
         for i in 0..self.players.len() {
@@ -280,20 +286,25 @@ impl Game {
         // 1. Step arrows in flight for active players (1 tile every 4 frames per arrow cooldown)
         for i in 0..self.players.len() {
             if self.players[i].active {
-                crate::physics::step_arrow(i, &mut self.players, &mut self.map, active_rect);
+                crate::physics::step_arrow(i, &mut self.players, &mut self.map, active_rect, &mut self.sounds);
             }
         }
 
         // 2. Step players (0 ms immediate start on 60 Hz frame with 8-frame move cooldown & immediate arrow spawn)
         for i in 0..self.players.len() {
             if self.players[i].active && self.players[i].alive && !self.players[i].escaped {
-                crate::physics::step_player(i, &mut self.players, &mut self.map, active_rect);
+                crate::physics::step_player(i, &mut self.players, &mut self.map, active_rect, &mut self.sounds);
             }
         }
 
         // 3. Step enemies every DELAY frames according to difficulty (Trivial: 13, Easy: 8, Hard: 5, Deadly: 2)
         if self.time % self.difficulty.delay() == 0 {
-            crate::ai::step_enemies(&mut self.map, &mut self.players, active_rect, &mut self.rotor, &mut self.rng);
+            crate::ai::step_enemies(&mut self.map, &mut self.players, active_rect, &mut self.rotor, &mut self.rng, &mut self.sounds);
+        }
+
+        // Update audio scheduler with frame sound events
+        if !self.sounds.is_empty() {
+            self.audio_scheduler.schedule_frame_events(&self.sounds);
         }
 
         // 4. Centralized Level Progression / Restart Check
@@ -959,6 +970,11 @@ mod tests {
         game.players[p1_idx].alive = true;
         game.map.set(px, py, PLAYER + p1_idx as u8);
 
+        // Center camera on player
+        let (tx, ty) = calculate_target_cog(&game.players);
+        game.camera.cog_x = tx as f64;
+        game.camera.cog_y = ty as f64;
+
         // Clear path for arrow
         game.map.set(px + 1, py, SPACE);
 
@@ -1062,6 +1078,11 @@ mod tests {
         game.players[0].y = py;
         game.players[0].dir = 2; // East
         game.map.set(px, py, PLAYER);
+
+        // Center camera on player
+        let (tx, ty) = calculate_target_cog(&game.players);
+        game.camera.cog_x = tx as f64;
+        game.camera.cog_y = ty as f64;
 
         for x in (px + 1)..(px + 10) {
             game.map.set(x, py, SPACE);
@@ -1302,6 +1323,11 @@ mod tests {
         game.players[0].dir = 2; // East
         game.map.set(px, py, PLAYER);
 
+        // Center camera on player
+        let (tx, ty) = calculate_target_cog(&game.players);
+        game.camera.cog_x = tx as f64;
+        game.camera.cog_y = ty as f64;
+
         // Place a Level 3 Generator at (px + 2, py)
         game.map.set(px + 1, py, SPACE);
         game.map.set(px + 2, py, GENERATOR + 2); // 15
@@ -1419,4 +1445,386 @@ mod tests {
         game.step();
         assert_eq!(game.players[0].y, py + 1, "Player must move immediately without 8-frame freeze");
     }
+
+    #[test]
+    fn test_arrow_despawns_at_active_viewport_boundary() {
+        let mut game = Game::new();
+        game.load();
+
+        // Clear existing ghosts and generators
+        for y in 0..MAP_HEIGHT {
+            for x in 0..MAP_WIDTH {
+                let v = game.map.get(x, y);
+                if (v >= GHOST && v <= GHOST + 2) || (v >= GENERATOR && v <= GENERATOR + 2) {
+                    game.map.set(x, y, SPACE);
+                }
+            }
+        }
+
+        let px = 10;
+        let py = 5;
+        game.map.set(game.players[0].x, game.players[0].y, SPACE);
+        game.players[0].x = px;
+        game.players[0].y = py;
+        game.players[0].dir = 2; // East
+        game.map.set(px, py, PLAYER);
+
+        // Center camera on player
+        let (tx, ty) = calculate_target_cog(&game.players);
+        game.camera.cog_x = tx as f64;
+        game.camera.cog_y = ty as f64;
+
+        let active = game.get_active_rect();
+        // Clear line of sight all the way across the map
+        for x in 0..MAP_WIDTH {
+            game.map.set(x, py, SPACE);
+        }
+        game.map.set(px, py, PLAYER);
+
+        // Fire arrow East
+        game.players[0].input_mask = ACTION_SHOOT;
+        game.step();
+        game.players[0].input_mask = 0;
+
+        assert!(game.players[0].arrow.is_some());
+        assert_eq!(game.sounds.contains(&SOUND_SHOOT), true);
+
+        // Fly arrow step-by-step until it reaches the edge of active_rect
+        let right_edge = active.left + active.width;
+        let mut frames = 0;
+        while game.players[0].arrow.is_some() && frames < 200 {
+            game.step();
+            frames += 1;
+            if let Some(arrow) = game.players[0].arrow {
+                assert!(arrow.x < right_edge, "Arrow must not advance past right edge of visible viewport");
+            }
+        }
+
+        // Arrow must have despawned cleanly upon reaching the edge
+        assert!(game.players[0].arrow.is_none(), "Arrow must despawn when leaving active viewport");
+        // Player must be immediately able to shoot again
+        game.players[0].input_mask = ACTION_SHOOT;
+        game.step();
+        assert!(game.players[0].arrow.is_some(), "Player must be able to shoot immediately once arrow despawned");
+    }
+
+    #[test]
+    fn test_arrow_hit_wall_sound_and_slot_freed() {
+        let mut game = Game::new();
+        game.load();
+        let px = 5;
+        let py = 5;
+        game.map.set(game.players[0].x, game.players[0].y, SPACE);
+        game.players[0].x = px;
+        game.players[0].y = py;
+        game.players[0].dir = 2; // East
+        game.map.set(px, py, PLAYER);
+
+        let (tx, ty) = calculate_target_cog(&game.players);
+        game.camera.cog_x = tx as f64;
+        game.camera.cog_y = ty as f64;
+
+        // Place wall right in front at px + 1
+        game.map.set(px + 1, py, WALL);
+
+        game.players[0].input_mask = ACTION_SHOOT;
+        game.step();
+
+        // Arrow immediately hit wall on spawn step, emitted SOUND_HIT_WALL and freed arrow slot
+        assert!(game.players[0].arrow.is_none());
+        assert_eq!(game.map.get(px + 1, py), WALL, "Wall must remain intact");
+        assert!(game.sounds.contains(&SOUND_HIT_WALL), "SOUND_HIT_WALL must be triggered");
+    }
+
+    #[test]
+    fn test_arrow_hit_monster_sounds_by_tier() {
+        let mut game = Game::new();
+        game.load();
+        let px = 5;
+        let py = 5;
+        game.map.set(game.players[0].x, game.players[0].y, SPACE);
+        game.players[0].x = px;
+        game.players[0].y = py;
+        game.players[0].dir = 2; // East
+        game.map.set(px, py, PLAYER);
+
+        let (tx, ty) = calculate_target_cog(&game.players);
+        game.camera.cog_x = tx as f64;
+        game.camera.cog_y = ty as f64;
+
+        // Test Tier 1 Ghost (GHOST / 9)
+        game.map.set(px + 1, py, GHOST);
+        game.players[0].input_mask = ACTION_SHOOT;
+        game.step();
+        assert!(game.sounds.contains(&SOUND_HIT_MONSTER_1), "SOUND_HIT_MONSTER_1 must be triggered");
+        assert_eq!(game.map.get(px + 1, py), SPACE, "Tier 1 ghost destroyed to SPACE");
+        assert_eq!(game.players[0].score, 10);
+        assert!(game.players[0].arrow.is_none());
+
+        // Test Tier 2 Ghost (GHOST + 1 / 10)
+        game.map.set(px + 1, py, GHOST + 1);
+        game.step(); // Fire again
+        assert!(game.sounds.contains(&SOUND_HIT_MONSTER_2), "SOUND_HIT_MONSTER_2 must be triggered");
+        assert_eq!(game.map.get(px + 1, py), GHOST, "Tier 2 ghost degraded to Tier 1");
+        assert_eq!(game.players[0].score, 20);
+        assert!(game.players[0].arrow.is_none());
+
+        // Test Tier 3 Ghost (GHOST + 2 / 11)
+        game.map.set(px + 1, py, GHOST + 2);
+        game.step(); // Fire again
+        assert!(game.sounds.contains(&SOUND_HIT_MONSTER_3), "SOUND_HIT_MONSTER_3 must be triggered");
+        assert_eq!(game.map.get(px + 1, py), GHOST + 1, "Tier 3 ghost degraded to Tier 2");
+        assert_eq!(game.players[0].score, 30);
+        assert!(game.players[0].arrow.is_none());
+    }
+
+    #[test]
+    fn test_arrow_friendly_fire_and_bomb_trigger() {
+        let mut game = Game::new();
+        game.load();
+        let px = 5;
+        let py = 5;
+        game.map.set(game.players[0].x, game.players[0].y, SPACE);
+        game.players[0].x = px;
+        game.players[0].y = py;
+        game.players[0].dir = 2; // East
+        game.map.set(px, py, PLAYER);
+
+        // Spawn P2 in front at px + 1
+        game.players[1].active = true;
+        game.players[1].alive = true;
+        game.players[1].x = px + 1;
+        game.players[1].y = py;
+        game.map.set(px + 1, py, PLAYER + 1);
+
+        let (tx, ty) = calculate_target_cog(&game.players);
+        game.camera.cog_x = tx as f64;
+        game.camera.cog_y = ty as f64;
+
+        // Shoot towards P2
+        game.players[0].input_mask = ACTION_SHOOT;
+        game.step();
+
+        assert!(game.sounds.contains(&SOUND_HIT_PLAYER), "SOUND_HIT_PLAYER must trigger on friendly fire");
+        assert_eq!(game.map.get(px + 1, py), PLAYER + 1, "Player tile remains intact");
+        assert!(game.players[0].arrow.is_none(), "Arrow must despawn on player collision");
+
+        // Now test Arrow hitting a Bomb tile
+        game.map.set(px + 1, py, BOMB);
+        game.step(); // Fire again
+        assert!(game.sounds.contains(&SOUND_EXPLODE_BOMB), "SOUND_EXPLODE_BOMB must trigger on bomb tile hit");
+        assert_eq!(game.map.get(px + 1, py), SPACE, "Bomb tile cleared after explosion");
+        assert!(game.players[0].arrow.is_none());
+    }
+
+    #[test]
+    fn test_sound_priority_hierarchy() {
+        assert!(sound_priority(SOUND_EXPLODE_BOMB) > sound_priority(SOUND_DEAD_PLAYER));
+        assert!(sound_priority(SOUND_DEAD_PLAYER) > sound_priority(SOUND_WARP_OUT));
+        assert!(sound_priority(SOUND_WARP_OUT) > sound_priority(SOUND_WARP_IN));
+        assert!(sound_priority(SOUND_WARP_IN) > sound_priority(SOUND_MONSTER_BITE));
+        assert!(sound_priority(SOUND_MONSTER_BITE) > sound_priority(SOUND_HIT_PLAYER));
+        assert!(sound_priority(SOUND_HIT_PLAYER) > sound_priority(SOUND_EAT_FOOD));
+        assert!(sound_priority(SOUND_EAT_FOOD) > sound_priority(SOUND_OPEN_DOOR));
+        assert!(sound_priority(SOUND_OPEN_DOOR) > sound_priority(SOUND_HIT_GENERATOR));
+        assert!(sound_priority(SOUND_HIT_GENERATOR) > sound_priority(SOUND_HIT_MONSTER_3));
+        assert!(sound_priority(SOUND_HIT_MONSTER_3) > sound_priority(SOUND_HIT_MONSTER_2));
+        assert!(sound_priority(SOUND_HIT_MONSTER_2) > sound_priority(SOUND_HIT_MONSTER_1));
+        assert!(sound_priority(SOUND_HIT_MONSTER_1) > sound_priority(SOUND_PICK_MONEY));
+        assert!(sound_priority(SOUND_PICK_MONEY) > sound_priority(SOUND_PICKUP_OBJECT));
+        assert!(sound_priority(SOUND_PICKUP_OBJECT) > sound_priority(SOUND_HIT_WALL));
+        assert!(sound_priority(SOUND_HIT_WALL) > sound_priority(SOUND_SHOOT));
+        assert!(sound_priority(SOUND_SHOOT) > sound_priority(SOUND_NONE));
+    }
+
+    #[test]
+    fn test_sound_pokey_channel_mapping() {
+        // Channel 3: Explosions, Death, Warps
+        assert_eq!(sound_pokey_channel(SOUND_EXPLODE_BOMB), 3);
+        assert_eq!(sound_pokey_channel(SOUND_DEAD_PLAYER), 3);
+        assert_eq!(sound_pokey_channel(SOUND_WARP_OUT), 3);
+        assert_eq!(sound_pokey_channel(SOUND_WARP_IN), 3);
+
+        // Channel 2: Monster Bite
+        assert_eq!(sound_pokey_channel(SOUND_MONSTER_BITE), 2);
+
+        // Channel 1: Monster/Player/Spawner hits
+        assert_eq!(sound_pokey_channel(SOUND_HIT_PLAYER), 1);
+        assert_eq!(sound_pokey_channel(SOUND_HIT_MONSTER_1), 1);
+        assert_eq!(sound_pokey_channel(SOUND_HIT_MONSTER_2), 1);
+        assert_eq!(sound_pokey_channel(SOUND_HIT_MONSTER_3), 1);
+        assert_eq!(sound_pokey_channel(SOUND_HIT_GENERATOR), 1);
+
+        // Channel 0: Ambient / Items / Actions
+        assert_eq!(sound_pokey_channel(SOUND_SHOOT), 0);
+        assert_eq!(sound_pokey_channel(SOUND_OPEN_DOOR), 0);
+        assert_eq!(sound_pokey_channel(SOUND_PICKUP_OBJECT), 0);
+        assert_eq!(sound_pokey_channel(SOUND_EAT_FOOD), 0);
+        assert_eq!(sound_pokey_channel(SOUND_PICK_MONEY), 0);
+        assert_eq!(sound_pokey_channel(SOUND_HIT_WALL), 0);
+    }
+
+    #[test]
+    fn test_pokey_audio_scheduler_idle_allocation() {
+        let mut scheduler = PokeyAudioScheduler::new();
+
+        // 1. Schedule shoot -> allocates preferred channel 0
+        let ch0 = scheduler.schedule_sound(SOUND_SHOOT);
+        assert_eq!(ch0, Some(0));
+        assert_eq!(scheduler.get_channel_sound(0), SOUND_SHOOT);
+        assert!(scheduler.is_channel_active(0));
+
+        // 2. Schedule monster hit 1 -> allocates preferred channel 1
+        let ch1 = scheduler.schedule_sound(SOUND_HIT_MONSTER_1);
+        assert_eq!(ch1, Some(1));
+        assert_eq!(scheduler.get_channel_sound(1), SOUND_HIT_MONSTER_1);
+
+        // 3. Schedule monster bite -> allocates preferred channel 2
+        let ch2 = scheduler.schedule_sound(SOUND_MONSTER_BITE);
+        assert_eq!(ch2, Some(2));
+        assert_eq!(scheduler.get_channel_sound(2), SOUND_MONSTER_BITE);
+
+        // 4. Schedule smart bomb explosion -> allocates preferred channel 3
+        let ch3 = scheduler.schedule_sound(SOUND_EXPLODE_BOMB);
+        assert_eq!(ch3, Some(3));
+        assert_eq!(scheduler.get_channel_sound(3), SOUND_EXPLODE_BOMB);
+    }
+
+    #[test]
+    fn test_pokey_audio_scheduler_preemption_high_over_low() {
+        let mut scheduler = PokeyAudioScheduler::new();
+
+        // Fill all 4 channels with low-priority sounds
+        scheduler.schedule_sound(SOUND_SHOOT); // Ch 0, prio 15
+        scheduler.schedule_sound(SOUND_HIT_WALL); // Ch 1 (since 0 busy if not matched), prio 20
+        scheduler.schedule_sound(SOUND_PICKUP_OBJECT); // Ch 2, prio 35
+        scheduler.schedule_sound(SOUND_PICK_MONEY); // Ch 3, prio 40
+
+        for ch in 0..NUM_POKEY_CHANNELS {
+            assert!(scheduler.is_channel_active(ch));
+        }
+
+        // Now incoming high-priority sound: SOUND_EXPLODE_BOMB (prio 100)
+        // Must preempt the lowest priority channel (SOUND_SHOOT, prio 15 on Ch 0)
+        let ch = scheduler.schedule_sound(SOUND_EXPLODE_BOMB);
+        assert_eq!(ch, Some(0));
+        assert_eq!(scheduler.get_channel_sound(0), SOUND_EXPLODE_BOMB);
+
+        // Next incoming high-priority sound: SOUND_DEAD_PLAYER (prio 95)
+        // Must preempt next lowest priority channel (SOUND_HIT_WALL, prio 20 on Ch 1)
+        let ch2 = scheduler.schedule_sound(SOUND_DEAD_PLAYER);
+        assert_eq!(ch2, Some(1));
+        assert_eq!(scheduler.get_channel_sound(1), SOUND_DEAD_PLAYER);
+    }
+
+    #[test]
+    fn test_pokey_audio_scheduler_drop_lower_priority_when_busy() {
+        let mut scheduler = PokeyAudioScheduler::new();
+
+        // Fill all 4 channels with major high-priority sounds
+        scheduler.schedule_sound(SOUND_EXPLODE_BOMB); // prio 100
+        scheduler.schedule_sound(SOUND_DEAD_PLAYER);  // prio 95
+        scheduler.schedule_sound(SOUND_WARP_OUT);     // prio 90
+        scheduler.schedule_sound(SOUND_WARP_IN);      // prio 85
+
+        for ch in 0..NUM_POKEY_CHANNELS {
+            assert!(scheduler.is_channel_active(ch));
+        }
+
+        // Incoming low-priority sound: SOUND_SHOOT (prio 15) must be dropped
+        let result = scheduler.schedule_sound(SOUND_SHOOT);
+        assert_eq!(result, None);
+
+        // Incoming medium sound: SOUND_HIT_MONSTER_1 (prio 45) must be dropped
+        let result2 = scheduler.schedule_sound(SOUND_HIT_MONSTER_1);
+        assert_eq!(result2, None);
+
+        // All 4 high priority sounds remain intact
+        assert_eq!(scheduler.get_channel_sound(3), SOUND_EXPLODE_BOMB);
+    }
+
+    #[test]
+    fn test_pokey_audio_scheduler_batch_frame_prioritization() {
+        let mut scheduler = PokeyAudioScheduler::new();
+
+        // Batch of 6 sounds in one frame: 2 low, 2 medium, 2 critical
+        let events = [
+            SOUND_SHOOT,         // prio 15
+            SOUND_EXPLODE_BOMB,  // prio 100
+            SOUND_HIT_WALL,      // prio 20
+            SOUND_DEAD_PLAYER,   // prio 95
+            SOUND_MONSTER_BITE,  // prio 75
+            SOUND_EAT_FOOD,      // prio 65
+        ];
+        scheduler.schedule_frame_events(&events);
+
+        let mut scheduled_sounds = Vec::new();
+        for ch in 0..NUM_POKEY_CHANNELS {
+            if scheduler.is_channel_active(ch) {
+                scheduled_sounds.push(scheduler.get_channel_sound(ch));
+            }
+        }
+        assert_eq!(scheduled_sounds.len(), 4, "Top 4 priority sounds claim the 4 channels");
+        assert!(scheduled_sounds.contains(&SOUND_EXPLODE_BOMB));
+        assert!(scheduled_sounds.contains(&SOUND_DEAD_PLAYER));
+        assert!(scheduled_sounds.contains(&SOUND_MONSTER_BITE));
+        assert!(scheduled_sounds.contains(&SOUND_EAT_FOOD));
+        assert!(!scheduled_sounds.contains(&SOUND_SHOOT));
+        assert!(!scheduled_sounds.contains(&SOUND_HIT_WALL));
+    }
+
+    #[test]
+    fn test_pokey_audio_scheduler_duration_and_expiry() {
+        let mut scheduler = PokeyAudioScheduler::new();
+        // Schedule short sound: SOUND_SHOOT (5 frames duration)
+        let ch = scheduler.schedule_sound(SOUND_SHOOT).unwrap();
+        assert!(scheduler.is_channel_active(ch));
+
+        // Advance 4 frames -> still active
+        for _ in 0..4 {
+            scheduler.tick_frame();
+            assert!(scheduler.is_channel_active(ch));
+        }
+
+        // Advance 5th frame -> expired and freed!
+        scheduler.tick_frame();
+        assert!(!scheduler.is_channel_active(ch));
+        assert_eq!(scheduler.get_channel_sound(ch), SOUND_NONE);
+    }
+
+    #[test]
+    fn test_monster_bite_and_death_sound_emission() {
+        let mut game = Game::new();
+        game.load();
+        let px = 5;
+        let py = 5;
+        game.map.set(game.players[0].x, game.players[0].y, SPACE);
+        game.players[0].x = px;
+        game.players[0].y = py;
+        game.players[0].health = 15; // Low health
+        game.map.set(px, py, PLAYER);
+
+        // Place Tier 1 Ghost right above player at (5, 4)
+        game.map.set(px, py - 1, GHOST);
+
+        let mut sounds = Vec::new();
+
+        // Step ghost -> moves Down (5, 5) and bites player
+        crate::ai::step_ghost(px, py - 1, GHOST, &mut game.map, &mut game.players, &mut sounds);
+
+        assert!(sounds.contains(&SOUND_MONSTER_BITE), "Must emit SOUND_MONSTER_BITE on attack");
+        assert_eq!(game.players[0].health, 5, "Health reduced by 10 (from 15 to 5)");
+        assert!(game.players[0].alive);
+
+        // Ghost attacks again -> kills player!
+        sounds.clear();
+        game.map.set(px, py - 1, GHOST);
+        crate::ai::step_ghost(px, py - 1, GHOST, &mut game.map, &mut game.players, &mut sounds);
+
+        assert!(sounds.contains(&SOUND_MONSTER_BITE));
+        assert!(sounds.contains(&SOUND_DEAD_PLAYER), "Must emit SOUND_DEAD_PLAYER when player dies");
+        assert_eq!(game.players[0].health, 0);
+        assert!(!game.players[0].alive);
+    }
 }
+

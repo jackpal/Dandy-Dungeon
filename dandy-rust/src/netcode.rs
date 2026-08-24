@@ -160,7 +160,7 @@ impl RollbackManager {
                 entry.confirmed = false;
             }
             self.last_known_input[p] = 0;
-            self.player_joined[p] = game.players[p].active || self.is_local_player(p);
+            self.player_joined[p] = game.players[p].active || self.is_local_player(p) || self.player_joined[p];
         }
     }
 
@@ -701,5 +701,40 @@ mod tests {
         // Ensure host local slots (0 and 1) were not overridden by remote receive
         assert!(!host_rollback.receive_remote_input(0, 4, ACTION_UP, &mut game_a), "Host cannot receive remote input for local slot 0");
         assert!(!host_rollback.receive_remote_input(1, 4, ACTION_UP, &mut game_a), "Host cannot receive remote input for local slot 1");
+    }
+
+    #[test]
+    fn test_multi_local_host_p1_p3_with_remote_p2_resimulation_and_parity() {
+        let mut host_game = Game::new();
+        host_game.load();
+        host_game.spawn_player(2); // Spawn P3 (slot 2)
+
+        // Host has P1 (slot 0) and P3 (slot 2) local
+        let mut host_rollback = RollbackManager::new_with_mask(0b0101, &host_game);
+        assert!(host_rollback.is_local_player(0));
+        assert!(!host_rollback.is_local_player(1));
+        assert!(host_rollback.is_local_player(2));
+        assert!(!host_rollback.is_local_player(3));
+
+        // Step 5 frames on Host before remote P2 connects
+        for f in 0..5 {
+            host_rollback.set_player_local_input(0, f, ACTION_RIGHT);
+            host_rollback.set_player_local_input(2, f, ACTION_LEFT);
+            host_rollback.step_frame(&mut host_game);
+        }
+        assert_eq!(host_rollback.current_frame, 5);
+        assert!(host_game.players[0].active);
+        assert!(!host_game.players[1].active);
+        assert!(host_game.players[2].active);
+
+        // Now remote P2 joins! Host receives remote input for P2 starting at frame 2
+        let did_rb = host_rollback.receive_remote_input(1, 2, ACTION_DOWN, &mut host_game);
+        assert!(did_rb, "Receiving remote P2 input for frame 2 must trigger rollback");
+
+        // Verify that after rollback re-simulation, all 3 players (0, 1, 2) are active on Host!
+        assert!(host_game.players[0].active, "P1 must remain active on Host");
+        assert!(host_game.players[1].active, "P2 must be active after remote join/rollback");
+        assert!(host_game.players[2].active, "P3 must remain active on Host");
+        assert_eq!(host_rollback.current_frame, 5);
     }
 }

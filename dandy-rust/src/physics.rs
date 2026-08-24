@@ -7,6 +7,7 @@ pub fn do_smart_bomb(
     player: &mut Player,
     map: &mut Map,
     active: ActiveRect,
+    sounds: &mut Vec<u8>,
 ) {
     let mut score_gain = 0;
 
@@ -24,6 +25,7 @@ pub fn do_smart_bomb(
     }
 
     player.score += score_gain;
+    sounds.push(SOUND_EXPLODE_BOMB);
 }
 
 pub fn try_move_player(
@@ -31,6 +33,7 @@ pub fn try_move_player(
     player: &mut Player,
     map: &mut Map,
     dir: usize,
+    sounds: &mut Vec<u8>,
 ) -> bool {
     player.dir = dir;
     let delta = DIR_TO_DELTA[dir];
@@ -47,6 +50,7 @@ pub fn try_move_player(
                 player.keys -= 1;
                 map.unlock(nx, ny);
                 moved = true;
+                sounds.push(SOUND_OPEN_DOOR);
             }
         }
         DOWN => {
@@ -55,23 +59,28 @@ pub fn try_move_player(
             player.escaped = true;
             player.x = -1;
             player.y = -1;
+            sounds.push(SOUND_WARP_OUT);
             return true;
         }
         KEY => {
             player.keys += 1;
             moved = true;
+            sounds.push(SOUND_PICKUP_OBJECT);
         }
         FOOD => {
             player.health += 100;
             moved = true;
+            sounds.push(SOUND_EAT_FOOD);
         }
         MONEY => {
             player.score += 100;
             moved = true;
+            sounds.push(SOUND_PICK_MONEY);
         }
         BOMB => {
             player.bombs += 1;
             moved = true;
+            sounds.push(SOUND_PICKUP_OBJECT);
         }
         _ => {}
     }
@@ -93,6 +102,7 @@ pub fn step_player(
     players: &mut [Player],
     map: &mut Map,
     active_rect: ActiveRect,
+    sounds: &mut Vec<u8>,
 ) {
     if index >= players.len() { return; }
     let input = players[index].input_mask;
@@ -100,7 +110,7 @@ pub fn step_player(
     // 1. Check Smart Bomb
     if (input & ACTION_BOMB) != 0 && players[index].bombs > 0 {
         players[index].bombs -= 1;
-        do_smart_bomb(&mut players[index], map, active_rect);
+        do_smart_bomb(&mut players[index], map, active_rect, sounds);
     }
 
     // Decrement movement cooldown unconditionally each 60 Hz frame if > 0
@@ -143,16 +153,17 @@ pub fn step_player(
                 dir: shoot_dir,
                 cooldown: ARROW_MOVE_INTERVAL as u8,
             });
-            step_arrow_advance(index, players, map, active_rect);
+            sounds.push(SOUND_SHOOT);
+            step_arrow_advance(index, players, map, active_rect, sounds);
         }
     } else if players[index].move_cooldown == 0 {
         if let Some(d) = dir_opt {
             // Try moving with wall-sliding
-            let moved = try_move_player(index, &mut players[index], map, d);
+            let moved = try_move_player(index, &mut players[index], map, d, sounds);
             if !moved {
-                let moved_left = try_move_player(index, &mut players[index], map, (d + 1) & 7);
+                let moved_left = try_move_player(index, &mut players[index], map, (d + 1) & 7, sounds);
                 if !moved_left {
-                    try_move_player(index, &mut players[index], map, (d + 7) & 7);
+                    try_move_player(index, &mut players[index], map, (d + 7) & 7, sounds);
                 }
             }
             players[index].move_cooldown = PLAYER_MOVE_INTERVAL as u8;
@@ -165,6 +176,7 @@ pub fn step_arrow_advance(
     players: &mut [Player],
     map: &mut Map,
     active_rect: ActiveRect,
+    sounds: &mut Vec<u8>,
 ) {
     if index >= players.len() { return; }
     if let Some(a) = players[index].arrow {
@@ -177,6 +189,23 @@ pub fn step_arrow_advance(
         let arrow_val = ARROW + (((a.dir + 3) & 7) as u8);
         if current_tile == arrow_val {
             map.set(a.x, a.y, SPACE);
+        }
+
+        // Viewport bounds check: arrow must stay strictly within the visible on-screen viewport
+        // (Matching 6502 Atari 8-Bit M.CHECK in MIS.TXT)
+        let is_on_screen = nx >= active_rect.left
+            && nx < active_rect.left + active_rect.width
+            && ny >= active_rect.top
+            && ny < active_rect.top + active_rect.height
+            && nx >= 0
+            && nx < MAP_WIDTH
+            && ny >= 0
+            && ny < MAP_HEIGHT;
+
+        if !is_on_screen {
+            // Reached/crossed the edge of the visible screen! Despawn arrow and free player slot.
+            players[index].arrow = None;
+            return;
         }
 
         // Check new position
@@ -199,6 +228,7 @@ pub fn step_arrow_advance(
             GHOST..=11 => {
                 // Hit ghost!
                 players[index].score += 10;
+                sounds.push(SOUND_HIT_MONSTER_1 + (v - GHOST));
                 if v > GHOST {
                     new_v = v - 1; // Ghost degrades
                 }
@@ -206,13 +236,15 @@ pub fn step_arrow_advance(
             GENERATOR..=15 => {
                 // Hit generator / spawner!
                 players[index].score += 200;
+                sounds.push(SOUND_HIT_GENERATOR);
                 if v > GENERATOR {
                     new_v = v - 1; // Spawner degrades
                 }
             }
             HEART => {
                 // RESURRECTION!
-                new_v = GHOST + 2; // Heart turns into level-3 ghost if nobody resurrected?
+                sounds.push(SOUND_WARP_IN);
+                new_v = GHOST + 2; // Heart turns into level-3 ghost if nobody resurrected
                 for (p_idx, p) in players.iter_mut().enumerate() {
                     if p.active && !p.alive {
                         p.alive = true;
@@ -227,10 +259,19 @@ pub fn step_arrow_advance(
             }
             BOMB => {
                 // Hit a smart bomb tile! Trigger smart bomb
-                do_smart_bomb(&mut players[index], map, active_rect);
+                sounds.push(SOUND_EXPLODE_BOMB);
+                map.set(nx, ny, SPACE);
+                do_smart_bomb(&mut players[index], map, active_rect, sounds);
+                new_v = SPACE;
+            }
+            PLAYER..=27 => {
+                // Friendly fire!
+                sounds.push(SOUND_HIT_PLAYER);
+                new_v = v;
             }
             _ => {
-                // Hit wall / door / player / key / etc. Kill arrow, don't change tile
+                // Hit wall / door / item / obstacle. Kill arrow, don't change tile
+                sounds.push(SOUND_HIT_WALL);
                 new_v = v;
             }
         }
@@ -247,6 +288,7 @@ pub fn step_arrow(
     players: &mut [Player],
     map: &mut Map,
     active_rect: ActiveRect,
+    sounds: &mut Vec<u8>,
 ) {
     if index >= players.len() { return; }
     if let Some(mut arrow) = players[index].arrow {
@@ -255,7 +297,8 @@ pub fn step_arrow(
             players[index].arrow = Some(arrow);
         }
         if arrow.cooldown == 0 {
-            step_arrow_advance(index, players, map, active_rect);
+            step_arrow_advance(index, players, map, active_rect, sounds);
         }
     }
 }
+
