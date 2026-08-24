@@ -387,6 +387,12 @@ assert.strictEqual(DandyApp.get_sound_pokey_channel(1), 1, "Hit Player -> Channe
 assert.strictEqual(DandyApp.get_sound_pokey_channel(2), 0, "Shoot -> Channel 0");
 
 const audioSim = new DandyApp();
+// On initial creation (Level 1 start), SOUND_WARP_IN (15) must be queued in sound events and active on Channel 3
+const initEvents = audioSim.get_sound_events();
+assert(initEvents.includes(15), "Initial Level 1 load must emit SOUND_WARP_IN (15)");
+assert.strictEqual((audioSim.get_sound_mask() & (1 << 15)) !== 0, true, "Sound mask bit 15 must be set for Level 1 start");
+assert.strictEqual(audioSim.get_audio_channel_sound(3), 15, "Channel 3 must play SOUND_WARP_IN upon Level 1 load");
+
 // Single shoot action -> emits SOUND_SHOOT on frame 1
 audioSim.set_action(0, PlayerAction.Shoot, true);
 audioSim.tick();

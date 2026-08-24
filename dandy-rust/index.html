@@ -1897,6 +1897,7 @@
         // -----------------------------------------------------------------
         // -----------------------------------------------------------------
         // Authentic Atari 8-Bit POKEY Sound Synthesizer (Web Audio API)
+        // -----------------------------------------------------------------
         // 4-Channel Priority Audio Scheduler & Preemption Engine
         // Modeling POKEY Hardware Voices 0..3 & EFFECTS.TXT Priorities
         // -----------------------------------------------------------------
@@ -1904,8 +1905,12 @@
             let audioCtx = null;
             let masterGain = null;
             let compressor = null;
-            let noiseBuffer = null;
+            let poly17Buffer = null;
+            let poly54Buffer = null;
+            let poly5Buffer = null;
+            let whiteNoiseBuffer = null;
             let isMuted = false;
+            const pendingSoundIds = new Set();
 
             const NUM_VOICES = 4;
             let voices = [];
@@ -1943,8 +1948,8 @@
             };
 
             const SOUND_DURATIONS_SEC = {
-                3: 0.42, // Explosion (420ms)
-                13: 1.00, // Death (1000ms)
+                3: 0.48, // Explosion (480ms ~ 25-29 frames)
+                13: 0.90, // Death (900ms ~ 54 frames)
                 14: 0.50, // Warp Out (500ms)
                 15: 0.50, // Warp In (500ms)
                 12: 0.25, // Monster Bite (250ms)
@@ -1965,10 +1970,89 @@
                 2: 0.083,// Shoot (83ms)
             };
 
+            function ensureNoiseBuffers() {
+                if (!audioCtx) return;
+                const sr = audioCtx.sampleRate || 44100;
+
+                // 1. POKEY 17-Bit Polynomial Noise (AUDC 0x80 - White/Shaped Noise, Period 131,071)
+                if (!poly17Buffer) {
+                    try {
+                        poly17Buffer = audioCtx.createBuffer(1, sr * 2, sr);
+                        const d17 = poly17Buffer.getChannelData(0);
+                        let reg17 = 0x1ffff;
+                        for (let i = 0; i < d17.length; i++) {
+                            const bit = ((reg17 >> 0) ^ (reg17 >> 3)) & 1;
+                            reg17 = (reg17 >> 1) | (bit << 16);
+                            d17[i] = (reg17 & 1) ? 0.95 : -0.95;
+                        }
+                    } catch (_) {}
+                }
+
+                // 2. POKEY 5-Bit + 4-Bit Polynomial Distortion (AUDC 0x40 - Harsh Screech / Death Crunch, Period 465)
+                if (!poly54Buffer) {
+                    try {
+                        poly54Buffer = audioCtx.createBuffer(1, sr, sr);
+                        const d54 = poly54Buffer.getChannelData(0);
+                        let reg5 = 0x1f;
+                        let reg4 = 0x0f;
+                        for (let i = 0; i < d54.length; i++) {
+                            const bit5 = ((reg5 >> 0) ^ (reg5 >> 2)) & 1;
+                            reg5 = (reg5 >> 1) | (bit5 << 4);
+                            const bit4 = ((reg4 >> 0) ^ (reg4 >> 1)) & 1;
+                            reg4 = (reg4 >> 1) | (bit4 << 3);
+                            d54[i] = ((reg5 & 1) & (reg4 & 1)) ? 0.9 : -0.9;
+                        }
+                    } catch (_) {}
+                }
+
+                // 3. POKEY 5-Bit Polynomial Noise (AUDC 0x20 / 0x60 - Motor / Buzzy Rumble, Period 31)
+                if (!poly5Buffer) {
+                    try {
+                        poly5Buffer = audioCtx.createBuffer(1, sr, sr);
+                        const d5 = poly5Buffer.getChannelData(0);
+                        let reg5 = 0x1f;
+                        for (let i = 0; i < d5.length; i++) {
+                            const bit = ((reg5 >> 0) ^ (reg5 >> 2)) & 1;
+                            reg5 = (reg5 >> 1) | (bit << 4);
+                            d5[i] = (reg5 & 1) ? 0.85 : -0.85;
+                        }
+                    } catch (_) {}
+                }
+
+                // 4. White Noise Fallback Buffer
+                if (!whiteNoiseBuffer) {
+                    try {
+                        whiteNoiseBuffer = audioCtx.createBuffer(1, sr, sr);
+                        const dw = whiteNoiseBuffer.getChannelData(0);
+                        for (let i = 0; i < dw.length; i++) {
+                            dw[i] = Math.random() * 2 - 1;
+                        }
+                    } catch (_) {}
+                }
+            }
+
+            function flushPendingSounds() {
+                if (pendingSoundIds.size === 0 || isMuted || !audioCtx || audioCtx.state !== "running") return;
+                const sorted = Array.from(pendingSoundIds)
+                    .filter(id => id > 0)
+                    .sort((a, b) => (SOUND_PRIORITIES[b] || 0) - (SOUND_PRIORITIES[a] || 0));
+                pendingSoundIds.clear();
+                for (const id of sorted) {
+                    playSoundDirect(id);
+                }
+            }
+
             function initAudio() {
                 if (audioCtx) {
+                    ensureNoiseBuffers();
                     if (audioCtx.state === "suspended") {
-                        audioCtx.resume().catch(() => {});
+                        audioCtx.resume().then(() => {
+                            if (audioCtx && audioCtx.state === "running") {
+                                flushPendingSounds();
+                            }
+                        }).catch(() => {});
+                    } else if (audioCtx.state === "running") {
+                        flushPendingSounds();
                     }
                     return;
                 }
@@ -1986,18 +2070,12 @@
                     compressor.release.setValueAtTime(0.1, audioCtx.currentTime);
 
                     masterGain = audioCtx.createGain();
-                    masterGain.gain.setValueAtTime(0.30, audioCtx.currentTime);
+                    masterGain.gain.setValueAtTime(0.32, audioCtx.currentTime);
 
                     compressor.connect(masterGain);
                     masterGain.connect(audioCtx.destination);
 
-                    // Pre-generate 1-second white noise buffer for explosions & crunchy hits
-                    const sr = audioCtx.sampleRate;
-                    noiseBuffer = audioCtx.createBuffer(1, sr, sr);
-                    const data = noiseBuffer.getChannelData(0);
-                    for (let i = 0; i < sr; i++) {
-                        data[i] = Math.random() * 2 - 1;
-                    }
+                    ensureNoiseBuffers();
 
                     // Initialize 4 dedicated POKEY voice channels
                     voices = [];
@@ -2015,7 +2093,28 @@
                             cleanupFns: []
                         });
                     }
+
+                    if (audioCtx.state === "running") {
+                        flushPendingSounds();
+                    } else if (audioCtx.state === "suspended") {
+                        audioCtx.resume().then(() => {
+                            if (audioCtx && audioCtx.state === "running") {
+                                flushPendingSounds();
+                            }
+                        }).catch(() => {});
+                    }
                 } catch (_) {}
+            }
+
+            function unlockAudio() {
+                initAudio();
+                if (audioCtx && audioCtx.state === "suspended") {
+                    audioCtx.resume().then(() => {
+                        if (audioCtx && audioCtx.state === "running") {
+                            flushPendingSounds();
+                        }
+                    }).catch(() => {});
+                }
             }
 
             function stopVoice(voice) {
@@ -2110,7 +2209,7 @@
                 osc.frequency.setValueAtTime(1800, now);
                 osc.frequency.exponentialRampToValueAtTime(240, now + dur);
 
-                gain.gain.setValueAtTime(0.22, now);
+                gain.gain.setValueAtTime(0.24, now);
                 gain.gain.exponentialRampToValueAtTime(0.001, now + dur);
 
                 osc.connect(gain);
@@ -2127,34 +2226,67 @@
                 });
             }
 
+            // Authentic 6502 Atari 8-Bit POKEY Shaped Noise Explosion (S.3)
+            // S.3 .DA #10,#10,0,#143,0 (10 frames static AUDF 10, AUDC 0x8F max vol)
+            //     .DA #15,#10,6144,#143,-256 (15 frames downward sweep + linear decay)
             function playExplosionOnVoice(voice) {
-                if (!noiseBuffer) return;
+                ensureNoiseBuffers();
+                const buf = poly17Buffer || whiteNoiseBuffer;
+                if (!buf || !audioCtx) return;
+
                 const now = audioCtx.currentTime;
-                const dur = 0.42;
+                const dur = 0.48; // ~25-29 frames (480ms)
 
-                const src = audioCtx.createBufferSource();
-                src.buffer = noiseBuffer;
+                // 1. 17-Bit Polynomial Shaped Noise Source
+                const noiseSrc = audioCtx.createBufferSource();
+                noiseSrc.buffer = buf;
+                noiseSrc.loop = true;
 
+                // 2. Sweeping Resonant Low-Pass Filter modeling POKEY AUDF frequency sweep
                 const filter = audioCtx.createBiquadFilter();
                 filter.type = "lowpass";
-                filter.frequency.setValueAtTime(700, now);
-                filter.frequency.exponentialRampToValueAtTime(50, now + dur);
+                filter.Q.setValueAtTime(3.2, now); // Resonant peak for authentic Atari crunch
+                filter.frequency.setValueAtTime(850, now);
+                filter.frequency.setValueAtTime(850, now + 0.16); // Hold for initial 10-frame fragment
+                filter.frequency.exponentialRampToValueAtTime(60, now + dur); // Sweep down to low rumble
 
-                const gain = audioCtx.createGain();
-                gain.gain.setValueAtTime(0.38, now);
-                gain.gain.exponentialRampToValueAtTime(0.001, now + dur);
+                // 3. Noise Volume Envelope
+                const noiseGain = audioCtx.createGain();
+                noiseGain.gain.setValueAtTime(0.40, now); // Full audible volume
+                noiseGain.gain.setValueAtTime(0.40, now + 0.16); // Hold at full volume
+                noiseGain.gain.exponentialRampToValueAtTime(0.001, now + dur);
 
-                src.connect(filter);
-                filter.connect(gain);
-                gain.connect(voice.gainNode);
-                src.start(now);
-                src.stop(now + dur);
+                noiseSrc.connect(filter);
+                filter.connect(noiseGain);
+                noiseGain.connect(voice.gainNode);
+
+                // 4. Sub-Bass Resonant Rumble Thump (POKEY divider physical low-end energy)
+                const subOsc = audioCtx.createOscillator();
+                subOsc.type = "triangle";
+                subOsc.frequency.setValueAtTime(75, now);
+                subOsc.frequency.exponentialRampToValueAtTime(28, now + dur);
+
+                const subGain = audioCtx.createGain();
+                subGain.gain.setValueAtTime(0.30, now);
+                subGain.gain.setValueAtTime(0.30, now + 0.12);
+                subGain.gain.exponentialRampToValueAtTime(0.001, now + dur);
+
+                subOsc.connect(subGain);
+                subGain.connect(voice.gainNode);
+
+                noiseSrc.start(now);
+                noiseSrc.stop(now + dur);
+                subOsc.start(now);
+                subOsc.stop(now + dur);
 
                 voice.cleanupFns.push(() => {
                     try {
-                        gain.gain.cancelScheduledValues(audioCtx.currentTime);
-                        gain.gain.setValueAtTime(0.0001, audioCtx.currentTime);
-                        src.stop(audioCtx.currentTime + 0.003);
+                        noiseGain.gain.cancelScheduledValues(audioCtx.currentTime);
+                        noiseGain.gain.setValueAtTime(0.0001, audioCtx.currentTime);
+                        subGain.gain.cancelScheduledValues(audioCtx.currentTime);
+                        subGain.gain.setValueAtTime(0.0001, audioCtx.currentTime);
+                        noiseSrc.stop(audioCtx.currentTime + 0.003);
+                        subOsc.stop(audioCtx.currentTime + 0.003);
                     } catch (_) {}
                 });
             }
@@ -2238,16 +2370,109 @@
                 });
             }
 
+            // Authentic 6502 Atari 8-Bit Player Death Sound (S.13)
+            // S.13 .DA #60,#0,1024,#79,-43 (60 frames AUDC 0x4F 5-bit+4-bit poly noise sweep)
+            //      .DA #30,#240,-2048,#165,-43 (30 frames AUDC 0xA5 pure tone sweep)
             function playDeadPlayerOnVoice(voice) {
+                ensureNoiseBuffers();
                 const now = audioCtx.currentTime;
-                const dur = 0.75;
+                const dur = 0.90; // ~54 frames (900ms)
+
+                // 1. Gritty Poly Distortion Noise
+                const buf = poly54Buffer || poly17Buffer || whiteNoiseBuffer;
+                if (buf) {
+                    const noiseSrc = audioCtx.createBufferSource();
+                    noiseSrc.buffer = buf;
+                    noiseSrc.loop = true;
+
+                    const filter = audioCtx.createBiquadFilter();
+                    filter.type = "bandpass";
+                    filter.Q.setValueAtTime(2.0, now);
+                    filter.frequency.setValueAtTime(500, now);
+                    filter.frequency.exponentialRampToValueAtTime(70, now + dur);
+
+                    const noiseGain = audioCtx.createGain();
+                    noiseGain.gain.setValueAtTime(0.25, now);
+                    noiseGain.gain.exponentialRampToValueAtTime(0.001, now + dur);
+
+                    noiseSrc.connect(filter);
+                    filter.connect(noiseGain);
+                    noiseGain.connect(voice.gainNode);
+
+                    noiseSrc.start(now);
+                    noiseSrc.stop(now + dur);
+
+                    voice.cleanupFns.push(() => {
+                        try {
+                            noiseGain.gain.cancelScheduledValues(audioCtx.currentTime);
+                            noiseGain.gain.setValueAtTime(0.0001, audioCtx.currentTime);
+                            noiseSrc.stop(audioCtx.currentTime + 0.003);
+                        } catch (_) {}
+                    });
+                }
+
+                // 2. Descending Tone Oscillator
                 const osc = audioCtx.createOscillator();
                 const gain = audioCtx.createGain();
                 osc.type = "square";
                 osc.frequency.setValueAtTime(440, now);
-                osc.frequency.exponentialRampToValueAtTime(80, now + dur);
+                osc.frequency.exponentialRampToValueAtTime(75, now + dur);
 
+                gain.gain.setValueAtTime(0.24, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + dur);
+
+                osc.connect(gain);
+                gain.connect(voice.gainNode);
+                osc.start(now);
+                osc.stop(now + dur);
+
+                voice.cleanupFns.push(() => {
+                    try {
+                        gain.gain.cancelScheduledValues(audioCtx.currentTime);
+                        gain.gain.setValueAtTime(0.0001, audioCtx.currentTime);
+                        osc.stop(audioCtx.currentTime + 0.003);
+                    } catch (_) {}
+                });
+            }
+
+            function playHitPlayerOnVoice(voice) {
+                ensureNoiseBuffers();
+                const now = audioCtx.currentTime;
+                const dur = 0.06; // 60ms
+
+                // Quick crunchy click transient + low square pulse (AUDF 250 ~ 128Hz)
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = "square";
+                osc.frequency.setValueAtTime(128, now);
                 gain.gain.setValueAtTime(0.26, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + dur);
+
+                osc.connect(gain);
+                gain.connect(voice.gainNode);
+                osc.start(now);
+                osc.stop(now + dur);
+
+                voice.cleanupFns.push(() => {
+                    try {
+                        gain.gain.cancelScheduledValues(audioCtx.currentTime);
+                        gain.gain.setValueAtTime(0.0001, audioCtx.currentTime);
+                        osc.stop(audioCtx.currentTime + 0.003);
+                    } catch (_) {}
+                });
+            }
+
+            function playHaveNoneOnVoice(voice) {
+                // S.8 AUDF 100 ~ 316 Hz fast downward decay thud
+                const now = audioCtx.currentTime;
+                const dur = 0.08; // 80ms
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = "triangle";
+                osc.frequency.setValueAtTime(316, now);
+                osc.frequency.exponentialRampToValueAtTime(120, now + dur);
+
+                gain.gain.setValueAtTime(0.24, now);
                 gain.gain.exponentialRampToValueAtTime(0.001, now + dur);
 
                 osc.connect(gain);
@@ -2266,13 +2491,13 @@
 
             function playWarpInOnVoice(voice) {
                 const now = audioCtx.currentTime;
-                const dur = 0.38;
+                const dur = 0.50; // 30 frames (500ms) matching 6502 S.15
                 const osc = audioCtx.createOscillator();
                 const gain = audioCtx.createGain();
                 osc.type = "square";
                 osc.frequency.setValueAtTime(100, now);
                 osc.frequency.exponentialRampToValueAtTime(1200, now + dur);
-                gain.gain.setValueAtTime(0.22, now);
+                gain.gain.setValueAtTime(0.24, now);
                 gain.gain.exponentialRampToValueAtTime(0.001, now + dur);
                 osc.connect(gain);
                 gain.connect(voice.gainNode);
@@ -2322,10 +2547,8 @@
                 voice.cleanupFns.push(() => clearTimeout(timer));
             }
 
-            function playSound(id) {
-                if (isMuted) return;
-                initAudio();
-                if (!audioCtx || audioCtx.state !== "running") return;
+            function playSoundDirect(id) {
+                if (isMuted || !audioCtx || audioCtx.state !== "running") return;
 
                 const voice = allocateVoice(id);
                 if (!voice) return; // Dropped by priority policy
@@ -2340,27 +2563,37 @@
                 voice.duration = dur;
 
                 switch (id) {
-                    case 1: playToneOnVoice(voice, 128, 0.05, "square", 0.22); break; // Hit Player
-                    case 2: playShootOnVoice(voice); break;                           // Shoot
-                    case 3: playExplosionOnVoice(voice); break;                       // Bomb Explode
-                    case 4: playOpenDoorOnVoice(voice); break;                        // Open Door
-                    case 5: playPickupOnVoice(voice); break;                          // Pickup Object
-                    case 6: playEatFoodOnVoice(voice); break;                         // Eat Food
-                    case 7: playPickMoneyOnVoice(voice); break;                       // Pick Money
-                    case 8: playToneOnVoice(voice, 316, 0.075, "square", 0.18); break;// Have None / Hit Wall
-                    case 9: playToneOnVoice(voice, 165, 0.16, "square", 0.22); break; // Hit Monster Tier 1
-                    case 10: playToneOnVoice(voice, 147, 0.16, "square", 0.22); break;// Hit Monster Tier 2
-                    case 11: playToneOnVoice(voice, 131, 0.16, "square", 0.22); break;// Hit Monster Tier 3
-                    case 12: playMonsterBiteOnVoice(voice); break;                     // Monster Bite
-                    case 13: playDeadPlayerOnVoice(voice); break;                      // Dead Player
-                    case 14: playWarpOutOnVoice(voice); break;                         // Warp Out
-                    case 15: playWarpInOnVoice(voice); break;                          // Warp In
+                    case 1: playHitPlayerOnVoice(voice); break;                        // Hit Player (S.1)
+                    case 2: playShootOnVoice(voice); break;                           // Shoot (S.2)
+                    case 3: playExplosionOnVoice(voice); break;                       // Bomb Explode (S.3)
+                    case 4: playOpenDoorOnVoice(voice); break;                        // Open Door (S.4)
+                    case 5: playPickupOnVoice(voice); break;                          // Pickup Object (S.5)
+                    case 6: playEatFoodOnVoice(voice); break;                         // Eat Food (S.6)
+                    case 7: playPickMoneyOnVoice(voice); break;                       // Pick Money (S.7)
+                    case 8: playHaveNoneOnVoice(voice); break;                        // Have None / Hit Wall (S.8)
+                    case 9: playToneOnVoice(voice, 165, 0.16, "square", 0.22); break; // Hit Monster Tier 1 (S.9)
+                    case 10: playToneOnVoice(voice, 147, 0.16, "square", 0.22); break;// Hit Monster Tier 2 (S.10)
+                    case 11: playToneOnVoice(voice, 131, 0.16, "square", 0.22); break;// Hit Monster Tier 3 (S.11)
+                    case 12: playMonsterBiteOnVoice(voice); break;                     // Monster Bite (S.12)
+                    case 13: playDeadPlayerOnVoice(voice); break;                      // Dead Player (S.13)
+                    case 14: playWarpOutOnVoice(voice); break;                         // Warp Out (S.14)
+                    case 15: playWarpInOnVoice(voice); break;                          // Warp In (S.15)
                     case 16: playToneOnVoice(voice, 492, 0.083, "square", 0.20); break;// Spawning 1 (AUDF 64)
                     case 17: playToneOnVoice(voice, 390, 0.083, "square", 0.20); break;// Spawning 2 (AUDF 81)
                     case 18: playToneOnVoice(voice, 329, 0.083, "square", 0.20); break;// Spawning 3 (AUDF 96)
                     case 19: playToneOnVoice(voice, 262, 0.083, "square", 0.20); break;// Spawning 4 (AUDF 121)
-                    case 20: playToHandOnVoice(voice); break;                          // To Hand
+                    case 20: playToHandOnVoice(voice); break;                          // To Hand (S.20)
                 }
+            }
+
+            function playSound(id) {
+                if (isMuted || id <= 0) return;
+                initAudio();
+                if (!audioCtx || audioCtx.state !== "running") {
+                    pendingSoundIds.add(id);
+                    return;
+                }
+                playSoundDirect(id);
             }
 
             function playEvents(events) {
@@ -2380,7 +2613,7 @@
                 if (mask === 0 || isMuted) return;
                 initAudio();
                 const activeIds = [];
-                for (let bit = 1; bit <= 16; bit++) {
+                for (let bit = 1; bit <= 20; bit++) {
                     if ((mask & (1 << bit)) !== 0) {
                         activeIds.push(bit);
                     }
@@ -2399,6 +2632,7 @@
 
             return {
                 init: initAudio,
+                unlock: unlockAudio,
                 play: playSound,
                 playMask,
                 playEvents,
@@ -2408,6 +2642,11 @@
                 getVoiceState: () => voices.map(v => ({ id: v.activeSoundId, priority: v.priority }))
             };
         })();
+
+        // Global user gesture listeners to unlock browser Web Audio
+        ["keydown", "pointerdown", "touchstart", "mousedown", "click"].forEach((evt) => {
+            window.addEventListener(evt, () => PokeyAudio.unlock(), { passive: true, capture: true });
+        });
 
         window.addEventListener("TrunkApplicationStarted", (event) => {
             const wasm = event.detail.wasm;

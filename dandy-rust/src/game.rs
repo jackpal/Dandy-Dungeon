@@ -234,6 +234,10 @@ impl Game {
         let (target_x, target_y) = calculate_target_cog(&self.players);
         self.camera.cog_x = target_x as f64;
         self.camera.cog_y = target_y as f64;
+
+        // Authentic 6502 Z.WARP.IN emitted on dungeon swap / level load (GAME.TXT lines 74-81)
+        self.sounds.push(SOUND_WARP_IN);
+        self.audio_scheduler.schedule_sound(SOUND_WARP_IN);
     }
 
     pub fn update_camera(&mut self) {
@@ -314,13 +318,10 @@ impl Game {
                 // Progress to next level
                 self.level = (self.level + 1).min(25);
                 self.load();
-                self.sounds.push(SOUND_WARP_IN);
             } else {
                 // Everyone died, restart
                 self.load();
-                self.sounds.push(SOUND_WARP_IN);
             }
-            self.audio_scheduler.schedule_sound(SOUND_WARP_IN);
         }
     }
 
@@ -2088,6 +2089,15 @@ mod tests {
             (SOUND_SPAWNING_1..=SOUND_SPAWNING_4).contains(&snd),
             "Emitted sound {snd} must be in SOUND_SPAWNING_1..=SOUND_SPAWNING_4"
         );
+    }
+
+    #[test]
+    fn test_initial_level_load_emits_warp_in_sound() {
+        let mut game = Game::new();
+        game.load();
+        assert!(game.sounds.contains(&SOUND_WARP_IN), "Initial Level 1 load must emit SOUND_WARP_IN");
+        assert!(game.audio_scheduler.is_channel_active(3), "SOUND_WARP_IN must be scheduled on channel 3 upon initial level load");
+        assert_eq!(game.audio_scheduler.get_channel_sound(3), SOUND_WARP_IN);
     }
 
     #[test]
