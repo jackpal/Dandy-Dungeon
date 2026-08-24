@@ -298,7 +298,7 @@
             text-align: center;
         }
 
-        canvas {
+        #gameCanvas {
             image-rendering: pixelated;
             image-rendering: crisp-edges;
             max-width: 100%;
@@ -308,6 +308,16 @@
             border-radius: 2px;
             display: block;
             touch-action: none;
+        }
+
+        #qr-canvas {
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
+            width: 200px !important;
+            height: 200px !important;
+            aspect-ratio: 1 / 1 !important;
+            display: block;
+            margin: 0 auto;
         }
 
         /* Mobile Touch Controls */
