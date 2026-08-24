@@ -36,7 +36,7 @@ pub fn step_enemies(
             if (GHOST..=GHOST + 2).contains(&v) {
                 step_ghost(x, y, v, map, players, sounds);
             } else if (GENERATOR..=GENERATOR + 2).contains(&v) {
-                step_generator(x, y, v, map, rng);
+                step_generator(x, y, v, map, rng, sounds);
             }
             x += 2;
         }
@@ -154,6 +154,7 @@ pub fn step_generator(
     gen_val: u8,
     map: &mut Map,
     rng: &mut LcgRng,
+    sounds: &mut Vec<u8>,
 ) {
     // Pick random cardinal direction: 0, 2, 4, 6
     let dir = (rng.rand_byte() as usize & 3) * 2;
@@ -165,6 +166,8 @@ pub fn step_generator(
         // Spawn ghost corresponding to generator level
         let new_ghost = GHOST + (gen_val - GENERATOR);
         map.set(nx, ny, new_ghost);
+        let spawn_sound = SOUND_SPAWNING_1 + (rng.rand_byte() & 3);
+        sounds.push(spawn_sound);
     }
 }
 

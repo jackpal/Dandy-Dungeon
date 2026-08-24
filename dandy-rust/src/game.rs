@@ -314,10 +314,13 @@ impl Game {
                 // Progress to next level
                 self.level = (self.level + 1).min(25);
                 self.load();
+                self.sounds.push(SOUND_WARP_IN);
             } else {
                 // Everyone died, restart
                 self.load();
+                self.sounds.push(SOUND_WARP_IN);
             }
+            self.audio_scheduler.schedule_sound(SOUND_WARP_IN);
         }
     }
 
@@ -2018,6 +2021,137 @@ mod tests {
         crate::ai::hurt_player(1, 200, &mut game.map, &mut game.players, &mut sounds);
         assert!(sounds.is_empty(), "Escaped player must not be hurt or drop keys");
         assert_eq!(game.players[1].keys, 5);
+    }
+
+    #[test]
+    fn test_locked_door_have_none_sound_when_no_keys() {
+        let mut game = Game::new();
+        game.load();
+        let px = 5;
+        let py = 5;
+        game.map.set(game.players[0].x, game.players[0].y, SPACE);
+        game.players[0].x = px;
+        game.players[0].y = py;
+        game.players[0].dir = 2; // East
+        game.players[0].keys = 0;
+        game.map.set(px, py, PLAYER);
+
+        // Place a locked door directly to the East (6, 5)
+        game.map.set(px + 1, py, LOCK);
+
+        let mut sounds = Vec::new();
+        let moved = crate::physics::try_move_player(0, &mut game.players[0], &mut game.map, 2, &mut sounds);
+
+        assert!(!moved, "Player cannot move through locked door without keys");
+        assert_eq!(game.players[0].x, px, "Player remains in position");
+        assert_eq!(game.map.get(px + 1, py), LOCK, "Door remains locked");
+        assert!(sounds.contains(&SOUND_HAVE_NONE), "Must emit SOUND_HAVE_NONE when hitting door with 0 keys");
+    }
+
+    #[test]
+    fn test_bomb_action_have_none_sound_when_no_bombs() {
+        let mut game = Game::new();
+        game.load();
+        game.players[0].bombs = 0;
+        game.players[0].input_mask = ACTION_BOMB;
+        game.players[0].move_cooldown = 0;
+
+        let mut sounds = Vec::new();
+        let active = game.get_active_rect();
+        crate::physics::step_player(0, &mut game.players, &mut game.map, active, &mut sounds);
+
+        assert!(sounds.contains(&SOUND_HAVE_NONE), "Must emit SOUND_HAVE_NONE when triggering bomb with 0 bombs");
+    }
+
+    #[test]
+    fn test_spawner_sound_emissions_and_tiers() {
+        let mut game = Game::new();
+        game.load();
+        let gx = 10;
+        let gy = 10;
+
+        // Place generator at (10, 10) surrounded by SPACE
+        game.map.set(gx, gy, GENERATOR);
+        game.map.set(gx, gy - 1, SPACE); // North
+        game.map.set(gx + 1, gy, SPACE); // East
+        game.map.set(gx, gy + 1, SPACE); // South
+        game.map.set(gx - 1, gy, SPACE); // West
+
+        let mut sounds = Vec::new();
+        let mut rng = LcgRng::new(42);
+
+        crate::ai::step_generator(gx, gy, GENERATOR, &mut game.map, &mut rng, &mut sounds);
+
+        assert!(!sounds.is_empty(), "Spawner must emit a sound on ghost spawn");
+        let snd = sounds[0];
+        assert!(
+            (SOUND_SPAWNING_1..=SOUND_SPAWNING_4).contains(&snd),
+            "Emitted sound {snd} must be in SOUND_SPAWNING_1..=SOUND_SPAWNING_4"
+        );
+    }
+
+    #[test]
+    fn test_level_restart_and_progression_warp_in_sound() {
+        let mut game = Game::new();
+        game.load();
+
+        // 1. Single player escapes -> next level emits SOUND_WARP_IN
+        game.players[0].escaped = true;
+        game.players[0].alive = true;
+        game.step();
+
+        assert_eq!(game.level, 1);
+        assert!(game.sounds.contains(&SOUND_WARP_IN), "Level transition must emit SOUND_WARP_IN");
+        assert!(game.audio_scheduler.is_channel_active(3), "SOUND_WARP_IN scheduled on channel 3");
+
+        // 2. Player dies and restarts -> emits SOUND_WARP_IN
+        game.players[0].alive = false;
+        game.players[0].escaped = false;
+        game.step();
+
+        assert!(game.sounds.contains(&SOUND_WARP_IN), "Wipe restart must emit SOUND_WARP_IN");
+    }
+
+    #[test]
+    fn test_full_sound_table_parity() {
+        // Assert all 21 sound constants match 6502 EFFECTS.TXT Z.PRIOR and channel assignments
+        assert_eq!(SOUND_NONE, 0);
+        assert_eq!(SOUND_HIT_PLAYER, 1);
+        assert_eq!(SOUND_SHOOT, 2);
+        assert_eq!(SOUND_EXPLODE_BOMB, 3);
+        assert_eq!(SOUND_OPEN_DOOR, 4);
+        assert_eq!(SOUND_PICKUP_OBJECT, 5);
+        assert_eq!(SOUND_EAT_FOOD, 6);
+        assert_eq!(SOUND_PICK_MONEY, 7);
+        assert_eq!(SOUND_HAVE_NONE, 8);
+        assert_eq!(SOUND_HIT_MONSTER_1, 9);
+        assert_eq!(SOUND_HIT_MONSTER_2, 10);
+        assert_eq!(SOUND_HIT_MONSTER_3, 11);
+        assert_eq!(SOUND_MONSTER_BITE, 12);
+        assert_eq!(SOUND_DEAD_PLAYER, 13);
+        assert_eq!(SOUND_WARP_OUT, 14);
+        assert_eq!(SOUND_WARP_IN, 15);
+        assert_eq!(SOUND_SPAWNING_1, 16);
+        assert_eq!(SOUND_SPAWNING_2, 17);
+        assert_eq!(SOUND_SPAWNING_3, 18);
+        assert_eq!(SOUND_SPAWNING_4, 19);
+        assert_eq!(SOUND_TO_HAND, 20);
+
+        // Verify Pokey Channels
+        assert_eq!(sound_pokey_channel(SOUND_SPAWNING_1), 1);
+        assert_eq!(sound_pokey_channel(SOUND_SPAWNING_2), 1);
+        assert_eq!(sound_pokey_channel(SOUND_SPAWNING_3), 1);
+        assert_eq!(sound_pokey_channel(SOUND_SPAWNING_4), 1);
+        assert_eq!(sound_pokey_channel(SOUND_TO_HAND), 0);
+        assert_eq!(sound_pokey_channel(SOUND_HAVE_NONE), 0);
+
+        // Verify Priorities
+        assert_eq!(sound_priority(SOUND_SPAWNING_1), 55);
+        assert_eq!(sound_priority(SOUND_SPAWNING_2), 55);
+        assert_eq!(sound_priority(SOUND_SPAWNING_3), 55);
+        assert_eq!(sound_priority(SOUND_SPAWNING_4), 55);
+        assert_eq!(sound_priority(SOUND_TO_HAND), 30);
+        assert_eq!(sound_priority(SOUND_HAVE_NONE), 20);
     }
 }
 

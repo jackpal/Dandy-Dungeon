@@ -50,6 +50,8 @@ pub fn try_move_player(
                 map.unlock(nx, ny);
                 moved = true;
                 sounds.push(SOUND_OPEN_DOOR);
+            } else {
+                sounds.push(SOUND_HAVE_NONE);
             }
         }
         DOWN => {
@@ -109,9 +111,13 @@ pub fn step_player(
     let input = players[index].input_mask;
 
     // 1. Check Smart Bomb
-    if (input & ACTION_BOMB) != 0 && players[index].bombs > 0 {
-        players[index].bombs -= 1;
-        do_smart_bomb(&mut players[index], map, active_rect, sounds);
+    if (input & ACTION_BOMB) != 0 {
+        if players[index].bombs > 0 {
+            players[index].bombs -= 1;
+            do_smart_bomb(&mut players[index], map, active_rect, sounds);
+        } else {
+            sounds.push(SOUND_HAVE_NONE);
+        }
     }
 
     // Decrement movement cooldown unconditionally each 60 Hz frame if > 0

@@ -73,7 +73,8 @@ pub const SOUND_OPEN_DOOR: u8 = 4;       // Z.OPEN.DOOR
 pub const SOUND_PICKUP_OBJECT: u8 = 5;   // Z.PICKUP.OBJECT
 pub const SOUND_EAT_FOOD: u8 = 6;        // Z.EAT.FOOD
 pub const SOUND_PICK_MONEY: u8 = 7;      // Z.PICK.MONEY
-pub const SOUND_HIT_WALL: u8 = 8;        // Z.HAVE.NONE / hit wall thud
+pub const SOUND_HAVE_NONE: u8 = 8;       // Z.HAVE.NONE / hit wall thud
+pub const SOUND_HIT_WALL: u8 = 8;        // Backward-compatibility alias
 pub const SOUND_HIT_MONSTER_1: u8 = 9;   // Z.HIT.MONSTER.1 (AUDF 193)
 pub const SOUND_HIT_MONSTER_2: u8 = 10;  // Z.HIT.MONSTER.2 (AUDF 217)
 pub const SOUND_HIT_MONSTER_3: u8 = 11;  // Z.HIT.MONSTER.3 (AUDF 243)
@@ -81,7 +82,12 @@ pub const SOUND_MONSTER_BITE: u8 = 12;   // Z.MONSTER.BITE
 pub const SOUND_DEAD_PLAYER: u8 = 13;    // Z.DEAD.PLAYER
 pub const SOUND_WARP_OUT: u8 = 14;       // Z.WARP.OUT
 pub const SOUND_WARP_IN: u8 = 15;        // Z.WARP.IN
-pub const SOUND_HIT_GENERATOR: u8 = 16;  // Z.SPAWNING.1 / Generator hit
+pub const SOUND_SPAWNING_1: u8 = 16;     // Z.SPAWNING.1 (AUDF 64)
+pub const SOUND_HIT_GENERATOR: u8 = 16;  // Backward-compatibility alias
+pub const SOUND_SPAWNING_2: u8 = 17;     // Z.SPAWNING.2 (AUDF 81)
+pub const SOUND_SPAWNING_3: u8 = 18;     // Z.SPAWNING.3 (AUDF 96)
+pub const SOUND_SPAWNING_4: u8 = 19;     // Z.SPAWNING.4 (AUDF 121)
+pub const SOUND_TO_HAND: u8 = 20;        // Z.TO.HAND
 
 // Sound Priority Ranking (Higher value = Higher Priority)
 pub fn sound_priority(sound_id: u8) -> u8 {
@@ -94,13 +100,14 @@ pub fn sound_priority(sound_id: u8) -> u8 {
         SOUND_HIT_PLAYER => 70,
         SOUND_EAT_FOOD => 65,
         SOUND_OPEN_DOOR => 60,
-        SOUND_HIT_GENERATOR => 55,
+        SOUND_SPAWNING_1 | SOUND_SPAWNING_2 | SOUND_SPAWNING_3 | SOUND_SPAWNING_4 => 55,
         SOUND_HIT_MONSTER_3 => 50,
         SOUND_HIT_MONSTER_2 => 48,
         SOUND_HIT_MONSTER_1 => 45,
         SOUND_PICK_MONEY => 40,
         SOUND_PICKUP_OBJECT => 35,
-        SOUND_HIT_WALL => 20,
+        SOUND_TO_HAND => 30,
+        SOUND_HAVE_NONE => 20,
         SOUND_SHOOT => 15,
         _ => 0,
     }
@@ -113,10 +120,23 @@ pub fn sound_pokey_channel(sound_id: u8) -> usize {
         SOUND_EXPLODE_BOMB | SOUND_DEAD_PLAYER | SOUND_WARP_OUT | SOUND_WARP_IN => 3,
         // Channel 2: Monster Bite
         SOUND_MONSTER_BITE => 2,
-        // Channel 1: Impacts, monster hits, player hits, generator/spawn
-        SOUND_HIT_PLAYER | SOUND_HIT_MONSTER_1 | SOUND_HIT_MONSTER_2 | SOUND_HIT_MONSTER_3 | SOUND_HIT_GENERATOR => 1,
-        // Channel 0: Ambient / Items / Shooting / Doors / Walls
-        SOUND_SHOOT | SOUND_OPEN_DOOR | SOUND_PICKUP_OBJECT | SOUND_EAT_FOOD | SOUND_PICK_MONEY | SOUND_HIT_WALL => 0,
+        // Channel 1: Impacts, monster hits, player hits, generator spawning
+        SOUND_HIT_PLAYER
+        | SOUND_HIT_MONSTER_1
+        | SOUND_HIT_MONSTER_2
+        | SOUND_HIT_MONSTER_3
+        | SOUND_SPAWNING_1
+        | SOUND_SPAWNING_2
+        | SOUND_SPAWNING_3
+        | SOUND_SPAWNING_4 => 1,
+        // Channel 0: Ambient / Items / Shooting / Doors / Walls / To Hand
+        SOUND_SHOOT
+        | SOUND_OPEN_DOOR
+        | SOUND_PICKUP_OBJECT
+        | SOUND_EAT_FOOD
+        | SOUND_PICK_MONEY
+        | SOUND_HAVE_NONE
+        | SOUND_TO_HAND => 0,
         _ => 0,
     }
 }
@@ -132,11 +152,12 @@ pub fn sound_duration_frames(sound_id: u8) -> u32 {
         SOUND_HIT_PLAYER => 3,    // ~50ms
         SOUND_EAT_FOOD => 30,     // ~500ms
         SOUND_OPEN_DOOR => 10,    // ~166ms
-        SOUND_HIT_GENERATOR => 5, // ~83ms
+        SOUND_SPAWNING_1 | SOUND_SPAWNING_2 | SOUND_SPAWNING_3 | SOUND_SPAWNING_4 => 5, // ~83ms
         SOUND_HIT_MONSTER_1 | SOUND_HIT_MONSTER_2 | SOUND_HIT_MONSTER_3 => 10, // ~166ms
         SOUND_PICK_MONEY => 15,   // ~250ms
         SOUND_PICKUP_OBJECT => 10,// ~166ms
-        SOUND_HIT_WALL => 5,      // ~83ms
+        SOUND_TO_HAND => 30,      // ~500ms
+        SOUND_HAVE_NONE => 5,     // ~83ms
         SOUND_SHOOT => 5,         // ~83ms
         _ => 0,
     }
