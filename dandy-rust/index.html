@@ -256,6 +256,36 @@
             touch-action: none;
         }
 
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .connecting-spinner {
+            width: 36px;
+            height: 36px;
+            border: 3px solid rgba(255, 167, 38, 0.2);
+            border-top-color: var(--accent-color);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin-bottom: 12px;
+        }
+
+        #connecting-overlay {
+            display: none;
+            position: absolute;
+            inset: 0;
+            background: rgba(18, 18, 18, 0.95);
+            z-index: 10;
+            border-radius: 6px;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(4px);
+            padding: 16px;
+            text-align: center;
+            line-height: normal;
+        }
+
         #hud {
             width: 100%;
             border-collapse: collapse;
@@ -618,6 +648,13 @@
         </div>
 
         <main class="canvas-wrapper">
+            <!-- Connecting State Crisp High-DPI HTML/CSS Overlay -->
+            <div id="connecting-overlay">
+                <div class="connecting-spinner"></div>
+                <h3 style="color: var(--accent-color); font-size: 1.15rem; margin: 0 0 6px 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-weight: 600; letter-spacing: 0.5px;">Connecting to Room...</h3>
+                <p id="connecting-subtext" style="color: var(--text-secondary); font-size: 0.85rem; margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">Waiting for host snapshot state sync</p>
+            </div>
+
             <table id="hud">
                 <thead>
                     <tr>
@@ -1265,6 +1302,7 @@
 
             const canvas = document.getElementById("gameCanvas");
             const ctx = canvas.getContext("2d", { alpha: false });
+            const connectingOverlay = document.getElementById("connecting-overlay");
 
             // Zero-Copy Transport Ladder (G3) View Cache
             let cachedFbPtr = 0;
@@ -2083,6 +2121,7 @@
                 onlinePanel.style.display = "none";
                 btnShareLink.style.display = "none";
                 btnShowQr.style.display = "none";
+                connectingOverlay.style.display = "none";
                 document.getElementById("net-stat-role").textContent = "LOCAL";
                 document.getElementById("net-stat-status").textContent = "Ready";
                 document.getElementById("net-stat-status").style.color = "#4caf50";
@@ -2424,18 +2463,13 @@
 
                 if (isOnlineMode) {
                     if (isWaitingForHostSync) {
+                        connectingOverlay.style.display = "flex";
                         ctx.fillStyle = "#121212";
                         ctx.fillRect(0, 0, 320, 160);
-                        ctx.fillStyle = "#ffa726";
-                        ctx.font = "bold 12px 'Courier New', monospace";
-                        ctx.textAlign = "center";
-                        ctx.fillText("CONNECTING TO ROOM...", 160, 70);
-                        ctx.fillStyle = "#b0b0b0";
-                        ctx.font = "9px 'Courier New', monospace";
-                        ctx.fillText("Waiting for host snapshot state sync...", 160, 95);
-                        ctx.textAlign = "start";
                         requestAnimationFrame(gameLoop);
                         return;
+                    } else {
+                        connectingOverlay.style.display = "none";
                     }
 
                     // 1. Advance rollback netcode step
