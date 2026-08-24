@@ -3072,6 +3072,7 @@
             let lastPingSent = performance.now();
             let measuredPing = 0;
             const myPeerId = "PEER-" + Math.random().toString(36).slice(2, 8).toUpperCase();
+            window.myPeerId = myPeerId;
 
             function broadcastPacket(uint8Array, excludePeerId = null) {
                 for (const [peerId, peer] of PEER_CONNECTIONS.entries()) {
@@ -5330,6 +5331,7 @@
 
             window.dandyApp = app;
             window.dandyBuildInfo = app.get_build_info();
+            window.myPeerId = myPeerId;
             console.log(`[Dandy Dungeon] Loaded: ${window.dandyBuildInfo}`);
 
             requestAnimationFrame(gameLoop);

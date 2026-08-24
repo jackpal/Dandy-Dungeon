@@ -424,7 +424,8 @@ new Promise(async (resolve, reject) => {
         const iframeMismatch = spawnJoiner("Mismatch_Joiner", "#room=" + roomCode);
         await waitFor(() => {
             const doc = iframeMismatch.contentDocument;
-            return doc && doc.getElementById("connecting-overlay") !== null;
+            const win = iframeMismatch.contentWindow;
+            return doc && doc.getElementById("connecting-overlay") !== null && win?.myPeerId && win?.dandyApp;
         }, 5000, "Mismatch Joiner iframe load");
 
         const mismatchDoc = iframeMismatch.contentDocument;

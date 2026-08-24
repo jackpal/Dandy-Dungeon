@@ -339,11 +339,11 @@ impl DandyApp {
     }
 
     pub fn net_receive_remote_packet(&mut self, bytes: &[u8]) -> bool {
-        let mut parsed = [(0usize, 0u32, 0u8, 0u8); 4];
+        let mut parsed = [(0usize, 0u32, 0u8, 0u8); 32];
         let mut count = 0;
         for chunk in bytes.chunks_exact(8) {
             if let Some((peer_idx, frame, curr_mask, prev_mask)) = netcode::decode_input_packet(chunk) {
-                if count < 4 {
+                if count < 32 {
                     parsed[count] = (peer_idx as usize, frame, curr_mask, prev_mask);
                     count += 1;
                 }

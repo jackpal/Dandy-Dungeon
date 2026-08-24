@@ -152,8 +152,7 @@ impl Game {
         }
 
         // Find first available adjacent space
-        for test_dir in 0..8 {
-            let d = DIR_TO_DELTA[test_dir];
+        for &d in &DIR_TO_DELTA {
             let tx = spawn.0 + d.0;
             let ty = spawn.1 + d.1;
             let v = self.map.get(tx, ty);
@@ -194,10 +193,11 @@ impl Game {
             return;
         }
 
-        if self.players[player_idx].alive && !self.players[player_idx].escaped {
-            if self.map.get(self.players[player_idx].x, self.players[player_idx].y) == (PLAYER + player_idx as u8) {
-                self.map.set(self.players[player_idx].x, self.players[player_idx].y, SPACE);
-            }
+        if self.players[player_idx].alive
+            && !self.players[player_idx].escaped
+            && self.map.get(self.players[player_idx].x, self.players[player_idx].y) == (PLAYER + player_idx as u8)
+        {
+            self.map.set(self.players[player_idx].x, self.players[player_idx].y, SPACE);
         }
         if let Some(arrow) = self.players[player_idx].arrow {
             let arrow_val = ARROW + (((arrow.dir + 3) & 7) as u8);
@@ -230,8 +230,7 @@ impl Game {
                     let mut ty = spawn.1 + delta.1;
                     let curr = self.map.get(tx, ty);
                     if curr != SPACE && curr != (PLAYER + i as u8) {
-                        for test_dir in 0..8 {
-                            let d = DIR_TO_DELTA[test_dir];
+                        for &d in &DIR_TO_DELTA {
                             let candidate_x = spawn.0 + d.0;
                             let candidate_y = spawn.1 + d.1;
                             let v = self.map.get(candidate_x, candidate_y);
@@ -298,7 +297,7 @@ impl Game {
         }
 
         // 3. Step enemies every DELAY frames according to difficulty (Trivial: 13, Easy: 8, Hard: 5, Deadly: 2)
-        if self.time % self.difficulty.delay() == 0 {
+        if self.time.is_multiple_of(self.difficulty.delay()) {
             crate::ai::step_enemies(&mut self.map, &mut self.players, active_rect, &mut self.rotor, &mut self.rng, &mut self.sounds);
         }
 
@@ -341,13 +340,13 @@ impl Game {
     }
 
     pub fn can_sleep(&self) -> bool {
-        // 1. No Player Inputs
-        if self.players.iter().any(|p| p.input_mask != 0) {
+        // 1. No Player Inputs (for active & alive players)
+        if self.players.iter().any(|p| p.active && p.alive && !p.escaped && p.input_mask != 0) {
             return false;
         }
 
-        // 2. No Active Move Cooldowns (players completing tile steps)
-        if self.players.iter().any(|p| p.active && p.move_cooldown > 0) {
+        // 2. No Active Move Cooldowns (active & alive players completing tile steps)
+        if self.players.iter().any(|p| p.active && p.alive && !p.escaped && p.move_cooldown > 0) {
             return false;
         }
 
@@ -510,7 +509,7 @@ impl Game {
             Player::new(3),
         ];
 
-        for p_idx in 0..num_players.min(MAX_PLAYERS) {
+        for player_slot in new_players.iter_mut().take(num_players.min(MAX_PLAYERS)) {
             if offset + 24 > bytes.len() {
                 return false;
             }
@@ -552,7 +551,7 @@ impl Game {
                 None
             };
 
-            new_players[p_idx] = Player {
+            *player_slot = Player {
                 index,
                 x,
                 y,
@@ -1825,6 +1824,112 @@ mod tests {
         assert!(sounds.contains(&SOUND_DEAD_PLAYER), "Must emit SOUND_DEAD_PLAYER when player dies");
         assert_eq!(game.players[0].health, 0);
         assert!(!game.players[0].alive);
+        assert_eq!(game.players[0].move_cooldown, 0, "move_cooldown must be reset to 0 upon death");
+        assert_eq!(game.players[0].input_mask, 0, "input_mask must be reset to 0 upon death");
+    }
+
+    #[test]
+    fn test_player_facing_direction_preserved_when_wall_sliding_fails() {
+        let mut game = Game::new();
+        game.load();
+
+        // Place player at (10, 10) surrounded by walls to the North, North-East, and North-West
+        let px = 10;
+        let py = 10;
+        game.map.set(game.players[0].x, game.players[0].y, SPACE);
+        game.players[0].x = px;
+        game.players[0].y = py;
+        game.players[0].dir = 0; // Up
+        game.map.set(px, py, PLAYER);
+
+        // Wall to Up (10, 9), Up-Right (11, 9), Up-Left (9, 9)
+        game.map.set(px, py - 1, WALL);
+        game.map.set(px + 1, py - 1, WALL);
+        game.map.set(px - 1, py - 1, WALL);
+
+        let mut sounds = Vec::new();
+        let active = game.get_active_rect();
+
+        // Player inputs UP
+        game.players[0].input_mask = ACTION_UP;
+        game.players[0].move_cooldown = 0;
+
+        crate::physics::step_player(0, &mut game.players, &mut game.map, active, &mut sounds);
+
+        // Movement should have failed (player stays at 10, 10)
+        assert_eq!(game.players[0].x, px);
+        assert_eq!(game.players[0].y, py);
+        // Player direction must REMAIN 0 (Up), NOT 7 (Up-Left) or 1 (Up-Right)
+        assert_eq!(game.players[0].dir, 0, "Facing direction must remain UP (0) when all slide paths fail");
+    }
+
+    #[test]
+    fn test_dead_player_does_not_block_can_sleep() {
+        let mut game = Game::new();
+        game.load();
+        // Activate P2
+        game.players[1].active = true;
+        game.players[1].alive = true;
+        game.players[1].move_cooldown = 6; // P2 was moving mid-stride
+
+        // Kill P2 directly
+        let mut sounds = Vec::new();
+        crate::ai::hurt_player(1, 200, &mut game.map, &mut game.players, &mut sounds);
+
+        assert!(!game.players[1].alive);
+        assert_eq!(game.players[1].move_cooldown, 0);
+
+        // P1 is alive with 0 input and 0 cooldown
+        game.players[0].input_mask = 0;
+        game.players[0].move_cooldown = 0;
+
+        // Clear ghosts in viewport to isolate player state
+        let active = game.get_active_rect();
+        for y in active.top..(active.top + active.height) {
+            for x in active.left..(active.left + active.width) {
+                let v = game.map.get(x, y);
+                if (GHOST..=GHOST + 2).contains(&v) || (GENERATOR..=GENERATOR + 2).contains(&v) {
+                    game.map.set(x, y, SPACE);
+                }
+            }
+        }
+
+        // can_sleep should succeed even though P2 is dead in the game
+        assert!(game.can_sleep(), "Dead player must not block can_sleep");
+    }
+
+    #[test]
+    fn test_enemy_scanning_odd_bounds() {
+        let mut game = Game::new();
+        game.load();
+
+        // Setup active rect with odd left and top bounds: left=1, top=1, width=4, height=4
+        let active = ActiveRect { left: 1, top: 1, width: 4, height: 4 };
+
+        // Clear region
+        for y in 1..5 {
+            for x in 1..5 {
+                game.map.set(x, y, SPACE);
+            }
+        }
+
+        // Place ghost at odd border tile (1, 1)
+        game.map.set(1, 1, GHOST);
+
+        // Position alive player at (1, 3)
+        game.map.set(game.players[0].x, game.players[0].y, SPACE);
+        game.players[0].x = 1;
+        game.players[0].y = 3;
+        game.map.set(1, 3, PLAYER);
+
+        // Step enemies 4 times to cycle through all 4 rotor phases (0..3)
+        let mut sounds = Vec::new();
+        for _ in 0..4 {
+            crate::ai::step_enemies(&mut game.map, &mut game.players, active, &mut game.rotor, &mut game.rng, &mut sounds);
+        }
+
+        // Ghost at (1, 1) should have been scanned and moved towards player at (1, 3)
+        assert_ne!(game.map.get(1, 1), GHOST, "Ghost at odd coordinate (1, 1) must be scanned and stepped");
     }
 }
 

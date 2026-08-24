@@ -17,8 +17,14 @@ pub fn step_enemies(
     let rx = (*rotor & 1) as i32;
     let ry = ((*rotor >> 1) & 1) as i32;
 
-    let x_start = ((active.left + 1) & !1) + rx;
-    let y_start = ((active.top + 1) & !1) + ry;
+    let mut x_start = active.left;
+    if (x_start & 1) != rx {
+        x_start += 1;
+    }
+    let mut y_start = active.top;
+    if (y_start & 1) != ry {
+        y_start += 1;
+    }
     let x_end = active.left + active.width;
     let y_end = active.top + active.height;
 
@@ -119,11 +125,14 @@ pub fn hurt_player(
     players: &mut [Player],
     sounds: &mut Vec<u8>,
 ) {
+    if index >= players.len() { return; }
     if players[index].health > pain {
         players[index].health -= pain;
     } else {
         players[index].health = 0;
         players[index].alive = false;
+        players[index].move_cooldown = 0;
+        players[index].input_mask = 0;
         sounds.push(SOUND_DEAD_PLAYER);
         
         // If player dies, drop a key if they had keys

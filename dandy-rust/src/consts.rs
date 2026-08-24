@@ -221,6 +221,7 @@ impl PokeyAudioScheduler {
     ///   - Finds the channel playing the lowest-priority sound (breaking ties by oldest playing sound).
     ///   - If incoming sound priority >= that channel's priority, PREEMPTS that channel.
     ///   - Otherwise, drops the sound (returns None).
+    ///
     /// Returns Some(channel_index) if allocated/preempted, or None if dropped.
     pub fn schedule_sound(&mut self, sound_id: u8) -> Option<usize> {
         if sound_id == SOUND_NONE {
@@ -307,8 +308,8 @@ impl PokeyAudioScheduler {
                 j -= 1;
             }
         }
-        for i in 0..len {
-            self.schedule_sound(buf[i]);
+        for &s in &buf[..len] {
+            self.schedule_sound(s);
         }
     }
 }

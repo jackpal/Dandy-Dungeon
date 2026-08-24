@@ -35,7 +35,6 @@ pub fn try_move_player(
     dir: usize,
     sounds: &mut Vec<u8>,
 ) -> bool {
-    player.dir = dir;
     let delta = DIR_TO_DELTA[dir];
     let nx = player.x + delta.0;
     let ny = player.y + delta.1;
@@ -55,6 +54,7 @@ pub fn try_move_player(
         }
         DOWN => {
             // Player Escaped!
+            player.dir = dir;
             map.set(player.x, player.y, SPACE);
             player.escaped = true;
             player.x = -1;
@@ -86,6 +86,7 @@ pub fn try_move_player(
     }
 
     if moved {
+        player.dir = dir;
         // Erase old position
         map.set(player.x, player.y, SPACE);
         // Set new position
@@ -197,10 +198,8 @@ pub fn step_arrow_advance(
             && nx < active_rect.left + active_rect.width
             && ny >= active_rect.top
             && ny < active_rect.top + active_rect.height
-            && nx >= 0
-            && nx < MAP_WIDTH
-            && ny >= 0
-            && ny < MAP_HEIGHT;
+            && (0..MAP_WIDTH).contains(&nx)
+            && (0..MAP_HEIGHT).contains(&ny);
 
         if !is_on_screen {
             // Reached/crossed the edge of the visible screen! Despawn arrow and free player slot.

@@ -30,6 +30,10 @@ impl Framebuffer {
     }
 
     pub fn blit_tile(&mut self, spritesheet: &[u8], tile_idx: u8, dest_x: i32, dest_y: i32) {
+        if spritesheet.len() < 256 * 256 * 4 {
+            return;
+        }
+
         let tile_x = ((tile_idx & 15) as i32) * 16;
         let tile_y = ((tile_idx >> 4) as i32) * 16;
 

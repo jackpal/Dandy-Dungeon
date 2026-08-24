@@ -21,21 +21,11 @@ pub const PKT_RESYNC_REQ: u8 = 0x09;
 pub const HANDSHAKE_MAGIC_0: u8 = 0x44;
 pub const HANDSHAKE_MAGIC_1: u8 = 0x44;
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct InputEntry {
     pub frame: u32,
     pub mask: u8,
     pub confirmed: bool,
-}
-
-impl Default for InputEntry {
-    fn default() -> Self {
-        Self {
-            frame: 0,
-            mask: 0,
-            confirmed: false,
-        }
-    }
 }
 
 pub struct RollbackManager {
@@ -72,9 +62,9 @@ impl RollbackManager {
         let input_history = [[InputEntry::default(); INPUT_HISTORY_BUFFER_SIZE]; MAX_PLAYERS];
 
         let mut player_joined = [false; MAX_PLAYERS];
-        for p in 0..MAX_PLAYERS {
+        for (p, joined) in player_joined.iter_mut().enumerate() {
             if (local_player_mask & (1 << p)) != 0 {
-                player_joined[p] = true;
+                *joined = true;
             }
         }
 
