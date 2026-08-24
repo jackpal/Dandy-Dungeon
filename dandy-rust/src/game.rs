@@ -482,6 +482,9 @@ impl Game {
         let cog_y = read_f64(bytes, &mut offset);
         let num_players = bytes[offset] as usize;
         offset += 1;
+        if num_players > MAX_PLAYERS {
+            return false;
+        }
 
         let mut new_players = [
             Player::new(0),
@@ -490,17 +493,23 @@ impl Game {
             Player::new(3),
         ];
 
-        for player_slot in new_players.iter_mut().take(num_players.min(MAX_PLAYERS)) {
+        for player_slot in new_players.iter_mut().take(num_players) {
             if offset + 29 > bytes.len() {
                 return false;
             }
 
             let index = bytes[offset] as usize;
             offset += 1;
+            if index >= MAX_PLAYERS {
+                return false;
+            }
             let x = read_i32(bytes, &mut offset);
             let y = read_i32(bytes, &mut offset);
             let dir = bytes[offset] as usize;
             offset += 1;
+            if dir >= 8 {
+                return false;
+            }
             let score = read_i32(bytes, &mut offset);
             let health = read_i32(bytes, &mut offset);
             let bombs = read_i32(bytes, &mut offset);
@@ -525,6 +534,9 @@ impl Game {
                 let ay = read_i32(bytes, &mut offset);
                 let adir = bytes[offset] as usize;
                 offset += 1;
+                if adir >= 8 {
+                    return false;
+                }
                 let acooldown = bytes[offset];
                 offset += 1;
                 Some(crate::entity::Arrow { x: ax, y: ay, dir: adir, cooldown: acooldown })
@@ -1931,6 +1943,77 @@ mod tests {
                 len
             );
         }
+    }
+
+    #[test]
+    fn test_load_state_rejects_excess_players() {
+        let mut game = Game::new();
+        game.load();
+        let mut valid_bytes = game.save_state_bytes();
+        // Byte 37 is num_players (offset 37 from 0..38 header)
+        valid_bytes[37] = 5; // > MAX_PLAYERS (4)
+        assert!(!game.load_state_bytes(&valid_bytes), "num_players > MAX_PLAYERS must be rejected");
+        valid_bytes[37] = 255;
+        assert!(!game.load_state_bytes(&valid_bytes), "num_players = 255 must be rejected");
+    }
+
+    #[test]
+    fn test_load_state_rejects_corrupted_directions() {
+        let mut game = Game::new();
+        game.load();
+        let mut valid_bytes = game.save_state_bytes();
+        // First player block starts at offset 38.
+        // Index is offset 38, x is 39..42, y is 43..46, dir is offset 47.
+        valid_bytes[47] = 8; // Invalid dir >= 8
+        assert!(!game.load_state_bytes(&valid_bytes), "Player dir >= 8 must be rejected to prevent OOB indexing");
+
+        valid_bytes[47] = 255;
+        assert!(!game.load_state_bytes(&valid_bytes), "Player dir = 255 must be rejected to prevent OOB indexing");
+    }
+
+    #[test]
+    fn test_load_state_rejects_corrupted_player_index() {
+        let mut game = Game::new();
+        game.load();
+        let mut valid_bytes = game.save_state_bytes();
+        // First player index is at offset 38
+        valid_bytes[38] = 4; // index >= MAX_PLAYERS (4)
+        assert!(!game.load_state_bytes(&valid_bytes), "Player index >= MAX_PLAYERS must be rejected");
+    }
+
+    #[test]
+    fn test_hurt_player_idempotent_on_dead_or_escaped_player() {
+        let mut game = Game::new();
+        game.load();
+        game.players[0].keys = 3;
+        let px = game.players[0].x;
+        let py = game.players[0].y;
+        let mut sounds = Vec::new();
+
+        // 1. First lethal attack kills player, emits SOUND_DEAD_PLAYER, and drops 1 key (keys 3 -> 2)
+        crate::ai::hurt_player(0, 200, &mut game.map, &mut game.players, &mut sounds);
+        assert!(!game.players[0].alive);
+        assert_eq!(game.players[0].keys, 2);
+        assert_eq!(game.map.get(px, py), KEY);
+        assert!(sounds.contains(&SOUND_DEAD_PLAYER));
+
+        // 2. Subsequent attack on already-dead player must be a NO-OP (no sound, keys stay 2, map unchanged)
+        sounds.clear();
+        game.map.set(px, py, SPACE); // Someone picked up the key
+        crate::ai::hurt_player(0, 200, &mut game.map, &mut game.players, &mut sounds);
+        assert!(!game.players[0].alive);
+        assert_eq!(game.players[0].keys, 2, "Dead player must not drop duplicate keys");
+        assert_eq!(game.map.get(px, py), SPACE, "Dead player must not overwrite map tile");
+        assert!(sounds.is_empty(), "Dead player must not re-emit death sound");
+
+        // 3. Attack on escaped player must also be a NO-OP
+        game.players[1].active = true;
+        game.players[1].alive = true;
+        game.players[1].escaped = true;
+        game.players[1].keys = 5;
+        crate::ai::hurt_player(1, 200, &mut game.map, &mut game.players, &mut sounds);
+        assert!(sounds.is_empty(), "Escaped player must not be hurt or drop keys");
+        assert_eq!(game.players[1].keys, 5);
     }
 }
 

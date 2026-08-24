@@ -3292,61 +3292,67 @@
                                 updateSlotCards();
                                 wakeLoop();
                             } else if (pktType === 0x05) { // PKT_JOIN
-                                const slot = bytes[1];
-                                const joined = bytes.length > 2 ? (bytes[2] === 1) : true;
-                                if (!app.net_is_local_player(slot)) {
-                                    if (joined) {
-                                        app.net_hot_join(slot);
-                                    } else {
-                                        app.net_set_player_joined(slot, false);
-                                    }
-                                }
-                                if (localPlayerIdx === 0) {
-                                    const peer = PEER_CONNECTIONS.get(peerId);
-                                    if (peer && peer.ownedSlots) {
+                                if (bytes.length >= 2) {
+                                    const slot = bytes[1];
+                                    const joined = bytes.length > 2 ? (bytes[2] === 1) : true;
+                                    if (slot < 4 && !app.net_is_local_player(slot)) {
                                         if (joined) {
-                                            peer.ownedSlots.add(slot);
+                                            app.net_hot_join(slot);
                                         } else {
-                                            peer.ownedSlots.delete(slot);
+                                            app.net_set_player_joined(slot, false);
                                         }
                                     }
-                                    broadcastPacket(bytes, peerId);
-                                }
-                                updateSlotCards();
-                                wakeLoop();
-                            } else if (pktType === 0x06) { // PKT_LEAVE
-                                const slot = bytes[1];
-                                if (!app.net_is_local_player(slot)) {
-                                    app.net_set_player_joined(slot, false);
-                                }
-                                if (localPlayerIdx === 0) {
-                                    const peer = PEER_CONNECTIONS.get(peerId);
-                                    if (peer && peer.ownedSlots) {
-                                        peer.ownedSlots.delete(slot);
+                                    if (localPlayerIdx === 0 && slot < 4) {
+                                        const peer = PEER_CONNECTIONS.get(peerId);
+                                        if (peer && peer.ownedSlots) {
+                                            if (joined) {
+                                                peer.ownedSlots.add(slot);
+                                            } else {
+                                                peer.ownedSlots.delete(slot);
+                                            }
+                                        }
+                                        broadcastPacket(bytes, peerId);
                                     }
-                                    broadcastPacket(bytes, peerId);
+                                    updateSlotCards();
+                                    wakeLoop();
                                 }
-                                updateSlotCards();
-                                wakeLoop();
+                            } else if (pktType === 0x06) { // PKT_LEAVE
+                                if (bytes.length >= 2) {
+                                    const slot = bytes[1];
+                                    if (slot < 4 && !app.net_is_local_player(slot)) {
+                                        app.net_set_player_joined(slot, false);
+                                    }
+                                    if (localPlayerIdx === 0 && slot < 4) {
+                                        const peer = PEER_CONNECTIONS.get(peerId);
+                                        if (peer && peer.ownedSlots) {
+                                            peer.ownedSlots.delete(slot);
+                                        }
+                                        broadcastPacket(bytes, peerId);
+                                    }
+                                    updateSlotCards();
+                                    wakeLoop();
+                                }
                             } else if (pktType === 0x07) { // PKT_SET_DIFFICULTY
-                                const diffVal = bytes[1] & 0x03;
-                                app.set_difficulty(diffVal);
-                                if (difficultySelect) {
-                                    difficultySelect.value = diffVal.toString();
+                                if (bytes.length >= 2) {
+                                    const diffVal = bytes[1] & 0x03;
+                                    app.set_difficulty(diffVal);
+                                    if (difficultySelect) {
+                                        difficultySelect.value = diffVal.toString();
+                                    }
+                                    // If Host (localPlayerIdx == 0), relay to all other connected peers and deliver authoritative state sync!
+                                    if (localPlayerIdx === 0) {
+                                        broadcastPacket(bytes, peerId);
+                                        const curFrame = app.net_get_current_frame();
+                                        const stateBytes = app.save_state_bytes();
+                                        const syncPkt = new Uint8Array(1 + 4 + stateBytes.length);
+                                        syncPkt[0] = 0x04; // PKT_STATE_SYNC
+                                        const syncDv = new DataView(syncPkt.buffer);
+                                        syncDv.setUint32(1, curFrame, false);
+                                        syncPkt.set(stateBytes, 5);
+                                        broadcastPacket(syncPkt);
+                                    }
+                                    wakeLoop();
                                 }
-                                // If Host (localPlayerIdx == 0), relay to all other connected peers and deliver authoritative state sync!
-                                if (localPlayerIdx === 0) {
-                                    broadcastPacket(bytes, peerId);
-                                    const curFrame = app.net_get_current_frame();
-                                    const stateBytes = app.save_state_bytes();
-                                    const syncPkt = new Uint8Array(1 + 4 + stateBytes.length);
-                                    syncPkt[0] = 0x04; // PKT_STATE_SYNC
-                                    const syncDv = new DataView(syncPkt.buffer);
-                                    syncDv.setUint32(1, curFrame, false);
-                                    syncPkt.set(stateBytes, 5);
-                                    broadcastPacket(syncPkt);
-                                }
-                                wakeLoop();
                             } else if (pktType === 0x08) { // PKT_CHECKSUM
                                 if (bytes.length >= 9) {
                                     const dv = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
@@ -3775,6 +3781,10 @@
                 msg.msgId = msg.msgId || (msg.senderId + "_" + Date.now() + "_" + Math.random().toString(36).substr(2, 6));
 
                 seenSignalingMsgIds.add(msg.msgId);
+                if (seenSignalingMsgIds.size > 512) {
+                    const oldest = seenSignalingMsgIds.values().next().value;
+                    seenSignalingMsgIds.delete(oldest);
+                }
 
                 // Deep sanitize to plain JSON POJO so DataCloneError can never occur on BroadcastChannel or localStorage
                 let jsonStr;
@@ -3823,7 +3833,13 @@
             async function handleSignalingMessage(msg) {
                 if (!msg || msg.roomId !== currentRoomId) return;
                 if (msg.msgId && seenSignalingMsgIds.has(msg.msgId)) return;
-                if (msg.msgId) seenSignalingMsgIds.add(msg.msgId);
+                if (msg.msgId) {
+                    seenSignalingMsgIds.add(msg.msgId);
+                    if (seenSignalingMsgIds.size > 512) {
+                        const oldest = seenSignalingMsgIds.values().next().value;
+                        seenSignalingMsgIds.delete(oldest);
+                    }
+                }
 
                 // Prevent processing own messages
                 if (msg.senderId === myPeerId || (localPlayerIdx === 0 && msg.senderId === "HOST")) return;

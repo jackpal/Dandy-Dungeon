@@ -83,7 +83,7 @@ pub fn parse_bmp(bytes: &[u8]) -> Vec<u8> {
     let data_offset = u32::from_le_bytes([bytes[10], bytes[11], bytes[12], bytes[13]]) as usize;
     let raw_width = i32::from_le_bytes([bytes[18], bytes[19], bytes[20], bytes[21]]);
     let raw_height = i32::from_le_bytes([bytes[22], bytes[23], bytes[24], bytes[25]]);
-    if raw_width <= 0 || raw_height == 0 || raw_width > 4096 || raw_height.unsigned_abs() > 4096 {
+    if data_offset >= bytes.len() || raw_width <= 0 || raw_height == 0 || raw_width > 4096 || raw_height.unsigned_abs() > 4096 {
         return Vec::new();
     }
     let width = raw_width as usize;

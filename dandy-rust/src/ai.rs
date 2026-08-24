@@ -125,7 +125,9 @@ pub fn hurt_player(
     players: &mut [Player],
     sounds: &mut Vec<u8>,
 ) {
-    if index >= players.len() { return; }
+    if index >= players.len() || !players[index].active || !players[index].alive || players[index].escaped {
+        return;
+    }
     if players[index].health > pain {
         players[index].health -= pain;
     } else {
