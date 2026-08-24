@@ -550,11 +550,11 @@ impl DandyApp {
         let (offset_x, offset_y) = self.game.get_camera_offsets();
         let active = self.game.get_active_rect();
 
-        let base_x = (offset_x + (active.left * TILE_SIZE) as f64) as i32;
-        let base_y = (offset_y + (active.top * TILE_SIZE) as f64) as i32;
+        let base_x = (offset_x + (active.left * TILE_SIZE) as f64).round() as i32;
+        let base_y = (offset_y + (active.top * TILE_SIZE) as f64).round() as i32;
         let tile_size = TILE_SIZE;
 
-        // Render viewport active grid
+        // 1. Render viewport active grid (skipping player tile characters)
         for y in 0..active.height {
             let dy = active.top + y;
             let dest_y = base_y + y * tile_size;
@@ -562,11 +562,32 @@ impl DandyApp {
                 let dx = active.left + x;
                 let tile_val = self.game.map.get(dx, dy);
 
+                // Skip player tile characters in map grid
+                if (PLAYER..=PLAYER + 3).contains(&tile_val) {
+                    continue;
+                }
+
                 // Calculate pixel coordinate on retro screen
                 let dest_x = base_x + x * tile_size;
 
                 // Blit tile from spritesheet into framebuffer
                 self.framebuffer.blit_tile(&self.spritesheet, tile_val, dest_x, dest_y);
+            }
+        }
+
+        // 2. Render active players at sub-pixel interpolated positions
+        for (i, p) in self.game.players.iter().enumerate() {
+            if p.active && p.alive && !p.escaped {
+                let delta = DIR_TO_DELTA[p.dir];
+                let fraction = (p.move_cooldown as f64) / (PLAYER_MOVE_INTERVAL as f64);
+                let visual_x = (p.x * TILE_SIZE) as f64 - (delta.0 as f64) * fraction * (TILE_SIZE as f64);
+                let visual_y = (p.y * TILE_SIZE) as f64 - (delta.1 as f64) * fraction * (TILE_SIZE as f64);
+
+                let screen_x = (offset_x + visual_x).round() as i32;
+                let screen_y = (offset_y + visual_y).round() as i32;
+
+                let player_tile = PLAYER + (i as u8);
+                self.framebuffer.blit_tile(&self.spritesheet, player_tile, screen_x, screen_y);
             }
         }
     }
@@ -657,6 +678,37 @@ mod tests {
         assert!(
             diff_count > 0,
             "Framebuffer must visually update when arrow is spawned and rendered"
+        );
+    }
+
+    #[test]
+    fn test_subpixel_player_interpolation_during_stride() {
+        let mut app = DandyApp::new();
+        // Clear inputs, step to let camera arrive
+        for _ in 0..30 {
+            app.tick();
+        }
+
+        // P1 moves Right: move_cooldown starts at 8
+        app.set_action(0, PlayerAction::Right, true);
+        app.tick(); // Frame 1: move triggered, move_cooldown decremented to 7
+
+        let mut differing_frames = 0;
+        let mut prev_fb = app.framebuffer.pixels.clone();
+
+        // Across frames 2..8, player visually steps sub-pixel towards target tile
+        for _ in 0..7 {
+            app.tick();
+            let curr_fb = &app.framebuffer.pixels;
+            if prev_fb.iter().zip(curr_fb.iter()).any(|(a, b)| a != b) {
+                differing_frames += 1;
+            }
+            prev_fb = curr_fb.clone();
+        }
+
+        assert_eq!(
+            differing_frames, 7,
+            "Framebuffer must continuously visually update on every single frame of the 8-frame stride (sub-pixel interpolation)"
         );
     }
 }

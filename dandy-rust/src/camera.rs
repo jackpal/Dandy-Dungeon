@@ -23,17 +23,21 @@ impl Camera {
         }
     }
 
-    pub fn update(&mut self, target_x: i32, target_y: i32) {
-        let max_rate = (TILE_SIZE as f64) / 4.0; // Match 4 pixels per frame
+    pub fn update(&mut self, target_x: i32, target_y: i32, num_active_players: usize) {
+        let n = num_active_players.clamp(1, 4);
+        let alpha = (n as f64) / 4.0;
         
-        let mut dx = (target_x as f64) - self.cog_x;
-        let mut dy = (target_y as f64) - self.cog_y;
+        let tx = target_x as f64;
+        let ty = target_y as f64;
         
-        if dx != 0.0 || dy != 0.0 {
-            dx = dx.clamp(-max_rate, max_rate);
-            dy = dy.clamp(-max_rate, max_rate);
-            self.cog_x += dx;
-            self.cog_y += dy;
+        self.cog_x = (1.0 - alpha) * self.cog_x + alpha * tx;
+        self.cog_y = (1.0 - alpha) * self.cog_y + alpha * ty;
+        
+        if (tx - self.cog_x).abs() < 0.001 {
+            self.cog_x = tx;
+        }
+        if (ty - self.cog_y).abs() < 0.001 {
+            self.cog_y = ty;
         }
     }
 
@@ -96,4 +100,56 @@ pub fn calculate_target_cog(players: &[Player]) -> (i32, i32) {
         cog_y = 5 * TILE_SIZE;
     }
     (cog_x + TILE_SIZE / 2, cog_y + TILE_SIZE / 2)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_camera_ema_filter_by_player_count() {
+        let mut cam = Camera::new(100.0, 100.0);
+
+        // 1 Player: alpha = 0.25 (C_t = 0.75 * 100 + 0.25 * 200 = 125.0)
+        cam.update(200, 100, 1);
+        assert!((cam.cog_x - 125.0).abs() < 1e-6);
+
+        // 2 Players: alpha = 0.50 (C_t = 0.50 * 125 + 0.50 * 200 = 162.5)
+        cam.update(200, 100, 2);
+        assert!((cam.cog_x - 162.5).abs() < 1e-6);
+
+        // 3 Players: alpha = 0.75 (C_t = 0.25 * 162.5 + 0.75 * 200 = 190.625)
+        cam.update(200, 100, 3);
+        assert!((cam.cog_x - 190.625).abs() < 1e-6);
+
+        // 4 Players: alpha = 1.00 (C_t = 200.0)
+        cam.update(200, 100, 4);
+        assert_eq!(cam.cog_x, 200.0);
+    }
+
+    #[test]
+    fn test_camera_viewport_offset_clamping_at_map_edges() {
+        // Map: 60 * 16 = 960 width, 30 * 16 = 480 height
+        // Screen: 320 width, 160 height
+        // Max offset range: X in [-640.0, 0.0], Y in [-320.0, 0.0]
+
+        // Top-left extreme
+        let cam_top_left = Camera::new(0.0, 0.0);
+        let (ox, oy) = cam_top_left.get_offsets();
+        assert_eq!(ox, 0.0);
+        assert_eq!(oy, 0.0);
+
+        // Bottom-right extreme
+        let cam_bottom_right = Camera::new(1000.0, 600.0);
+        let (ox, oy) = cam_bottom_right.get_offsets();
+        assert_eq!(ox, -640.0);
+        assert_eq!(oy, -320.0);
+
+        // ActiveRect within bounds
+        let rect = cam_top_left.get_active_rect();
+        assert_eq!(rect.left, 0);
+        assert_eq!(rect.top, 0);
+        assert!(rect.width >= 20);
+        assert!(rect.height >= 10);
+    }
 }

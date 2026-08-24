@@ -238,7 +238,8 @@ impl Game {
 
     pub fn update_camera(&mut self) {
         let (tx, ty) = calculate_target_cog(&self.players);
-        self.camera.update(tx, ty);
+        let num_active = self.players.iter().filter(|p| p.active && p.alive && !p.escaped).count();
+        self.camera.update(tx, ty, num_active);
     }
 
     pub fn get_camera_offsets(&self) -> (f64, f64) {
@@ -340,7 +341,7 @@ impl Game {
         let (tx, ty) = calculate_target_cog(&self.players);
         let dx = (tx as f64) - self.camera.cog_x;
         let dy = (ty as f64) - self.camera.cog_y;
-        if dx.abs() >= 0.1 || dy.abs() >= 0.1 {
+        if dx.abs() >= 0.05 || dy.abs() >= 0.05 {
             return false;
         }
 
@@ -872,7 +873,10 @@ mod tests {
         game.camera.cog_x += 1.0;
         assert!(!game.can_sleep());
 
-        game.camera.cog_x = (calculate_target_cog(&game.players).0 as f64) + 0.05;
+        game.camera.cog_x = (calculate_target_cog(&game.players).0 as f64) + 0.06;
+        assert!(!game.can_sleep());
+
+        game.camera.cog_x = (calculate_target_cog(&game.players).0 as f64) + 0.04;
         assert!(game.can_sleep());
     }
 

@@ -161,13 +161,19 @@ pub fn step_player(
         if let Some(d) = dir_opt {
             // Try moving with wall-sliding
             let moved = try_move_player(index, &mut players[index], map, d, sounds);
-            if !moved {
+            let any_moved = if !moved {
                 let moved_left = try_move_player(index, &mut players[index], map, (d + 1) & 7, sounds);
                 if !moved_left {
-                    try_move_player(index, &mut players[index], map, (d + 7) & 7, sounds);
+                    try_move_player(index, &mut players[index], map, (d + 7) & 7, sounds)
+                } else {
+                    true
                 }
+            } else {
+                true
+            };
+            if any_moved {
+                players[index].move_cooldown = PLAYER_MOVE_INTERVAL as u8;
             }
-            players[index].move_cooldown = PLAYER_MOVE_INTERVAL as u8;
         }
     }
 }
