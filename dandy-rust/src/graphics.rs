@@ -30,7 +30,7 @@ impl Framebuffer {
     }
 
     pub fn blit_tile(&mut self, spritesheet: &[u8], tile_idx: u8, dest_x: i32, dest_y: i32) {
-        if spritesheet.len() < 256 * 256 * 4 {
+        if spritesheet.is_empty() {
             return;
         }
 
@@ -69,8 +69,10 @@ impl Framebuffer {
             let dest_start_idx = (dest_row_start + start_x as usize) * 4;
             let dest_end_idx = dest_start_idx + num_pixels * 4;
 
-            self.pixels[dest_start_idx..dest_end_idx]
-                .copy_from_slice(&spritesheet[src_start_idx..src_end_idx]);
+            if src_end_idx <= spritesheet.len() && dest_end_idx <= self.pixels.len() {
+                self.pixels[dest_start_idx..dest_end_idx]
+                    .copy_from_slice(&spritesheet[src_start_idx..src_end_idx]);
+            }
         }
     }
 }
@@ -119,4 +121,62 @@ pub fn parse_bmp(bytes: &[u8]) -> Vec<u8> {
     }
     
     rgba
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const SPRITESHEET_BYTES: &[u8] = include_bytes!("../assets/dandy.bmp");
+
+    #[test]
+    fn test_parse_bmp_dandy_spritesheet() {
+        let rgba = parse_bmp(SPRITESHEET_BYTES);
+        assert_eq!(rgba.len(), 256 * 32 * 4, "Spritesheet must parse to 256x32x4 bytes");
+        // Verify non-zero color channels exist in spritesheet
+        let has_non_zero_rgb = rgba.chunks_exact(4).any(|px| px[0] != 0 || px[1] != 0 || px[2] != 0);
+        assert!(has_non_zero_rgb, "Spritesheet must contain non-zero RGB pixel data");
+    }
+
+    #[test]
+    fn test_parse_bmp_invalid_inputs() {
+        assert!(parse_bmp(&[]).is_empty());
+        assert!(parse_bmp(b"INVALID").is_empty());
+        let mut corrupted = SPRITESHEET_BYTES.to_vec();
+        corrupted[0] = b'X';
+        assert!(parse_bmp(&corrupted).is_empty());
+    }
+
+    #[test]
+    fn test_framebuffer_blit_tile_and_clear() {
+        let mut fb = Framebuffer::new();
+        assert_eq!(fb.pixels.len(), SCREEN_WIDTH * SCREEN_HEIGHT * 4);
+
+        fb.clear(10, 20, 30);
+        assert_eq!(fb.pixels[0], 10);
+        assert_eq!(fb.pixels[1], 20);
+        assert_eq!(fb.pixels[2], 30);
+        assert_eq!(fb.pixels[3], 255);
+
+        let spritesheet = parse_bmp(SPRITESHEET_BYTES);
+        // Blit Wall tile (tile index 1) at (0, 0)
+        fb.clear(0, 0, 0);
+        fb.blit_tile(&spritesheet, 1, 0, 0);
+
+        let non_zero_rgb = fb.pixels.chunks_exact(4).any(|px| px[0] != 0 || px[1] != 0 || px[2] != 0);
+        assert!(non_zero_rgb, "Framebuffer must contain non-zero RGB data after blitting wall tile");
+    }
+
+    #[test]
+    fn test_blit_tile_clipping_bounds_safety() {
+        let mut fb = Framebuffer::new();
+        let spritesheet = parse_bmp(SPRITESHEET_BYTES);
+
+        // Blit offscreen (negative and out-of-bounds) coordinates - must not panic
+        fb.blit_tile(&spritesheet, 1, -100, -100);
+        fb.blit_tile(&spritesheet, 1, 500, 500);
+        fb.blit_tile(&spritesheet, 1, -8, -8); // Partially off-screen top-left
+        fb.blit_tile(&spritesheet, 1, SCREEN_WIDTH as i32 - 8, SCREEN_HEIGHT as i32 - 8); // Partially off-screen bottom-right
+        fb.blit_tile(&[], 1, 0, 0); // Empty spritesheet safety
+    }
 }

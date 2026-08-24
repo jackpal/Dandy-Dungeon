@@ -516,12 +516,21 @@ for (let f = 0; f < 200; f++) {
 }
 console.log("✓ Gamepad Action Bitmask Mapping & Determinism verified.");
 
-// 8. Boundary extraction zero-copy view validity
+// 8. Boundary extraction zero-copy view validity & graphics rendering parity
 const fbPtr = app.get_framebuffer_ptr();
 const fbSize = app.get_framebuffer_size();
 const fbBytes = new Uint8ClampedArray(wasmInstance.memory.buffer, fbPtr, fbSize);
 assert.strictEqual(fbBytes.length, 320 * 160 * 4, "Framebuffer byte length must be 320*160*4");
-console.log("✓ Zero-Copy Framebuffer ABI view verified.");
+
+let nonZeroRgbCount = 0;
+for (let i = 0; i < fbBytes.length; i += 4) {
+    if (fbBytes[i] !== 0 || fbBytes[i + 1] !== 0 || fbBytes[i + 2] !== 0) {
+        nonZeroRgbCount++;
+    }
+}
+// 320x160 = 51200 pixels. Level 1 rendering has active dungeon tiles (walls, player, floor features) covering thousands of pixels.
+assert(nonZeroRgbCount > 10000, `Framebuffer must render non-zero RGB pixel graphics (found ${nonZeroRgbCount} / 51200 non-zero RGB pixels)`);
+console.log(`✓ Zero-Copy Framebuffer ABI view & Graphics Rendering verified (${nonZeroRgbCount} active RGB pixels).`);
 
 // 9. POKEY Priority Audio Scheduler & Multi-Channel Allocation
 console.log("\nTesting POKEY Priority Audio Scheduler & Channel APIs...");
