@@ -6,6 +6,7 @@ pub const MAX_ROLLBACK_FRAMES: usize = 64;
 pub const INPUT_HISTORY_BUFFER_SIZE: usize = 256;
 
 // Packet Types
+pub const PKT_HANDSHAKE: u8 = 0x00;
 pub const PKT_INPUT: u8 = 0x01;
 pub const PKT_PING: u8 = 0x02;
 pub const PKT_PONG: u8 = 0x03;
@@ -15,6 +16,10 @@ pub const PKT_LEAVE: u8 = 0x06;
 pub const PKT_SET_DIFFICULTY: u8 = 0x07;
 pub const PKT_CHECKSUM: u8 = 0x08;
 pub const PKT_RESYNC_REQ: u8 = 0x09;
+
+// Handshake Magic Bytes ('D', 'D')
+pub const HANDSHAKE_MAGIC_0: u8 = 0x44;
+pub const HANDSHAKE_MAGIC_1: u8 = 0x44;
 
 #[derive(Clone, Copy, Debug)]
 pub struct InputEntry {
@@ -499,9 +504,70 @@ pub fn decode_resync_req_packet(bytes: &[u8]) -> Option<(u8, u32)> {
     Some((peer_idx, frame))
 }
 
+/// Encodes a binary DataChannel handshake packet:
+/// [PKT_HANDSHAKE(1), MAGIC_0(1), MAGIC_1(1), VERSION_HI(1), VERSION_LO(1)] = 5 bytes
+pub fn encode_handshake_packet(protocol_version: u16) -> [u8; 5] {
+    let v_bytes = protocol_version.to_be_bytes();
+    [
+        PKT_HANDSHAKE,
+        HANDSHAKE_MAGIC_0,
+        HANDSHAKE_MAGIC_1,
+        v_bytes[0],
+        v_bytes[1],
+    ]
+}
+
+/// Decodes a handshake packet: returns Some(protocol_version) if valid format and magic, or None
+pub fn decode_handshake_packet(bytes: &[u8]) -> Option<u16> {
+    if bytes.len() < 5 || bytes[0] != PKT_HANDSHAKE || bytes[1] != HANDSHAKE_MAGIC_0 || bytes[2] != HANDSHAKE_MAGIC_1 {
+        return None;
+    }
+    let version = u16::from_be_bytes([bytes[3], bytes[4]]);
+    Some(version)
+}
+
+/// Validates whether a packet is a valid handshake matching NET_PROTOCOL_VERSION
+pub fn validate_handshake_packet(bytes: &[u8]) -> bool {
+    decode_handshake_packet(bytes) == Some(NET_PROTOCOL_VERSION)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_handshake_packet_encode_decode() {
+        let pkt = encode_handshake_packet(NET_PROTOCOL_VERSION);
+        assert_eq!(pkt.len(), 5);
+        assert_eq!(pkt[0], PKT_HANDSHAKE);
+        assert_eq!(pkt[1], HANDSHAKE_MAGIC_0);
+        assert_eq!(pkt[2], HANDSHAKE_MAGIC_1);
+        assert_eq!(u16::from_be_bytes([pkt[3], pkt[4]]), NET_PROTOCOL_VERSION);
+
+        let decoded = decode_handshake_packet(&pkt).expect("Should decode valid handshake");
+        assert_eq!(decoded, NET_PROTOCOL_VERSION);
+        assert!(validate_handshake_packet(&pkt), "Should validate matching protocol version");
+
+        // Version mismatch packet
+        let v99_pkt = encode_handshake_packet(99);
+        assert_eq!(decode_handshake_packet(&v99_pkt), Some(99));
+        assert!(!validate_handshake_packet(&v99_pkt), "v99 must fail validation against current version");
+
+        // Corrupt magic
+        let mut corrupt_magic = pkt;
+        corrupt_magic[1] = 0x58; // 'X'
+        assert_eq!(decode_handshake_packet(&corrupt_magic), None);
+        assert!(!validate_handshake_packet(&corrupt_magic));
+
+        // Wrong packet type
+        let mut wrong_type = pkt;
+        wrong_type[0] = PKT_INPUT;
+        assert_eq!(decode_handshake_packet(&wrong_type), None);
+
+        // Short buffer
+        assert_eq!(decode_handshake_packet(&pkt[..4]), None);
+        assert_eq!(decode_handshake_packet(&[]), None);
+    }
 
     #[test]
     fn test_packet_encode_decode() {

@@ -27,7 +27,7 @@ console.log(`[Artifact] Loaded ${wasmFile} (${wasmBytes.length} bytes)`);
 const wasmModule = await WebAssembly.compile(wasmBytes);
 const glue = await import(path.resolve(distDir, jsFile));
 const wasmInstance = await glue.default({ module_or_path: wasmModule });
-const { DandyApp, PlayerAction, Difficulty } = glue;
+const { DandyApp, PlayerAction, Difficulty, net_get_protocol_version, net_get_app_id } = glue;
 
 assert(DandyApp, "DandyApp export missing");
 assert(PlayerAction, "PlayerAction export missing");
@@ -36,10 +36,34 @@ assert.strictEqual(Difficulty.Trivial, 0);
 assert.strictEqual(Difficulty.Easy, 1);
 assert.strictEqual(Difficulty.Hard, 2);
 assert.strictEqual(Difficulty.Deadly, 3);
-console.log("✓ Module compiled and exports verified (including 4-level Difficulty enum).");
+
+// Protocol & App ID verification
+assert.strictEqual(net_get_protocol_version(), 1, "Top-level net_get_protocol_version must return 1");
+assert.strictEqual(net_get_app_id(), "dandy-dungeon", "Top-level net_get_app_id must return 'dandy-dungeon'");
+console.log("✓ Module compiled and exports verified (including 4-level Difficulty enum and Protocol v1 metadata).");
 
 // 2. Route Introspection & Build Metadata Check (OP-ROUTE)
 const app = new DandyApp();
+assert.strictEqual(app.net_get_protocol_version(), 1, "DandyApp.net_get_protocol_version must return 1");
+assert.strictEqual(app.net_get_app_id(), "dandy-dungeon", "DandyApp.net_get_app_id must return 'dandy-dungeon'");
+
+// Binary handshake packet verification
+const handshakePkt = app.net_encode_handshake_packet();
+assert.strictEqual(handshakePkt.length, 5, "Handshake packet must be 5 bytes");
+assert.strictEqual(handshakePkt[0], 0x00, "Handshake opcode must be 0x00");
+assert.strictEqual(handshakePkt[1], 0x44, "Magic byte 0 must be 'D' (0x44)");
+assert.strictEqual(handshakePkt[2], 0x44, "Magic byte 1 must be 'D' (0x44)");
+assert.strictEqual(app.net_validate_handshake_packet(handshakePkt), true, "Handshake packet must validate");
+assert.strictEqual(app.net_decode_handshake_version(handshakePkt), 1, "Handshake version must decode to 1");
+
+// Corrupted / mismatch handshake rejection tests
+const invalidHandshake = new Uint8Array([0x00, 0x44, 0x44, 0x00, 0x63]); // v99
+assert.strictEqual(app.net_validate_handshake_packet(invalidHandshake), false, "v99 handshake must fail validation");
+assert.strictEqual(app.net_decode_handshake_version(invalidHandshake), 99, "v99 handshake version must decode to 99");
+
+const corruptMagicHandshake = new Uint8Array([0x00, 0x58, 0x44, 0x00, 0x01]);
+assert.strictEqual(app.net_validate_handshake_packet(corruptMagicHandshake), false, "Corrupt magic handshake must fail validation");
+assert.strictEqual(app.net_decode_handshake_version(corruptMagicHandshake), -1, "Corrupt magic handshake must return -1");
 const buildInfo = app.get_build_info();
 const routeInfo = app.get_route_info();
 console.log(`[Route Info] ${routeInfo}`);

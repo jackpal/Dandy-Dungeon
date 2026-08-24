@@ -1,4 +1,8 @@
 #![allow(dead_code)]
+// Network Protocol Version & Application ID
+pub const NET_PROTOCOL_VERSION: u16 = 1;
+pub const NET_APP_ID: &str = "dandy-dungeon";
+
 // Game Constants
 pub const TILE_SIZE: i32 = 16;
 pub const MAP_WIDTH: i32 = 60;

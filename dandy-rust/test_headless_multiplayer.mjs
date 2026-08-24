@@ -396,6 +396,82 @@ new Promise(async (resolve, reject) => {
                                   p5Doc.getElementById("net-stat-status")?.textContent === "Ready";
         const p5HashAfterLocal = iframeP5.contentWindow?.location.hash;
 
+        console.log("[Test] 8b. Simulating Signaling and DataChannel Protocol Version Mismatch Guards...");
+        // 1. Signaling layer: Host receives join_request with mismatched protocolVersion (v99)
+        const mismatchPeerId = "MISMATCH_PEER_99";
+        const sigBc = new BroadcastChannel("dandy_room_" + roomCode);
+        let hostRejectionResponse = null;
+        sigBc.onmessage = (e) => {
+            if (e.data && e.data.type === "join_rejected" && (e.data.recipientId === mismatchPeerId || e.data.targetId === mismatchPeerId)) {
+                hostRejectionResponse = e.data;
+            }
+        };
+        sigBc.postMessage({
+            roomId: roomCode,
+            senderId: mismatchPeerId,
+            type: "join_request",
+            appId: "dandy-dungeon",
+            protocolVersion: 99
+        });
+        await waitFor(() => hostRejectionResponse !== null, 5000, "Host rejecting version 99 join_request over signaling");
+
+        const hostRejectionReason = hostRejectionResponse?.reason;
+        const hostRejectionMsg = hostRejectionResponse?.message;
+        const hostRejectionHostVer = hostRejectionResponse?.hostVersion;
+        const hostRejectionClientVer = hostRejectionResponse?.clientVersion;
+
+        // 2. Client UX: Joiner receives join_rejected with version_mismatch
+        const iframeMismatch = spawnJoiner("Mismatch_Joiner", "#room=" + roomCode);
+        await waitFor(() => {
+            const doc = iframeMismatch.contentDocument;
+            return doc && doc.getElementById("connecting-overlay") !== null;
+        }, 5000, "Mismatch Joiner iframe load");
+
+        const mismatchDoc = iframeMismatch.contentDocument;
+        const mismatchWin = iframeMismatch.contentWindow;
+
+        // Send simulated version mismatch rejection to this iframe's peer
+        sigBc.postMessage({
+            roomId: roomCode,
+            senderId: "HOST",
+            recipientId: mismatchWin.myPeerId,
+            targetId: mismatchWin.myPeerId,
+            type: "join_rejected",
+            reason: "version_mismatch",
+            message: "Protocol version mismatch: Host is v1, Client is v99. Please reload to update.",
+            hostVersion: 1,
+            clientVersion: 99
+        });
+
+        await waitFor(() => {
+            const overlay = mismatchDoc.getElementById("version-mismatch-overlay");
+            const connecting = mismatchDoc.getElementById("connecting-overlay");
+            const statusEl = mismatchDoc.getElementById("net-stat-status");
+            const isOverlayVisible = overlay && window.getComputedStyle(overlay).display !== "none";
+            const isConnectingHidden = connecting && window.getComputedStyle(connecting).display === "none";
+            const isStatusMismatch = statusEl && statusEl.textContent === "Version Mismatch";
+            return isOverlayVisible && isConnectingHidden && isStatusMismatch;
+        }, 5000, "Version Mismatch overlay rendering on Joiner");
+
+        const mismatchOverlayVisible = window.getComputedStyle(mismatchDoc.getElementById("version-mismatch-overlay")).display !== "none";
+        const mismatchConnectingHidden = window.getComputedStyle(mismatchDoc.getElementById("connecting-overlay")).display === "none";
+        const mismatchStatus = mismatchDoc.getElementById("net-stat-status")?.textContent;
+        const mismatchRole = mismatchDoc.getElementById("net-stat-role")?.textContent;
+        const mismatchHostText = mismatchDoc.getElementById("version-host-val")?.textContent;
+        const mismatchClientText = mismatchDoc.getElementById("version-client-val")?.textContent;
+        const mismatchMsgText = mismatchDoc.getElementById("version-mismatch-message")?.textContent;
+
+        const btnMismatchReload = mismatchDoc.getElementById("btn-version-reload");
+        const btnMismatchPlayLocal = mismatchDoc.getElementById("btn-version-play-local");
+        const mismatchHasActionButtons = Boolean(btnMismatchReload && btnMismatchPlayLocal);
+
+        // Test clicking "Play Local" on version mismatch instance to ensure clean recovery
+        btnMismatchPlayLocal.click();
+        await new Promise(r => setTimeout(r, 200));
+        const mismatchRecoveredToLocal = window.getComputedStyle(mismatchDoc.getElementById("version-mismatch-overlay")).display === "none" &&
+                                          mismatchDoc.getElementById("net-stat-role")?.textContent === "LOCAL" &&
+                                          mismatchDoc.getElementById("net-stat-status")?.textContent === "Ready";
+
         // 9. Host and Joiner Refresh Persistence Tests
         console.log("[Test] 9. Simulating Host Refresh persistence with #host= hash...");
         const iframeHostRefresh = spawnJoiner("Host_Refresh", "#host=DANDY-7777");
@@ -525,6 +601,19 @@ new Promise(async (resolve, reject) => {
             p5HasActionButtons,
             p5RecoveredToLocal,
             p5HashAfterLocal,
+            hostRejectionReason,
+            hostRejectionMsg,
+            hostRejectionHostVer,
+            hostRejectionClientVer,
+            mismatchOverlayVisible,
+            mismatchConnectingHidden,
+            mismatchStatus,
+            mismatchRole,
+            mismatchHostText,
+            mismatchClientText,
+            mismatchMsgText,
+            mismatchHasActionButtons,
+            mismatchRecoveredToLocal,
             hostRefreshRole,
             hostRefreshRoom,
             hostRefreshHash,
@@ -830,6 +919,25 @@ try {
     assert.strictEqual(res.p5HasActionButtons, true, "5th player overlay must provide Play Local, Host Room, and Try Again buttons");
     assert.strictEqual(res.p5RecoveredToLocal, true, "Clicking 'Play Local' on rejected player must cleanly recover into Local mode");
     console.log("✓ 5th player full-room rejection, explicit signaling message, error overlay transition, and local recovery verified.");
+
+    // 10. Two-Stage Protocol Version Guards (Signaling + UX)
+    console.log("\n=== Verifying Two-Stage Protocol Version Guards ===");
+    console.log(`Host Rejection: Reason="${res.hostRejectionReason}", HostVer=${res.hostRejectionHostVer}, ClientVer=${res.hostRejectionClientVer}, Msg="${res.hostRejectionMsg}"`);
+    assert.strictEqual(res.hostRejectionReason, "version_mismatch", "Host must reject client with version_mismatch");
+    assert.strictEqual(res.hostRejectionHostVer, 1, "Host version must be 1");
+    assert.strictEqual(res.hostRejectionClientVer, 99, "Client version must reflect 99");
+    assert(res.hostRejectionMsg.includes("Protocol version mismatch"), "Rejection message must indicate protocol version mismatch");
+
+    console.log(`Mismatch UI: Visible=${res.mismatchOverlayVisible}, ConnectingHidden=${res.mismatchConnectingHidden}, Status="${res.mismatchStatus}", Role="${res.mismatchRole}", HostVal="${res.mismatchHostText}", ClientVal="${res.mismatchClientText}"`);
+    assert.strictEqual(res.mismatchOverlayVisible, true, "Version mismatch overlay must be visible upon receiving version_mismatch rejection");
+    assert.strictEqual(res.mismatchConnectingHidden, true, "Connecting spinner overlay must be hidden on version mismatch");
+    assert.strictEqual(res.mismatchStatus, "Version Mismatch", "Status must report Version Mismatch");
+    assert.strictEqual(res.mismatchRole, "VERSION MISMATCH", "Role badge must report VERSION MISMATCH");
+    assert.strictEqual(res.mismatchHostText, "v1", "Host version element must display v1");
+    assert.strictEqual(res.mismatchClientText, "v99", "Client version element must display v99");
+    assert.strictEqual(res.mismatchHasActionButtons, true, "Version mismatch overlay must have Reload and Play Local buttons");
+    assert.strictEqual(res.mismatchRecoveredToLocal, true, "Clicking 'Play Local' on version mismatch overlay must cleanly recover into Local mode");
+    console.log("✓ Two-stage protocol version guard across signaling and UI, host rejection, error modal transition, and local recovery verified.");
 
     console.log("\n==================================================================");
     console.log("🎉 ALL 4-PLAYER WEBRTC ROLLBACK MULTIPLAYER GATES PASSED! 🎉");

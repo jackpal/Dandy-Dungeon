@@ -81,6 +81,16 @@ pub fn wasm_start() {
 }
 
 #[wasm_bindgen]
+pub fn net_get_protocol_version() -> u16 {
+    NET_PROTOCOL_VERSION
+}
+
+#[wasm_bindgen]
+pub fn net_get_app_id() -> String {
+    NET_APP_ID.to_string()
+}
+
+#[wasm_bindgen]
 impl DandyApp {
     #[wasm_bindgen(constructor)]
     pub fn new() -> Self {
@@ -196,6 +206,29 @@ impl DandyApp {
     // -------------------------------------------------------------------------
     // Rollback Netcode Engine APIs
     // -------------------------------------------------------------------------
+
+    pub fn net_get_protocol_version(&self) -> u16 {
+        NET_PROTOCOL_VERSION
+    }
+
+    pub fn net_get_app_id(&self) -> String {
+        NET_APP_ID.to_string()
+    }
+
+    pub fn net_encode_handshake_packet(&self) -> Vec<u8> {
+        netcode::encode_handshake_packet(NET_PROTOCOL_VERSION).to_vec()
+    }
+
+    pub fn net_validate_handshake_packet(&self, bytes: &[u8]) -> bool {
+        netcode::validate_handshake_packet(bytes)
+    }
+
+    pub fn net_decode_handshake_version(&self, bytes: &[u8]) -> i32 {
+        match netcode::decode_handshake_packet(bytes) {
+            Some(v) => v as i32,
+            None => -1,
+        }
+    }
 
     pub fn net_init(&mut self, local_player_idx: usize) {
         let mask = if local_player_idx < MAX_PLAYERS { 1 << local_player_idx } else { 0 };
