@@ -337,6 +337,8 @@ impl RollbackManager {
                     pred
                 };
                 game.players[p].input_mask = mask;
+            } else {
+                game.players[p].input_mask = 0;
             }
         }
         game.step();

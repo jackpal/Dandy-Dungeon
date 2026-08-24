@@ -292,10 +292,10 @@ impl PokeyAudioScheduler {
         if events.is_empty() {
             return;
         }
-        let mut buf = [0u8; 16];
+        let mut buf = [0u8; 32];
         let mut len = 0;
         for &s in events {
-            if s != SOUND_NONE && len < 16 {
+            if s != SOUND_NONE && len < 32 {
                 buf[len] = s;
                 len += 1;
             }

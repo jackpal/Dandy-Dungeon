@@ -339,20 +339,16 @@ impl DandyApp {
     }
 
     pub fn net_receive_remote_packet(&mut self, bytes: &[u8]) -> bool {
-        let mut parsed = [(0usize, 0u32, 0u8, 0u8); 32];
-        let mut count = 0;
+        let mut parsed = Vec::with_capacity(bytes.len() / 8);
         for chunk in bytes.chunks_exact(8) {
             if let Some((peer_idx, frame, curr_mask, prev_mask)) = netcode::decode_input_packet(chunk) {
-                if count < 32 {
-                    parsed[count] = (peer_idx as usize, frame, curr_mask, prev_mask);
-                    count += 1;
-                }
+                parsed.push((peer_idx as usize, frame, curr_mask, prev_mask));
             }
         }
-        if count == 0 {
+        if parsed.is_empty() {
             return false;
         }
-        let did_rollback = self.rollback.receive_remote_packets(&parsed[..count], &mut self.game);
+        let did_rollback = self.rollback.receive_remote_packets(&parsed, &mut self.game);
         if did_rollback {
             self.render_framebuffer();
             self.update_stats_buffer();

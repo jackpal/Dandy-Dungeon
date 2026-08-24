@@ -1,8 +1,67 @@
 import { execFile } from 'child_process';
 import assert from 'assert';
 import path from 'path';
+import http from 'http';
+import fs from 'fs';
+import { fileURLToPath } from 'url';
 
 console.log("=== Dandy Dungeon Headless Multi-Browser WebRTC Multiplayer Test ===");
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const DIST_DIR = path.resolve(__dirname, 'dist');
+
+const MIME_TYPES = {
+    '.html': 'text/html',
+    '.js': 'application/javascript',
+    '.wasm': 'application/wasm',
+    '.css': 'text/css',
+    '.png': 'image/png',
+    '.ico': 'image/x-icon',
+    '.bmp': 'image/bmp'
+};
+
+async function ensureLocalServer(port = 8080) {
+    const isUp = await new Promise((resolve) => {
+        const req = http.get(`http://127.0.0.1:${port}/`, (res) => {
+            resolve(true);
+        });
+        req.on('error', () => resolve(false));
+        req.setTimeout(500, () => {
+            req.destroy();
+            resolve(false);
+        });
+    });
+
+    if (isUp) {
+        return null;
+    }
+
+    const server = http.createServer((req, res) => {
+        let reqPath = req.url.split('?')[0].split('#')[0];
+        if (reqPath === '/' || reqPath === '') reqPath = '/index.html';
+        const filePath = path.join(DIST_DIR, reqPath);
+        if (!fs.existsSync(filePath) || fs.statSync(filePath).isDirectory()) {
+            res.writeHead(404);
+            res.end("Not found");
+            return;
+        }
+        const ext = path.extname(filePath).toLowerCase();
+        const mime = MIME_TYPES[ext] || 'application/octet-stream';
+        res.writeHead(200, { 'Content-Type': mime });
+        fs.createReadStream(filePath).pipe(res);
+    });
+
+    await new Promise((resolve, reject) => {
+        server.listen(port, '127.0.0.1', () => {
+            console.log(`[Test Server] Started temporary HTTP static server on http://127.0.0.1:${port}/ for dist/`);
+            resolve();
+        });
+        server.on('error', reject);
+    });
+
+    return server;
+}
 
 const GBROWSER_BIN = "/google/bin/releases/gemini-agents-gbrowser/gbrowser";
 
@@ -739,7 +798,9 @@ function runTest() {
     });
 }
 
+let server = null;
 try {
+    server = await ensureLocalServer(8080);
     const res = await runTest();
     if (res.error) {
         console.error("Test code failed inside gbrowser:\n", res.error);
@@ -976,4 +1037,8 @@ try {
 } catch (err) {
     console.error("\n❌ Headless Multiplayer Test Failed:", err);
     process.exit(1);
+} finally {
+    if (server) {
+        server.close();
+    }
 }

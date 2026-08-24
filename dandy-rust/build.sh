@@ -24,7 +24,7 @@ echo ""
 echo "=== Running Headless Built-Artifact Parity Gate ==="
 node test_artifact_parity.mjs
 
-if curl -s -I http://127.0.0.1:8080/ >/dev/null 2>&1; then
+if [ -x "/google/bin/releases/gemini-agents-gbrowser/gbrowser" ] || command -v gbrowser >/dev/null 2>&1; then
     echo ""
     echo "=== Running Headless Multi-Browser WebRTC Multiplayer Gate ==="
     node test_headless_multiplayer.mjs

@@ -258,7 +258,6 @@ pub fn step_arrow_advance(
             }
             BOMB => {
                 // Hit a smart bomb tile! Trigger smart bomb
-                sounds.push(SOUND_EXPLODE_BOMB);
                 map.set(nx, ny, SPACE);
                 do_smart_bomb(&mut players[index], map, active_rect, sounds);
                 new_v = SPACE;

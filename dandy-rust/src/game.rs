@@ -141,12 +141,12 @@ impl Game {
         }
     }
 
-    fn find_spawn_tile(&self, spawn: (i32, i32), preferred_dir: usize, player_idx: usize) -> (i32, i32) {
+    fn find_spawn_tile(map: &Map, spawn: (i32, i32), preferred_dir: usize, player_idx: usize) -> (i32, i32) {
         let delta = DIR_TO_DELTA[preferred_dir];
         let px = spawn.0 + delta.0;
         let py = spawn.1 + delta.1;
 
-        let curr = self.map.get(px, py);
+        let curr = map.get(px, py);
         if curr == SPACE || curr == (PLAYER + player_idx as u8) {
             return (px, py);
         }
@@ -155,7 +155,7 @@ impl Game {
         for &d in &DIR_TO_DELTA {
             let tx = spawn.0 + d.0;
             let ty = spawn.1 + d.1;
-            let v = self.map.get(tx, ty);
+            let v = map.get(tx, ty);
             if v == SPACE || v == (PLAYER + player_idx as u8) {
                 return (tx, ty);
             }
@@ -179,7 +179,7 @@ impl Game {
             0
         };
 
-        let (px, py) = self.find_spawn_tile(spawn, dir, player_idx);
+        let (px, py) = Self::find_spawn_tile(&self.map, spawn, dir, player_idx);
 
         self.players[player_idx].start(px, py, dir);
         self.map.set(px, py, PLAYER + player_idx as u8);
@@ -224,26 +224,7 @@ impl Game {
         for (i, player) in self.players.iter_mut().enumerate() {
             if player.active && i < PLAYER_SPAWN_DIRS.len() {
                 let dir = PLAYER_SPAWN_DIRS[i];
-                let (px, py) = {
-                    let delta = DIR_TO_DELTA[dir];
-                    let mut tx = spawn.0 + delta.0;
-                    let mut ty = spawn.1 + delta.1;
-                    let curr = self.map.get(tx, ty);
-                    if curr != SPACE && curr != (PLAYER + i as u8) {
-                        for &d in &DIR_TO_DELTA {
-                            let candidate_x = spawn.0 + d.0;
-                            let candidate_y = spawn.1 + d.1;
-                            let v = self.map.get(candidate_x, candidate_y);
-                            if v == SPACE || v == (PLAYER + i as u8) {
-                                tx = candidate_x;
-                                ty = candidate_y;
-                                break;
-                            }
-                        }
-                    }
-                    (tx, ty)
-                };
-
+                let (px, py) = Self::find_spawn_tile(&self.map, spawn, dir, i);
                 player.start(px, py, dir);
                 self.map.set(px, py, PLAYER + i as u8);
             }
@@ -478,7 +459,7 @@ impl Game {
     }
 
     pub fn load_state_bytes(&mut self, bytes: &[u8]) -> bool {
-        if bytes.len() < 37 || &bytes[0..4] != b"DNDY" || bytes[4] != 1 {
+        if bytes.len() < 38 || &bytes[0..4] != b"DNDY" || bytes[4] != 1 {
             return false;
         }
 
@@ -510,7 +491,7 @@ impl Game {
         ];
 
         for player_slot in new_players.iter_mut().take(num_players.min(MAX_PLAYERS)) {
-            if offset + 24 > bytes.len() {
+            if offset + 25 > bytes.len() {
                 return false;
             }
 
@@ -817,7 +798,7 @@ mod tests {
         for y in 0..MAP_HEIGHT {
             for x in 0..MAP_WIDTH {
                 let v = game.map.get(x, y);
-                if (v >= GHOST && v <= GHOST + 2) || (v >= GENERATOR && v <= GENERATOR + 2) {
+                if (GHOST..=GHOST + 2).contains(&v) || (GENERATOR..=GENERATOR + 2).contains(&v) {
                     game.map.set(x, y, SPACE);
                 }
             }
@@ -832,7 +813,7 @@ mod tests {
         for y in 0..MAP_HEIGHT {
             for x in 0..MAP_WIDTH {
                 let v = game.map.get(x, y);
-                if (v >= GHOST && v <= GHOST + 2) || (v >= GENERATOR && v <= GENERATOR + 2) {
+                if (GHOST..=GHOST + 2).contains(&v) || (GENERATOR..=GENERATOR + 2).contains(&v) {
                     game.map.set(x, y, SPACE);
                 }
             }
@@ -848,7 +829,7 @@ mod tests {
         for y in 0..MAP_HEIGHT {
             for x in 0..MAP_WIDTH {
                 let v = game.map.get(x, y);
-                if (v >= GHOST && v <= GHOST + 2) || (v >= GENERATOR && v <= GENERATOR + 2) {
+                if (GHOST..=GHOST + 2).contains(&v) || (GENERATOR..=GENERATOR + 2).contains(&v) {
                     game.map.set(x, y, SPACE);
                 }
             }
@@ -871,7 +852,7 @@ mod tests {
         for y in 0..MAP_HEIGHT {
             for x in 0..MAP_WIDTH {
                 let v = game.map.get(x, y);
-                if (v >= GHOST && v <= GHOST + 2) || (v >= GENERATOR && v <= GENERATOR + 2) {
+                if (GHOST..=GHOST + 2).contains(&v) || (GENERATOR..=GENERATOR + 2).contains(&v) {
                     game.map.set(x, y, SPACE);
                 }
             }
@@ -890,7 +871,7 @@ mod tests {
         for y in 0..MAP_HEIGHT {
             for x in 0..MAP_WIDTH {
                 let v = game.map.get(x, y);
-                if (v >= GHOST && v <= GHOST + 2) || (v >= GENERATOR && v <= GENERATOR + 2) {
+                if (GHOST..=GHOST + 2).contains(&v) || (GENERATOR..=GENERATOR + 2).contains(&v) {
                     game.map.set(x, y, SPACE);
                 }
             }
@@ -920,7 +901,7 @@ mod tests {
         for y in 0..MAP_HEIGHT {
             for x in 0..MAP_WIDTH {
                 let v = game.map.get(x, y);
-                if (v >= GHOST && v <= GHOST + 2) || (v >= GENERATOR && v <= GENERATOR + 2) {
+                if (GHOST..=GHOST + 2).contains(&v) || (GENERATOR..=GENERATOR + 2).contains(&v) {
                     game.map.set(x, y, SPACE);
                 }
             }
@@ -951,7 +932,7 @@ mod tests {
         for y in 0..MAP_HEIGHT {
             for x in 0..MAP_WIDTH {
                 let v = game.map.get(x, y);
-                if (v >= GHOST && v <= GHOST + 2) || (v >= GENERATOR && v <= GENERATOR + 2) {
+                if (GHOST..=GHOST + 2).contains(&v) || (GENERATOR..=GENERATOR + 2).contains(&v) {
                     game.map.set(x, y, SPACE);
                 }
             }
@@ -1382,7 +1363,7 @@ mod tests {
         for y in 0..MAP_HEIGHT {
             for x in 0..MAP_WIDTH {
                 let v = game.map.get(x, y);
-                if (v >= GHOST && v <= GHOST + 2) || (v >= GENERATOR && v <= GENERATOR + 2) {
+                if (GHOST..=GHOST + 2).contains(&v) || (GENERATOR..=GENERATOR + 2).contains(&v) {
                     game.map.set(x, y, SPACE);
                 }
             }
@@ -1454,7 +1435,7 @@ mod tests {
         for y in 0..MAP_HEIGHT {
             for x in 0..MAP_WIDTH {
                 let v = game.map.get(x, y);
-                if (v >= GHOST && v <= GHOST + 2) || (v >= GENERATOR && v <= GENERATOR + 2) {
+                if (GHOST..=GHOST + 2).contains(&v) || (GENERATOR..=GENERATOR + 2).contains(&v) {
                     game.map.set(x, y, SPACE);
                 }
             }
@@ -1486,7 +1467,7 @@ mod tests {
         game.players[0].input_mask = 0;
 
         assert!(game.players[0].arrow.is_some());
-        assert_eq!(game.sounds.contains(&SOUND_SHOOT), true);
+        assert!(game.sounds.contains(&SOUND_SHOOT));
 
         // Fly arrow step-by-step until it reaches the edge of active_rect
         let right_edge = active.left + active.width;
