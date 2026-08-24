@@ -43,7 +43,7 @@ pub const PLAYER_SPAWN_DIRS: [usize; 4] = [0, 2, 4, 6];
 
 pub const MAX_PLAYERS: usize = 4;
 pub const PLAYER_NAMES: [&str; 4] = ["Ruby", "Sapphire", "Topaz", "Emerald"];
-pub const PLAYER_COLORS: [&str; 4] = ["#ff3344", "#33aaff", "#ffcc00", "#33dd66"]; // Red (Ruby), Blue (Sapphire), Yellow (Topaz), Green (Emerald)
+pub const PLAYER_COLORS: [&str; 4] = ["#ef5350", "#42a5f5", "#ffca28", "#66bb6a"]; // Red (Ruby), Blue (Sapphire), Yellow (Topaz), Green (Emerald)
 
 // Player logical input actions (Bitmask)
 pub const ACTION_UP: u8 = 1 << 0;
