@@ -84,6 +84,69 @@ new Promise(async (resolve, reject) => {
         const ctx = canvas.getContext("2d");
         const app = window.dandyApp;
 
+        // 1b. Test Sound Test UI & Direct POKEY Playback Integration
+        console.log("[E2E] 1b. Testing Sound Test UI & Direct POKEY Playback Integration...");
+        const btnWelcomeSound = document.getElementById("btn-welcome-sound-test");
+        const btnLobbySound = document.getElementById("btn-sound-test");
+        const soundModal = document.getElementById("sound-test-modal");
+        const btnCloseSound = document.getElementById("btn-close-sound-test");
+        const soundSelect = document.getElementById("sound-test-select");
+        const btnPlaySound = document.getElementById("btn-sound-play");
+        const soundGrid = document.getElementById("sound-test-grid");
+
+        let soundTestModalOpened = false;
+        let soundTestSelectCount = 0;
+        let soundTestGridCount = 0;
+        let soundTestMetaPopulated = false;
+        let soundTestDirectPlaySuccess = false;
+        let soundTestModalClosed = false;
+
+        if (btnWelcomeSound && soundModal && btnCloseSound) {
+            btnWelcomeSound.click();
+            await new Promise(r => setTimeout(r, 150));
+            soundTestModalOpened = soundModal.style.display !== "none";
+
+            if (soundSelect) {
+                soundTestSelectCount = soundSelect.options.length;
+            }
+            if (soundGrid) {
+                soundTestGridCount = soundGrid.querySelectorAll(".sound-tile-btn").length;
+            }
+
+            const metaIdEl = document.getElementById("meta-sound-id");
+            const metaLabelEl = document.getElementById("meta-sound-label");
+            const metaChanEl = document.getElementById("meta-sound-channel");
+            const metaPrioEl = document.getElementById("meta-sound-priority");
+            soundTestMetaPopulated = Boolean(
+                metaIdEl && metaIdEl.textContent.trim().length > 0 &&
+                metaLabelEl && metaLabelEl.textContent.trim().length > 0 &&
+                metaChanEl && metaChanEl.textContent.trim().length > 0 &&
+                metaPrioEl && metaPrioEl.textContent.trim().length > 0
+            );
+
+            // Test trigger direct sound playback API on PokeyAudio (Bomb Explosion ID 3, Hit Player ID 1)
+            if (window.PokeyAudio) {
+                try {
+                    window.PokeyAudio.testSound(3);
+                    window.PokeyAudio.playDirectSound(1);
+                    soundTestDirectPlaySuccess = true;
+                } catch (e) {
+                    console.error("Direct sound playback error:", e);
+                }
+            }
+
+            // Click play button on UI
+            if (btnPlaySound) {
+                btnPlaySound.click();
+                await new Promise(r => setTimeout(r, 100));
+            }
+
+            // Close sound test modal
+            btnCloseSound.click();
+            await new Promise(r => setTimeout(r, 150));
+            soundTestModalClosed = soundModal.style.display === "none";
+        }
+
         // Dismiss welcome modal by choosing Play Local
         const btnLocal = document.getElementById("btn-welcome-local");
         if (btnLocal && window.getComputedStyle(document.getElementById("welcome-modal")).display !== "none") {
@@ -196,6 +259,12 @@ new Promise(async (resolve, reject) => {
         const hudBombs = hudBombsEl ? parseInt(hudBombsEl.textContent, 10) : 0;
 
         const results = {
+            soundTestModalOpened,
+            soundTestSelectCount,
+            soundTestGridCount,
+            soundTestMetaPopulated,
+            soundTestDirectPlaySuccess,
+            soundTestModalClosed,
             nonZeroInitialRgb,
             distinctColorCount,
             p1InitX,
@@ -254,6 +323,22 @@ try {
         console.error("Test code failed inside gbrowser:\n", res.error);
         process.exit(1);
     }
+
+    console.log("\n=== Sound Test UI & POKEY Playback Verification ===");
+    console.log(`Sound Test Modal Opened: ${res.soundTestModalOpened}`);
+    console.log(`Sound Test Select Count: ${res.soundTestSelectCount} / 21`);
+    console.log(`Sound Test Grid Tiles Count: ${res.soundTestGridCount} / 21`);
+    console.log(`Sound Test Metadata Populated: ${res.soundTestMetaPopulated}`);
+    console.log(`Direct POKEY Playback Execution: ${res.soundTestDirectPlaySuccess}`);
+    console.log(`Sound Test Modal Closed: ${res.soundTestModalClosed}`);
+
+    assert(res.soundTestModalOpened, "Sound Test modal must open on clicking 🔊 Sound Test button");
+    assert.strictEqual(res.soundTestSelectCount, 21, `Sound Test dropdown must contain all 21 sound entries (found ${res.soundTestSelectCount})`);
+    assert.strictEqual(res.soundTestGridCount, 21, `Sound Test quick-audition grid must contain 21 sound tiles (found ${res.soundTestGridCount})`);
+    assert(res.soundTestMetaPopulated, "Sound Test metadata panel must display ID, Label, Channel, and Priority");
+    assert(res.soundTestDirectPlaySuccess, "PokeyAudio direct sound playback API must execute cleanly");
+    assert(res.soundTestModalClosed, "Sound Test modal must close cleanly on dismiss");
+    console.log("✓ Sound Test UI, 21-sound catalog, metadata panel, and POKEY audio synthesis verified.");
 
     console.log("\n=== E2E Smoke Test Verification ===");
     console.log(`Initial Canvas Non-Zero RGB Pixels: ${res.nonZeroInitialRgb} / 51200`);

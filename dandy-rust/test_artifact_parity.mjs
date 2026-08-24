@@ -400,6 +400,23 @@ const events = audioSim.get_sound_events();
 assert(events.includes(2), "Sound events must contain SOUND_SHOOT (2)");
 assert.strictEqual((audioSim.get_sound_mask() & (1 << 2)) !== 0, true, "Sound mask bit 2 must be set");
 assert.strictEqual(audioSim.get_audio_channel_sound(0), 2, "Channel 0 must play SOUND_SHOOT");
+
+// Player movement followed by immediate shoot action
+const moveShootSim = new DandyApp();
+moveShootSim.set_action(0, PlayerAction.Right, true);
+moveShootSim.tick();
+moveShootSim.set_action(0, PlayerAction.Right, false);
+for (let i = 0; i < 8; i++) {
+    moveShootSim.tick();
+}
+// Now fire arrow immediately after moving
+moveShootSim.set_action(0, PlayerAction.Shoot, true);
+moveShootSim.tick();
+const moveShootEvents = moveShootSim.get_sound_events();
+assert(moveShootEvents.includes(2), "Sound events after moving must contain SOUND_SHOOT (2)");
+assert.strictEqual((moveShootSim.get_sound_mask() & (1 << 2)) !== 0, true, "Sound mask bit 2 must be set after moving");
+assert.strictEqual(moveShootSim.get_audio_channel_sound(0), 2, "Channel 0 must play SOUND_SHOOT after moving");
+
 console.log("✓ POKEY Priority Audio Scheduler & Multi-Channel APIs verified.");
 
 console.log("\n=== ALL BUILT-ARTIFACT PARITY & MULTIPLAYER TESTS PASSED ===");

@@ -2163,5 +2163,51 @@ mod tests {
         assert_eq!(sound_priority(SOUND_TO_HAND), 30);
         assert_eq!(sound_priority(SOUND_HAVE_NONE), 20);
     }
+
+    #[test]
+    fn test_movement_followed_by_shoot_sound_emission() {
+        let mut game = Game::new();
+        game.load();
+        let px = 10;
+        let py = 10;
+        game.map.set(game.players[0].x, game.players[0].y, SPACE);
+        game.players[0].x = px;
+        game.players[0].y = py;
+        game.players[0].dir = 2; // East
+        game.map.set(px, py, PLAYER);
+        let (tx, ty) = calculate_target_cog(&game.players);
+        game.camera.cog_x = tx as f64;
+        game.camera.cog_y = ty as f64;
+        for x in (px - 5)..=(px + 5) {
+            for y in (py - 5)..=(py + 5) {
+                if (x, y) != (px, py) {
+                    game.map.set(x, y, SPACE);
+                }
+            }
+        }
+
+        // 1. Step player to the right (move action)
+        game.players[0].input_mask = ACTION_RIGHT;
+        game.step();
+        assert_eq!(game.players[0].x, px + 1);
+        assert_eq!(game.players[0].move_cooldown, PLAYER_MOVE_INTERVAL as u8);
+
+        // 2. Clear input and let movement cooldown complete
+        game.players[0].input_mask = 0;
+        for _ in 0..PLAYER_MOVE_INTERVAL {
+            game.step();
+        }
+        assert_eq!(game.players[0].move_cooldown, 0);
+
+        // 3. Fire arrow immediately after moving
+        game.players[0].input_mask = ACTION_SHOOT;
+        game.step();
+
+        // Must emit SOUND_SHOOT in sounds vector and schedule on channel 0
+        assert!(game.players[0].arrow.is_some(), "Arrow must be spawned");
+        assert!(game.sounds.contains(&SOUND_SHOOT), "SOUND_SHOOT must be emitted immediately upon shooting after movement");
+        assert!(game.audio_scheduler.is_channel_active(0), "Channel 0 must be active for SOUND_SHOOT");
+        assert_eq!(game.audio_scheduler.get_channel_sound(0), SOUND_SHOOT);
+    }
 }
 
