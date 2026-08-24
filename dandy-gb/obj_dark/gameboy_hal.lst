@@ -1,0 +1,867 @@
+                                      1 ;--------------------------------------------------------
+                                      2 ; File Created by SDCC : free open source ISO C Compiler
+                                      3 ; Version 4.5.1 #15267 (Linux)
+                                      4 ;--------------------------------------------------------
+                                      5 	.module gameboy_hal
+                                      6 	
+                                      7 ;--------------------------------------------------------
+                                      8 ; Public variables in this module
+                                      9 ;--------------------------------------------------------
+                                     10 	.globl _hal_draw_string
+                                     11 	.globl _fill_bkg_rect
+                                     12 	.globl _set_bkg_tile_xy
+                                     13 	.globl _hal_draw_tile
+                                     14 	.globl _hal_update_hud
+                                     15 	.globl _hal_clear_sprites
+                                     16 	.globl _hal_set_sprite
+                                     17 	.globl _hal_play_sound
+                                     18 ;--------------------------------------------------------
+                                     19 ; special function registers
+                                     20 ;--------------------------------------------------------
+                                     21 	.area _HRAM
+                                     22 ;--------------------------------------------------------
+                                     23 ; ram data
+                                     24 ;--------------------------------------------------------
+                                     25 	.area _DATA
+                                     26 ;--------------------------------------------------------
+                                     27 ; ram data
+                                     28 ;--------------------------------------------------------
+                                     29 	.area _INITIALIZED
+    00000000                         30 _sound_initialized:
+    00000000                         31 	.ds 1
+                                     32 ;--------------------------------------------------------
+                                     33 ; absolute external ram data
+                                     34 ;--------------------------------------------------------
+                                     35 	.area _DABS (ABS)
+                                     36 ;--------------------------------------------------------
+                                     37 ; global & static initialisations
+                                     38 ;--------------------------------------------------------
+                                     39 	.area _HOME
+                                     40 	.area _GSINIT
+                                     41 	.area _GSFINAL
+                                     42 	.area _GSINIT
+                                     43 ;--------------------------------------------------------
+                                     44 ; Home
+                                     45 ;--------------------------------------------------------
+                                     46 	.area _HOME
+                                     47 	.area _HOME
+                                     48 ;--------------------------------------------------------
+                                     49 ; code
+                                     50 ;--------------------------------------------------------
+                                     51 	.area _CODE
+                                     52 ;src/gameboy_hal.c:8: void hal_draw_string(uint8_t x, uint8_t y, const char* str) {
+                                     53 ;	---------------------------------
+                                     54 ; Function hal_draw_string
+                                     55 ; ---------------------------------
+    00000000                         56 _hal_draw_string::
+    00000000 3B               [ 8]   57 	dec	sp
+    00000001 3B               [ 8]   58 	dec	sp
+    00000002 F8 01            [12]   59 	ldhl	sp,	#1
+    00000004 32               [ 8]   60 	ld	(hl-), a
+    00000005 73               [ 8]   61 	ld	(hl), e
+                                     62 ;src/gameboy_hal.c:10: while (str[i] != '\0') {
+    00000006 0E 00            [ 8]   63 	ld	c, #0x00
+    00000008                         64 00101$:
+    00000008 F8 04            [12]   65 	ldhl	sp,#4
+    0000000A 2A               [ 8]   66 	ld	a, (hl+)
+    0000000B 5F               [ 4]   67 	ld	e, a
+    0000000C 56               [ 8]   68 	ld	d, (hl)
+    0000000D 69               [ 4]   69 	ld	l, c
+    0000000E 26 00            [ 8]   70 	ld	h, #0x00
+    00000010 19               [ 8]   71 	add	hl, de
+    00000011 5D               [ 4]   72 	ld	e, l
+    00000012 54               [ 4]   73 	ld	d, h
+    00000013 1A               [ 8]   74 	ld	a, (de)
+    00000014 B7               [ 4]   75 	or	a, a
+    00000015 28 12            [12]   76 	jr	Z, 00104$
+                                     77 ;src/gameboy_hal.c:12: set_bkg_tile_xy(x + i, y, str[i] - 32);
+    00000017 C6 E0            [ 8]   78 	add	a, #0xe0
+    00000019 47               [ 4]   79 	ld	b, a
+    0000001A F8 01            [12]   80 	ldhl	sp,	#1
+    0000001C 3A               [ 8]   81 	ld	a, (hl-)
+    0000001D 81               [ 4]   82 	add	a, c
+    0000001E C5               [16]   83 	push	bc
+    0000001F C5               [16]   84 	push	bc
+    00000020 33               [ 8]   85 	inc	sp
+    00000021 5E               [ 8]   86 	ld	e, (hl)
+    00000022 CDr00r00         [24]   87 	call	_set_bkg_tile_xy
+    00000025 C1               [12]   88 	pop	bc
+                                     89 ;src/gameboy_hal.c:13: i++;
+    00000026 0C               [ 4]   90 	inc	c
+    00000027 18 DF            [12]   91 	jr	00101$
+    00000029                         92 00104$:
+                                     93 ;src/gameboy_hal.c:15: }
+    00000029 33               [ 8]   94 	inc	sp
+    0000002A 33               [ 8]   95 	inc	sp
+    0000002B E1               [12]   96 	pop	hl
+    0000002C F1               [12]   97 	pop	af
+    0000002D E9               [ 4]   98 	jp	(hl)
+                                     99 ;src/gameboy_hal.c:18: static void hal_draw_string_inverted(uint8_t x, uint8_t y, const char* str) {
+                                    100 ;	---------------------------------
+                                    101 ; Function hal_draw_string_inverted
+                                    102 ; ---------------------------------
+    0000002E                        103 _hal_draw_string_inverted:
+    0000002E 3B               [ 8]  104 	dec	sp
+    0000002F 3B               [ 8]  105 	dec	sp
+    00000030 F8 01            [12]  106 	ldhl	sp,	#1
+    00000032 32               [ 8]  107 	ld	(hl-), a
+    00000033 73               [ 8]  108 	ld	(hl), e
+                                    109 ;src/gameboy_hal.c:20: while (str[i] != '\0') {
+    00000034 0E 00            [ 8]  110 	ld	c, #0x00
+    00000036                        111 00101$:
+    00000036 F8 04            [12]  112 	ldhl	sp,#4
+    00000038 2A               [ 8]  113 	ld	a, (hl+)
+    00000039 5F               [ 4]  114 	ld	e, a
+    0000003A 56               [ 8]  115 	ld	d, (hl)
+    0000003B 69               [ 4]  116 	ld	l, c
+    0000003C 26 00            [ 8]  117 	ld	h, #0x00
+    0000003E 19               [ 8]  118 	add	hl, de
+    0000003F 5D               [ 4]  119 	ld	e, l
+    00000040 54               [ 4]  120 	ld	d, h
+    00000041 1A               [ 8]  121 	ld	a, (de)
+    00000042 B7               [ 4]  122 	or	a, a
+    00000043 28 12            [12]  123 	jr	Z, 00104$
+                                    124 ;src/gameboy_hal.c:23: set_bkg_tile_xy(x + i, y, str[i] - 32);
+    00000045 C6 E0            [ 8]  125 	add	a, #0xe0
+    00000047 47               [ 4]  126 	ld	b, a
+    00000048 F8 01            [12]  127 	ldhl	sp,	#1
+    0000004A 3A               [ 8]  128 	ld	a, (hl-)
+    0000004B 81               [ 4]  129 	add	a, c
+    0000004C C5               [16]  130 	push	bc
+    0000004D C5               [16]  131 	push	bc
+    0000004E 33               [ 8]  132 	inc	sp
+    0000004F 5E               [ 8]  133 	ld	e, (hl)
+    00000050 CDr00r00         [24]  134 	call	_set_bkg_tile_xy
+    00000053 C1               [12]  135 	pop	bc
+                                    136 ;src/gameboy_hal.c:28: i++;
+    00000054 0C               [ 4]  137 	inc	c
+    00000055 18 DF            [12]  138 	jr	00101$
+    00000057                        139 00104$:
+                                    140 ;src/gameboy_hal.c:30: }
+    00000057 33               [ 8]  141 	inc	sp
+    00000058 33               [ 8]  142 	inc	sp
+    00000059 E1               [12]  143 	pop	hl
+    0000005A F1               [12]  144 	pop	af
+    0000005B E9               [ 4]  145 	jp	(hl)
+                                    146 ;src/gameboy_hal.c:33: static void u16_to_str(uint16_t val, char* buf, uint8_t digits) {
+                                    147 ;	---------------------------------
+                                    148 ; Function u16_to_str
+                                    149 ; ---------------------------------
+    0000005C                        150 _u16_to_str:
+    0000005C E8 FD            [16]  151 	add	sp, #-3
+    0000005E D5               [16]  152 	push	de
+    0000005F F8 02            [12]  153 	ldhl	sp,	#2
+    00000061 79               [ 4]  154 	ld	a, c
+    00000062 22               [ 8]  155 	ld	(hl+), a
+    00000063 70               [ 8]  156 	ld	(hl), b
+                                    157 ;src/gameboy_hal.c:34: for (int8_t i = digits - 1; i >= 0; --i) {
+    00000064 F8 07            [12]  158 	ldhl	sp,	#7
+    00000066 7E               [ 8]  159 	ld	a, (hl)
+    00000067 3D               [ 4]  160 	dec	a
+    00000068 F8 04            [12]  161 	ldhl	sp,	#4
+    0000006A 77               [ 8]  162 	ld	(hl), a
+    0000006B                        163 00103$:
+    0000006B F8 04            [12]  164 	ldhl	sp,	#4
+    0000006D CB 7E            [12]  165 	bit	7, (hl)
+    0000006F 20 27            [12]  166 	jr	NZ, 00101$
+                                    167 ;src/gameboy_hal.c:35: buf[i] = '0' + (val % 10);
+    00000071 3A               [ 8]  168 	ld	a, (hl-)
+    00000072 5F               [ 4]  169 	ld	e, a
+    00000073 16 00            [ 8]  170 	ld	d, #0x00
+    00000075 3A               [ 8]  171 	ld	a, (hl-)
+    00000076 6E               [ 8]  172 	ld	l, (hl)
+    00000077 67               [ 4]  173 	ld	h, a
+    00000078 19               [ 8]  174 	add	hl, de
+    00000079 E5               [16]  175 	push	hl
+    0000007A 01 0A 00         [12]  176 	ld	bc, #0x000a
+    0000007D E1               [12]  177 	pop	hl
+    0000007E D1               [12]  178 	pop	de
+    0000007F D5               [16]  179 	push	de
+    00000080 E5               [16]  180 	push	hl
+    00000081 CDr00r00         [24]  181 	call	__moduint
+    00000084 D1               [12]  182 	pop	de
+    00000085 79               [ 4]  183 	ld	a, c
+    00000086 C6 30            [ 8]  184 	add	a, #0x30
+    00000088 12               [ 8]  185 	ld	(de), a
+                                    186 ;src/gameboy_hal.c:36: val /= 10;
+    00000089 01 0A 00         [12]  187 	ld	bc, #0x000a
+    0000008C D1               [12]  188 	pop	de
+    0000008D D5               [16]  189 	push	de
+    0000008E CDr00r00         [24]  190 	call	__divuint
+    00000091 E1               [12]  191 	pop	hl
+    00000092 C5               [16]  192 	push	bc
+                                    193 ;src/gameboy_hal.c:34: for (int8_t i = digits - 1; i >= 0; --i) {
+    00000093 F8 04            [12]  194 	ldhl	sp,	#4
+    00000095 35               [12]  195 	dec	(hl)
+    00000096 18 D3            [12]  196 	jr	00103$
+    00000098                        197 00101$:
+                                    198 ;src/gameboy_hal.c:38: buf[digits] = '\0';
+    00000098 F8 02            [12]  199 	ldhl	sp,#2
+    0000009A 2A               [ 8]  200 	ld	a, (hl+)
+    0000009B 5F               [ 4]  201 	ld	e, a
+    0000009C 56               [ 8]  202 	ld	d, (hl)
+    0000009D F8 07            [12]  203 	ldhl	sp,	#7
+    0000009F 6E               [ 8]  204 	ld	l, (hl)
+    000000A0 26 00            [ 8]  205 	ld	h, #0x00
+    000000A2 19               [ 8]  206 	add	hl, de
+    000000A3 4D               [ 4]  207 	ld	c, l
+    000000A4 44               [ 4]  208 	ld	b, h
+    000000A5 AF               [ 4]  209 	xor	a, a
+    000000A6 02               [ 8]  210 	ld	(bc), a
+                                    211 ;src/gameboy_hal.c:39: }
+    000000A7 E8 05            [16]  212 	add	sp, #5
+    000000A9 E1               [12]  213 	pop	hl
+    000000AA 33               [ 8]  214 	inc	sp
+    000000AB E9               [ 4]  215 	jp	(hl)
+                                    216 ;src/gameboy_hal.c:41: static void s16_to_str(int16_t val, char* buf, uint8_t digits) {
+                                    217 ;	---------------------------------
+                                    218 ; Function s16_to_str
+                                    219 ; ---------------------------------
+    000000AC                        220 _s16_to_str:
+    000000AC E8 F8            [16]  221 	add	sp, #-8
+    000000AE F8 05            [12]  222 	ldhl	sp,	#5
+    000000B0 7B               [ 4]  223 	ld	a, e
+    000000B1 22               [ 8]  224 	ld	(hl+), a
+    000000B2 72               [ 8]  225 	ld	(hl), d
+    000000B3 F8 03            [12]  226 	ldhl	sp,	#3
+    000000B5 79               [ 4]  227 	ld	a, c
+    000000B6 22               [ 8]  228 	ld	(hl+), a
+    000000B7 70               [ 8]  229 	ld	(hl), b
+                                    230 ;src/gameboy_hal.c:42: bool neg = false;
+    000000B8 F8 00            [12]  231 	ldhl	sp,	#0
+    000000BA 36 00            [12]  232 	ld	(hl), #0x00
+                                    233 ;src/gameboy_hal.c:43: if (val < 0) {
+    000000BC F8 05            [12]  234 	ldhl	sp,	#5
+    000000BE 2A               [ 8]  235 	ld	a, (hl+)
+    000000BF CB 7E            [12]  236 	bit	7, (hl)
+    000000C1 28 15            [12]  237 	jr	Z, 00102$
+                                    238 ;src/gameboy_hal.c:44: neg = true;
+    000000C3 F8 00            [12]  239 	ldhl	sp,	#0
+    000000C5 36 01            [12]  240 	ld	(hl), #0x01
+                                    241 ;src/gameboy_hal.c:45: val = -val;
+    000000C7 11 00 00         [12]  242 	ld	de, #0x0000
+    000000CA F8 05            [12]  243 	ldhl	sp,	#5
+    000000CC 2A               [ 8]  244 	ld	a,	(hl+)
+    000000CD 66               [ 8]  245 	ld	h, (hl)
+    000000CE 6F               [ 4]  246 	ld	l, a
+    000000CF 7B               [ 4]  247 	ld	a, e
+    000000D0 95               [ 4]  248 	sub	a, l
+    000000D1 5F               [ 4]  249 	ld	e, a
+    000000D2 7A               [ 4]  250 	ld	a, d
+    000000D3 9C               [ 4]  251 	sbc	a, h
+    000000D4 F8 06            [12]  252 	ldhl	sp,	#6
+    000000D6 32               [ 8]  253 	ld	(hl-), a
+    000000D7 73               [ 8]  254 	ld	(hl), e
+    000000D8                        255 00102$:
+                                    256 ;src/gameboy_hal.c:47: for (int8_t i = digits - 1; i >= 0; --i) {
+    000000D8 F8 0A            [12]  257 	ldhl	sp,	#10
+    000000DA 7E               [ 8]  258 	ld	a, (hl)
+    000000DB 3D               [ 4]  259 	dec	a
+    000000DC F8 07            [12]  260 	ldhl	sp,	#7
+    000000DE 77               [ 8]  261 	ld	(hl), a
+    000000DF                        262 00108$:
+    000000DF F8 07            [12]  263 	ldhl	sp,	#7
+    000000E1 CB 7E            [12]  264 	bit	7, (hl)
+    000000E3 20 3A            [12]  265 	jr	NZ, 00103$
+                                    266 ;src/gameboy_hal.c:48: buf[i] = '0' + (val % 10);
+    000000E5 5E               [ 8]  267 	ld	e, (hl)
+    000000E6 16 00            [ 8]  268 	ld	d, #0x00
+    000000E8 F8 03            [12]  269 	ldhl	sp,	#3
+    000000EA 2A               [ 8]  270 	ld	a,	(hl+)
+    000000EB 66               [ 8]  271 	ld	h, (hl)
+    000000EC 6F               [ 4]  272 	ld	l, a
+    000000ED 19               [ 8]  273 	add	hl, de
+    000000EE 5D               [ 4]  274 	ld	e, l
+    000000EF 54               [ 4]  275 	ld	d, h
+    000000F0 F8 05            [12]  276 	ldhl	sp,	#5
+    000000F2 7E               [ 8]  277 	ld	a, (hl)
+    000000F3 F8 01            [12]  278 	ldhl	sp,	#1
+    000000F5 77               [ 8]  279 	ld	(hl), a
+    000000F6 F8 06            [12]  280 	ldhl	sp,	#6
+    000000F8 7E               [ 8]  281 	ld	a, (hl)
+    000000F9 F8 02            [12]  282 	ldhl	sp,	#2
+    000000FB 32               [ 8]  283 	ld	(hl-), a
+    000000FC D5               [16]  284 	push	de
+    000000FD 01 0A 00         [12]  285 	ld	bc, #0x000a
+    00000100 2A               [ 8]  286 	ld	a, (hl+)
+    00000101 5F               [ 4]  287 	ld	e, a
+    00000102 56               [ 8]  288 	ld	d, (hl)
+    00000103 CDr00r00         [24]  289 	call	__modsint
+    00000106 D1               [12]  290 	pop	de
+    00000107 79               [ 4]  291 	ld	a, c
+    00000108 C6 30            [ 8]  292 	add	a, #0x30
+    0000010A 12               [ 8]  293 	ld	(de), a
+                                    294 ;src/gameboy_hal.c:49: val /= 10;
+    0000010B 01 0A 00         [12]  295 	ld	bc, #0x000a
+    0000010E F8 01            [12]  296 	ldhl	sp,	#1
+    00000110 2A               [ 8]  297 	ld	a, (hl+)
+    00000111 5F               [ 4]  298 	ld	e, a
+    00000112 56               [ 8]  299 	ld	d, (hl)
+    00000113 CDr00r00         [24]  300 	call	__divsint
+    00000116 F8 05            [12]  301 	ldhl	sp,	#5
+    00000118 79               [ 4]  302 	ld	a, c
+    00000119 22               [ 8]  303 	ld	(hl+), a
+                                    304 ;src/gameboy_hal.c:47: for (int8_t i = digits - 1; i >= 0; --i) {
+    0000011A 78               [ 4]  305 	ld	a, b
+    0000011B 22               [ 8]  306 	ld	(hl+), a
+    0000011C 35               [12]  307 	dec	(hl)
+    0000011D 18 C0            [12]  308 	jr	00108$
+    0000011F                        309 00103$:
+                                    310 ;src/gameboy_hal.c:51: if (neg && digits > 0) {
+    0000011F F8 00            [12]  311 	ldhl	sp,	#0
+    00000121 CB 46            [12]  312 	bit	0, (hl)
+    00000123 28 0D            [12]  313 	jr	Z, 00105$
+    00000125 F8 0A            [12]  314 	ldhl	sp,	#10
+    00000127 7E               [ 8]  315 	ld	a, (hl)
+    00000128 B7               [ 4]  316 	or	a, a
+    00000129 28 07            [12]  317 	jr	Z, 00105$
+                                    318 ;src/gameboy_hal.c:52: buf[0] = '-';
+    0000012B F8 03            [12]  319 	ldhl	sp,	#3
+    0000012D 2A               [ 8]  320 	ld	a, (hl+)
+    0000012E 66               [ 8]  321 	ld	h, (hl)
+    0000012F 6F               [ 4]  322 	ld	l, a
+    00000130 36 2D            [12]  323 	ld	(hl), #0x2d
+    00000132                        324 00105$:
+                                    325 ;src/gameboy_hal.c:54: buf[digits] = '\0';
+    00000132 F8 03            [12]  326 	ldhl	sp,#3
+    00000134 2A               [ 8]  327 	ld	a, (hl+)
+    00000135 5F               [ 4]  328 	ld	e, a
+    00000136 56               [ 8]  329 	ld	d, (hl)
+    00000137 F8 0A            [12]  330 	ldhl	sp,	#10
+    00000139 6E               [ 8]  331 	ld	l, (hl)
+    0000013A 26 00            [ 8]  332 	ld	h, #0x00
+    0000013C 19               [ 8]  333 	add	hl, de
+    0000013D 4D               [ 4]  334 	ld	c, l
+    0000013E 44               [ 4]  335 	ld	b, h
+    0000013F AF               [ 4]  336 	xor	a, a
+    00000140 02               [ 8]  337 	ld	(bc), a
+                                    338 ;src/gameboy_hal.c:55: }
+    00000141 E8 08            [16]  339 	add	sp, #8
+    00000143 E1               [12]  340 	pop	hl
+    00000144 33               [ 8]  341 	inc	sp
+    00000145 E9               [ 4]  342 	jp	(hl)
+                                    343 ;src/gameboy_hal.c:59: void hal_draw_tile(uint8_t x, uint8_t y, uint8_t tile_id) {
+                                    344 ;	---------------------------------
+                                    345 ; Function hal_draw_tile
+                                    346 ; ---------------------------------
+    00000146                        347 _hal_draw_tile::
+    00000146 4F               [ 4]  348 	ld	c, a
+                                    349 ;src/gameboy_hal.c:61: if (tile_id >= TILE_PLAYER1 && tile_id <= TILE_PLAYER1 + 31) {
+    00000147 F8 02            [12]  350 	ldhl	sp,	#2
+    00000149 7E               [ 8]  351 	ld	a, (hl)
+    0000014A D6 18            [ 8]  352 	sub	a, #0x18
+    0000014C 38 0D            [12]  353 	jr	C, 00102$
+    0000014E 3E 37            [ 8]  354 	ld	a, #0x37
+    00000150 96               [ 8]  355 	sub	a, (hl)
+    00000151 38 08            [12]  356 	jr	C, 00102$
+                                    357 ;src/gameboy_hal.c:62: tile_id = TILE_PLAYER1 + ((tile_id - TILE_PLAYER1) & 7);
+    00000153 7E               [ 8]  358 	ld	a, (hl)
+    00000154 C6 E8            [ 8]  359 	add	a, #0xe8
+    00000156 E6 07            [ 8]  360 	and	a, #0x07
+    00000158 C6 18            [ 8]  361 	add	a, #0x18
+    0000015A 77               [ 8]  362 	ld	(hl), a
+    0000015B                        363 00102$:
+                                    364 ;src/gameboy_hal.c:66: set_bkg_tile_xy(x, y, 128 + tile_id);
+    0000015B F8 02            [12]  365 	ldhl	sp,	#2
+    0000015D 7E               [ 8]  366 	ld	a, (hl)
+    0000015E C6 80            [ 8]  367 	add	a, #0x80
+    00000160 F5               [16]  368 	push	af
+    00000161 33               [ 8]  369 	inc	sp
+    00000162 79               [ 4]  370 	ld	a, c
+    00000163 CDr00r00         [24]  371 	call	_set_bkg_tile_xy
+                                    372 ;src/gameboy_hal.c:67: }
+    00000166 E1               [12]  373 	pop	hl
+    00000167 33               [ 8]  374 	inc	sp
+    00000168 E9               [ 4]  375 	jp	(hl)
+                                    376 ;src/gameboy_hal.c:69: void hal_update_hud(void) {
+                                    377 ;	---------------------------------
+                                    378 ; Function hal_update_hud
+                                    379 ; ---------------------------------
+    00000169                        380 _hal_update_hud::
+    00000169 E8 F1            [16]  381 	add	sp, #-15
+                                    382 ;src/gameboy_hal.c:71: uint8_t p = local_player_idx;
+    0000016B FAr00r00         [16]  383 	ld	a, (#_local_player_idx)
+    0000016E F8 0A            [12]  384 	ldhl	sp,	#10
+    00000170 77               [ 8]  385 	ld	(hl), a
+                                    386 ;src/gameboy_hal.c:77: fill_bkg_rect(0, 10, 20, 8, 0);
+    00000171 21 08 00         [12]  387 	ld	hl, #0x08
+    00000174 E5               [16]  388 	push	hl
+    00000175 21 0A 14         [12]  389 	ld	hl, #0x140a
+    00000178 E5               [16]  390 	push	hl
+    00000179 AF               [ 4]  391 	xor	a, a
+    0000017A F5               [16]  392 	push	af
+    0000017B 33               [ 8]  393 	inc	sp
+    0000017C CDr00r00         [24]  394 	call	_fill_bkg_rect
+    0000017F E8 05            [16]  395 	add	sp, #5
+                                    396 ;src/gameboy_hal.c:85: hal_draw_string_inverted(1, 11, "SCORE: ");
+    00000181 11r84r02         [12]  397 	ld	de, #___str_0
+    00000184 D5               [16]  398 	push	de
+    00000185 1E 0B            [ 8]  399 	ld	e, #0x0b
+    00000187 3E 01            [ 8]  400 	ld	a, #0x01
+    00000189 CDr2Er00         [24]  401 	call	_hal_draw_string_inverted
+                                    402 ;src/gameboy_hal.c:86: u16_to_str(player_score[p], buf, 6);
+    0000018C F8 00            [12]  403 	ldhl	sp,	#0
+    0000018E 4D               [ 4]  404 	ld	c, l
+    0000018F 44               [ 4]  405 	ld	b, h
+    00000190 F8 0A            [12]  406 	ldhl	sp,	#10
+    00000192 2A               [ 8]  407 	ld	a, (hl+)
+    00000193 5F               [ 4]  408 	ld	e, a
+    00000194 16 00            [ 8]  409 	ld	d, #0x00
+    00000196 CB 23            [ 8]  410 	sla	e
+    00000198 CB 12            [ 8]  411 	rl	d
+    0000019A 7B               [ 4]  412 	ld	a, e
+    0000019B 22               [ 8]  413 	ld	(hl+), a
+    0000019C 72               [ 8]  414 	ld	(hl), d
+    0000019D 11r00r00         [12]  415 	ld	de, #_player_score
+    000001A0 3A               [ 8]  416 	ld	a, (hl-)
+    000001A1 6E               [ 8]  417 	ld	l, (hl)
+    000001A2 67               [ 4]  418 	ld	h, a
+    000001A3 19               [ 8]  419 	add	hl, de
+    000001A4 E5               [16]  420 	push	hl
+    000001A5 7D               [ 4]  421 	ld	a, l
+    000001A6 F8 0F            [12]  422 	ldhl	sp,	#15
+    000001A8 77               [ 8]  423 	ld	(hl), a
+    000001A9 E1               [12]  424 	pop	hl
+    000001AA 7C               [ 4]  425 	ld	a, h
+    000001AB F8 0E            [12]  426 	ldhl	sp,	#14
+    000001AD 32               [ 8]  427 	ld	(hl-), a
+    000001AE 2A               [ 8]  428 	ld	a, (hl+)
+    000001AF 5F               [ 4]  429 	ld	e, a
+    000001B0 56               [ 8]  430 	ld	d, (hl)
+    000001B1 1A               [ 8]  431 	ld	a, (de)
+    000001B2 6F               [ 4]  432 	ld	l, a
+    000001B3 13               [ 8]  433 	inc	de
+    000001B4 1A               [ 8]  434 	ld	a, (de)
+    000001B5 67               [ 4]  435 	ld	h, a
+    000001B6 C5               [16]  436 	push	bc
+    000001B7 3E 06            [ 8]  437 	ld	a, #0x06
+    000001B9 F5               [16]  438 	push	af
+    000001BA 33               [ 8]  439 	inc	sp
+    000001BB 5D               [ 4]  440 	ld	e, l
+    000001BC 54               [ 4]  441 	ld	d, h
+    000001BD CDr5Cr00         [24]  442 	call	_u16_to_str
+    000001C0 C1               [12]  443 	pop	bc
+                                    444 ;src/gameboy_hal.c:87: hal_draw_string_inverted(8, 11, buf);
+    000001C1 C5               [16]  445 	push	bc
+    000001C2 C5               [16]  446 	push	bc
+    000001C3 1E 0B            [ 8]  447 	ld	e, #0x0b
+    000001C5 3E 08            [ 8]  448 	ld	a, #0x08
+    000001C7 CDr2Er00         [24]  449 	call	_hal_draw_string_inverted
+                                    450 ;src/gameboy_hal.c:90: hal_draw_string_inverted(1, 12, "HP:    ");
+    000001CA 11r8Cr02         [12]  451 	ld	de, #___str_1
+    000001CD D5               [16]  452 	push	de
+    000001CE 1E 0C            [ 8]  453 	ld	e, #0x0c
+    000001D0 3E 01            [ 8]  454 	ld	a, #0x01
+    000001D2 CDr2Er00         [24]  455 	call	_hal_draw_string_inverted
+    000001D5 C1               [12]  456 	pop	bc
+                                    457 ;src/gameboy_hal.c:91: s16_to_str(player_health[p], buf, 3);
+    000001D6 11r00r00         [12]  458 	ld	de, #_player_health
+    000001D9 F8 0B            [12]  459 	ldhl	sp,	#11
+    000001DB 2A               [ 8]  460 	ld	a,	(hl+)
+    000001DC 66               [ 8]  461 	ld	h, (hl)
+    000001DD 6F               [ 4]  462 	ld	l, a
+    000001DE 19               [ 8]  463 	add	hl, de
+    000001DF E5               [16]  464 	push	hl
+    000001E0 7D               [ 4]  465 	ld	a, l
+    000001E1 F8 0F            [12]  466 	ldhl	sp,	#15
+    000001E3 77               [ 8]  467 	ld	(hl), a
+    000001E4 E1               [12]  468 	pop	hl
+    000001E5 7C               [ 4]  469 	ld	a, h
+    000001E6 F8 0E            [12]  470 	ldhl	sp,	#14
+    000001E8 32               [ 8]  471 	ld	(hl-), a
+    000001E9 2A               [ 8]  472 	ld	a, (hl+)
+    000001EA 5F               [ 4]  473 	ld	e, a
+    000001EB 56               [ 8]  474 	ld	d, (hl)
+    000001EC 1A               [ 8]  475 	ld	a, (de)
+    000001ED 6F               [ 4]  476 	ld	l, a
+    000001EE 13               [ 8]  477 	inc	de
+    000001EF 1A               [ 8]  478 	ld	a, (de)
+    000001F0 67               [ 4]  479 	ld	h, a
+    000001F1 C5               [16]  480 	push	bc
+    000001F2 3E 03            [ 8]  481 	ld	a, #0x03
+    000001F4 F5               [16]  482 	push	af
+    000001F5 33               [ 8]  483 	inc	sp
+    000001F6 5D               [ 4]  484 	ld	e, l
+    000001F7 54               [ 4]  485 	ld	d, h
+    000001F8 CDrACr00         [24]  486 	call	_s16_to_str
+    000001FB C1               [12]  487 	pop	bc
+                                    488 ;src/gameboy_hal.c:92: hal_draw_string_inverted(8, 12, buf);
+    000001FC C5               [16]  489 	push	bc
+    000001FD C5               [16]  490 	push	bc
+    000001FE 1E 0C            [ 8]  491 	ld	e, #0x0c
+    00000200 3E 08            [ 8]  492 	ld	a, #0x08
+    00000202 CDr2Er00         [24]  493 	call	_hal_draw_string_inverted
+                                    494 ;src/gameboy_hal.c:95: hal_draw_string_inverted(1, 13, "BOMBS: ");
+    00000205 11r94r02         [12]  495 	ld	de, #___str_2
+    00000208 D5               [16]  496 	push	de
+    00000209 1E 0D            [ 8]  497 	ld	e, #0x0d
+    0000020B 3E 01            [ 8]  498 	ld	a, #0x01
+    0000020D CDr2Er00         [24]  499 	call	_hal_draw_string_inverted
+    00000210 C1               [12]  500 	pop	bc
+                                    501 ;src/gameboy_hal.c:96: u16_to_str(player_bombs[p], buf, 2);
+    00000211 11r00r00         [12]  502 	ld	de, #_player_bombs+0
+    00000214 F8 0A            [12]  503 	ldhl	sp,	#10
+    00000216 6E               [ 8]  504 	ld	l, (hl)
+    00000217 26 00            [ 8]  505 	ld	h, #0x00
+    00000219 19               [ 8]  506 	add	hl, de
+    0000021A 5D               [ 4]  507 	ld	e, l
+    0000021B 54               [ 4]  508 	ld	d, h
+    0000021C 1A               [ 8]  509 	ld	a, (de)
+    0000021D 16 00            [ 8]  510 	ld	d, #0x00
+    0000021F C5               [16]  511 	push	bc
+    00000220 26 02            [ 8]  512 	ld	h, #0x02
+    00000222 E5               [16]  513 	push	hl
+    00000223 33               [ 8]  514 	inc	sp
+    00000224 5F               [ 4]  515 	ld	e, a
+    00000225 CDr5Cr00         [24]  516 	call	_u16_to_str
+    00000228 C1               [12]  517 	pop	bc
+                                    518 ;src/gameboy_hal.c:97: hal_draw_string_inverted(8, 13, buf);
+    00000229 C5               [16]  519 	push	bc
+    0000022A C5               [16]  520 	push	bc
+    0000022B 1E 0D            [ 8]  521 	ld	e, #0x0d
+    0000022D 3E 08            [ 8]  522 	ld	a, #0x08
+    0000022F CDr2Er00         [24]  523 	call	_hal_draw_string_inverted
+                                    524 ;src/gameboy_hal.c:99: hal_draw_string_inverted(11, 13, "KEYS: ");
+    00000232 11r9Cr02         [12]  525 	ld	de, #___str_3
+    00000235 D5               [16]  526 	push	de
+    00000236 1E 0D            [ 8]  527 	ld	e, #0x0d
+    00000238 3E 0B            [ 8]  528 	ld	a, #0x0b
+    0000023A CDr2Er00         [24]  529 	call	_hal_draw_string_inverted
+    0000023D C1               [12]  530 	pop	bc
+                                    531 ;src/gameboy_hal.c:100: u16_to_str(player_keys[p], buf, 2);
+    0000023E 11r00r00         [12]  532 	ld	de, #_player_keys+0
+    00000241 F8 0A            [12]  533 	ldhl	sp,	#10
+    00000243 6E               [ 8]  534 	ld	l, (hl)
+    00000244 26 00            [ 8]  535 	ld	h, #0x00
+    00000246 19               [ 8]  536 	add	hl, de
+    00000247 5D               [ 4]  537 	ld	e, l
+    00000248 54               [ 4]  538 	ld	d, h
+    00000249 1A               [ 8]  539 	ld	a, (de)
+    0000024A 16 00            [ 8]  540 	ld	d, #0x00
+    0000024C C5               [16]  541 	push	bc
+    0000024D 26 02            [ 8]  542 	ld	h, #0x02
+    0000024F E5               [16]  543 	push	hl
+    00000250 33               [ 8]  544 	inc	sp
+    00000251 5F               [ 4]  545 	ld	e, a
+    00000252 CDr5Cr00         [24]  546 	call	_u16_to_str
+    00000255 C1               [12]  547 	pop	bc
+                                    548 ;src/gameboy_hal.c:101: hal_draw_string_inverted(17, 13, buf);
+    00000256 C5               [16]  549 	push	bc
+    00000257 C5               [16]  550 	push	bc
+    00000258 1E 0D            [ 8]  551 	ld	e, #0x0d
+    0000025A 3E 11            [ 8]  552 	ld	a, #0x11
+    0000025C CDr2Er00         [24]  553 	call	_hal_draw_string_inverted
+                                    554 ;src/gameboy_hal.c:104: hal_draw_string_inverted(1, 14, "LEVEL: ");
+    0000025F 11rA3r02         [12]  555 	ld	de, #___str_4
+    00000262 D5               [16]  556 	push	de
+    00000263 1E 0E            [ 8]  557 	ld	e, #0x0e
+    00000265 3E 01            [ 8]  558 	ld	a, #0x01
+    00000267 CDr2Er00         [24]  559 	call	_hal_draw_string_inverted
+    0000026A C1               [12]  560 	pop	bc
+                                    561 ;src/gameboy_hal.c:105: u16_to_str(current_level + 1, buf, 2);
+    0000026B FAr00r00         [16]  562 	ld	a, (_current_level)
+    0000026E 16 00            [ 8]  563 	ld	d, #0x00
+    00000270 5F               [ 4]  564 	ld	e, a
+    00000271 13               [ 8]  565 	inc	de
+    00000272 C5               [16]  566 	push	bc
+    00000273 3E 02            [ 8]  567 	ld	a, #0x02
+    00000275 F5               [16]  568 	push	af
+    00000276 33               [ 8]  569 	inc	sp
+    00000277 CDr5Cr00         [24]  570 	call	_u16_to_str
+                                    571 ;src/gameboy_hal.c:106: hal_draw_string_inverted(8, 14, buf);
+    0000027A 1E 0E            [ 8]  572 	ld	e, #0x0e
+    0000027C 3E 08            [ 8]  573 	ld	a, #0x08
+    0000027E CDr2Er00         [24]  574 	call	_hal_draw_string_inverted
+                                    575 ;src/gameboy_hal.c:107: }
+    00000281 E8 0F            [16]  576 	add	sp, #15
+    00000283 C9               [16]  577 	ret
+    00000284                        578 ___str_0:
+    00000284 53 43 4F 52 45 3A 20   579 	.ascii "SCORE: "
+    0000028B 00                     580 	.db 0x00
+    0000028C                        581 ___str_1:
+    0000028C 48 50 3A 20 20 20 20   582 	.ascii "HP:    "
+    00000293 00                     583 	.db 0x00
+    00000294                        584 ___str_2:
+    00000294 42 4F 4D 42 53 3A 20   585 	.ascii "BOMBS: "
+    0000029B 00                     586 	.db 0x00
+    0000029C                        587 ___str_3:
+    0000029C 4B 45 59 53 3A 20      588 	.ascii "KEYS: "
+    000002A2 00                     589 	.db 0x00
+    000002A3                        590 ___str_4:
+    000002A3 4C 45 56 45 4C 3A 20   591 	.ascii "LEVEL: "
+    000002AA 00                     592 	.db 0x00
+                                    593 ;src/gameboy_hal.c:109: void hal_clear_sprites(uint8_t vp_left, uint8_t vp_top) {
+                                    594 ;	---------------------------------
+                                    595 ; Function hal_clear_sprites
+                                    596 ; ---------------------------------
+    000002AB                        597 _hal_clear_sprites::
+                                    598 ;src/gameboy_hal.c:113: for (uint8_t i = 0; i < 40; ++i) {
+    000002AB 0E 00            [ 8]  599 	ld	c, #0x00
+    000002AD                        600 00104$:
+    000002AD 79               [ 4]  601 	ld	a, c
+    000002AE D6 28            [ 8]  602 	sub	a, #0x28
+    000002B0 D0               [20]  603 	ret	NC
+                                    604 ;/usr/local/google/home/jackpal/Developer/gbdk/include/gb/gb.h:1973: OAM_item_t * itm = &shadow_OAM[nb];
+    000002B1 11r00r00         [12]  605 	ld	de, #_shadow_OAM+0
+    000002B4 69               [ 4]  606 	ld	l, c
+    000002B5 AF               [ 4]  607 	xor	a, a
+    000002B6 67               [ 4]  608 	ld	h, a
+    000002B7 29               [ 8]  609 	add	hl, hl
+    000002B8 29               [ 8]  610 	add	hl, hl
+    000002B9 19               [ 8]  611 	add	hl, de
+                                    612 ;/usr/local/google/home/jackpal/Developer/gbdk/include/gb/gb.h:1974: itm->y=y, itm->x=x;
+    000002BA AF               [ 4]  613 	xor	a, a
+    000002BB 22               [ 8]  614 	ld	(hl+), a
+    000002BC 77               [ 8]  615 	ld	(hl), a
+                                    616 ;src/gameboy_hal.c:113: for (uint8_t i = 0; i < 40; ++i) {
+    000002BD 0C               [ 4]  617 	inc	c
+                                    618 ;src/gameboy_hal.c:116: }
+    000002BE 18 ED            [12]  619 	jr	00104$
+                                    620 ;src/gameboy_hal.c:118: void hal_set_sprite(uint8_t sprite_idx, uint8_t x, uint8_t y, uint8_t tile_id, uint8_t flags) {
+                                    621 ;	---------------------------------
+                                    622 ; Function hal_set_sprite
+                                    623 ; ---------------------------------
+    000002C0                        624 _hal_set_sprite::
+    000002C0 3B               [ 8]  625 	dec	sp
+                                    626 ;src/gameboy_hal.c:119: if (sprite_idx >= 40) return;
+    000002C1 4F               [ 4]  627 	ld	c, a
+    000002C2 D6 28            [ 8]  628 	sub	a, #0x28
+    000002C4 30 4B            [12]  629 	jr	NC, 00109$
+                                    630 ;src/gameboy_hal.c:122: if (tile_id >= TILE_PLAYER1 && tile_id <= TILE_PLAYER1 + 31) {
+    000002C6 F8 04            [12]  631 	ldhl	sp,	#4
+    000002C8 7E               [ 8]  632 	ld	a, (hl)
+    000002C9 D6 18            [ 8]  633 	sub	a, #0x18
+    000002CB 38 0D            [12]  634 	jr	C, 00104$
+    000002CD 3E 37            [ 8]  635 	ld	a, #0x37
+    000002CF 96               [ 8]  636 	sub	a, (hl)
+    000002D0 38 08            [12]  637 	jr	C, 00104$
+                                    638 ;src/gameboy_hal.c:123: tile_id = TILE_PLAYER1 + ((tile_id - TILE_PLAYER1) & 7);
+    000002D2 7E               [ 8]  639 	ld	a, (hl)
+    000002D3 C6 E8            [ 8]  640 	add	a, #0xe8
+    000002D5 E6 07            [ 8]  641 	and	a, #0x07
+    000002D7 C6 18            [ 8]  642 	add	a, #0x18
+    000002D9 77               [ 8]  643 	ld	(hl), a
+    000002DA                        644 00104$:
+                                    645 ;src/gameboy_hal.c:127: set_sprite_tile(sprite_idx, 128 + tile_id);
+    000002DA F8 04            [12]  646 	ldhl	sp,	#4
+    000002DC 7E               [ 8]  647 	ld	a, (hl)
+    000002DD C6 80            [ 8]  648 	add	a, #0x80
+    000002DF 57               [ 4]  649 	ld	d, a
+                                    650 ;/usr/local/google/home/jackpal/Developer/gbdk/include/gb/gb.h:1887: shadow_OAM[nb].tile=tile;
+    000002E0 06 00            [ 8]  651 	ld	b, #0x00
+    000002E2 CB 21            [ 8]  652 	sla	c
+    000002E4 CB 10            [ 8]  653 	rl	b
+    000002E6 CB 21            [ 8]  654 	sla	c
+    000002E8 CB 10            [ 8]  655 	rl	b
+    000002EA 21r01r00         [12]  656 	ld	hl,#_shadow_OAM + 1
+    000002ED 09               [ 8]  657 	add	hl,bc
+    000002EE 23               [ 8]  658 	inc	hl
+    000002EF 72               [ 8]  659 	ld	(hl), d
+                                    660 ;src/gameboy_hal.c:130: move_sprite(sprite_idx, x + 8, y + 16);
+    000002F0 F8 03            [12]  661 	ldhl	sp,	#3
+    000002F2 7E               [ 8]  662 	ld	a, (hl)
+    000002F3 C6 10            [ 8]  663 	add	a, #0x10
+    000002F5 F8 00            [12]  664 	ldhl	sp,	#0
+    000002F7 77               [ 8]  665 	ld	(hl), a
+    000002F8 7B               [ 4]  666 	ld	a, e
+    000002F9 C6 08            [ 8]  667 	add	a, #0x08
+    000002FB 5F               [ 4]  668 	ld	e, a
+                                    669 ;/usr/local/google/home/jackpal/Developer/gbdk/include/gb/gb.h:1973: OAM_item_t * itm = &shadow_OAM[nb];
+    000002FC 21r00r00         [12]  670 	ld	hl, #_shadow_OAM
+    000002FF 09               [ 8]  671 	add	hl, bc
+                                    672 ;/usr/local/google/home/jackpal/Developer/gbdk/include/gb/gb.h:1974: itm->y=y, itm->x=x;
+    00000300 E5               [16]  673 	push	hl
+    00000301 F8 02            [12]  674 	ldhl	sp,	#2
+    00000303 7E               [ 8]  675 	ld	a, (hl)
+    00000304 E1               [12]  676 	pop	hl
+    00000305 22               [ 8]  677 	ld	(hl+), a
+    00000306 73               [ 8]  678 	ld	(hl), e
+                                    679 ;src/gameboy_hal.c:133: set_sprite_prop(sprite_idx, flags);
+    00000307 F8 05            [12]  680 	ldhl	sp,	#5
+    00000309 5E               [ 8]  681 	ld	e, (hl)
+                                    682 ;/usr/local/google/home/jackpal/Developer/gbdk/include/gb/gb.h:1946: shadow_OAM[nb].prop=prop;
+    0000030A 21r01r00         [12]  683 	ld	hl,#_shadow_OAM + 1
+    0000030D 09               [ 8]  684 	add	hl,bc
+    0000030E 23               [ 8]  685 	inc	hl
+    0000030F 23               [ 8]  686 	inc	hl
+    00000310 73               [ 8]  687 	ld	(hl), e
+                                    688 ;src/gameboy_hal.c:133: set_sprite_prop(sprite_idx, flags);
+    00000311                        689 00109$:
+                                    690 ;src/gameboy_hal.c:134: }
+    00000311 33               [ 8]  691 	inc	sp
+    00000312 E1               [12]  692 	pop	hl
+    00000313 E8 03            [16]  693 	add	sp, #3
+    00000315 E9               [ 4]  694 	jp	(hl)
+                                    695 ;src/gameboy_hal.c:138: void hal_play_sound(uint8_t sound_id) {
+                                    696 ;	---------------------------------
+                                    697 ; Function hal_play_sound
+                                    698 ; ---------------------------------
+    00000316                        699 _hal_play_sound::
+    00000316 4F               [ 4]  700 	ld	c, a
+                                    701 ;src/gameboy_hal.c:139: if (!sound_initialized) {
+    00000317 21r00r00         [12]  702 	ld	hl, #_sound_initialized
+    0000031A CB 46            [12]  703 	bit	0, (hl)
+    0000031C 20 0E            [12]  704 	jr	NZ, 00102$
+                                    705 ;src/gameboy_hal.c:140: NR52_REG = 0x80; // Turn on Sound chip
+    0000031E 3E 80            [ 8]  706 	ld	a, #0x80
+    00000320 E0r00            [12]  707 	ldh	(_NR52_REG + 0), a
+                                    708 ;src/gameboy_hal.c:141: NR50_REG = 0x77; // Max volume on left/right channels
+    00000322 3E 77            [ 8]  709 	ld	a, #0x77
+    00000324 E0r00            [12]  710 	ldh	(_NR50_REG + 0), a
+                                    711 ;src/gameboy_hal.c:142: NR51_REG = 0xFF; // Route all 4 channels to left/right speakers
+    00000326 3E FF            [ 8]  712 	ld	a, #0xff
+    00000328 E0r00            [12]  713 	ldh	(_NR51_REG + 0), a
+                                    714 ;src/gameboy_hal.c:143: sound_initialized = true;
+    0000032A 36 01            [12]  715 	ld	(hl), #0x01
+    0000032C                        716 00102$:
+                                    717 ;src/gameboy_hal.c:146: switch (sound_id) {
+    0000032C 3E 06            [ 8]  718 	ld	a, #0x06
+    0000032E 91               [ 4]  719 	sub	a, c
+    0000032F D8               [20]  720 	ret	C
+    00000330 06 00            [ 8]  721 	ld	b, #0x00
+    00000332 21r3Cr03         [12]  722 	ld	hl, #00127$
+    00000335 09               [ 8]  723 	add	hl, bc
+    00000336 09               [ 8]  724 	add	hl, bc
+    00000337 4E               [ 8]  725 	ld	c, (hl)
+    00000338 23               [ 8]  726 	inc	hl
+    00000339 66               [ 8]  727 	ld	h, (hl)
+    0000033A 69               [ 4]  728 	ld	l, c
+    0000033B E9               [ 4]  729 	jp	(hl)
+    0000033C                        730 00127$:
+    0000033Cr4Ar03                  731 	.dw	00103$
+    0000033Er5Er03                  732 	.dw	00104$
+    00000340r6Fr03                  733 	.dw	00105$
+    00000342r83r03                  734 	.dw	00106$
+    00000344r94r03                  735 	.dw	00107$
+    00000346rA5r03                  736 	.dw	00108$
+    00000348rBAr03                  737 	.dw	00109$
+                                    738 ;src/gameboy_hal.c:147: case SOUND_SHOOT:
+    0000034A                        739 00103$:
+                                    740 ;src/gameboy_hal.c:148: NR10_REG = 0x1E;
+    0000034A 3E 1E            [ 8]  741 	ld	a, #0x1e
+    0000034C E0r00            [12]  742 	ldh	(_NR10_REG + 0), a
+                                    743 ;src/gameboy_hal.c:149: NR11_REG = 0x80;
+    0000034E 3E 80            [ 8]  744 	ld	a, #0x80
+    00000350 E0r00            [12]  745 	ldh	(_NR11_REG + 0), a
+                                    746 ;src/gameboy_hal.c:150: NR12_REG = 0xF3;
+    00000352 3E F3            [ 8]  747 	ld	a, #0xf3
+    00000354 E0r00            [12]  748 	ldh	(_NR12_REG + 0), a
+                                    749 ;src/gameboy_hal.c:151: NR13_REG = 0x00;
+    00000356 AF               [ 4]  750 	xor	a, a
+    00000357 E0r00            [12]  751 	ldh	(_NR13_REG + 0), a
+                                    752 ;src/gameboy_hal.c:152: NR14_REG = 0xC7;
+    00000359 3E C7            [ 8]  753 	ld	a, #0xc7
+    0000035B E0r00            [12]  754 	ldh	(_NR14_REG + 0), a
+                                    755 ;src/gameboy_hal.c:153: break;
+    0000035D C9               [16]  756 	ret
+                                    757 ;src/gameboy_hal.c:154: case SOUND_HIT:
+    0000035E                        758 00104$:
+                                    759 ;src/gameboy_hal.c:155: NR21_REG = 0x80;
+    0000035E 3E 80            [ 8]  760 	ld	a, #0x80
+    00000360 E0r00            [12]  761 	ldh	(_NR21_REG + 0), a
+                                    762 ;src/gameboy_hal.c:156: NR22_REG = 0xF1;
+    00000362 3E F1            [ 8]  763 	ld	a, #0xf1
+    00000364 E0r00            [12]  764 	ldh	(_NR22_REG + 0), a
+                                    765 ;src/gameboy_hal.c:157: NR23_REG = 0x80;
+    00000366 3E 80            [ 8]  766 	ld	a, #0x80
+    00000368 E0r00            [12]  767 	ldh	(_NR23_REG + 0), a
+                                    768 ;src/gameboy_hal.c:158: NR24_REG = 0xC4;
+    0000036A 3E C4            [ 8]  769 	ld	a, #0xc4
+    0000036C E0r00            [12]  770 	ldh	(_NR24_REG + 0), a
+                                    771 ;src/gameboy_hal.c:159: break;
+    0000036E C9               [16]  772 	ret
+                                    773 ;src/gameboy_hal.c:160: case SOUND_FOOD:
+    0000036F                        774 00105$:
+                                    775 ;src/gameboy_hal.c:161: NR10_REG = 0x16;
+    0000036F 3E 16            [ 8]  776 	ld	a, #0x16
+    00000371 E0r00            [12]  777 	ldh	(_NR10_REG + 0), a
+                                    778 ;src/gameboy_hal.c:162: NR11_REG = 0x80;
+    00000373 3E 80            [ 8]  779 	ld	a, #0x80
+    00000375 E0r00            [12]  780 	ldh	(_NR11_REG + 0), a
+                                    781 ;src/gameboy_hal.c:163: NR12_REG = 0xF2;
+    00000377 3E F2            [ 8]  782 	ld	a, #0xf2
+    00000379 E0r00            [12]  783 	ldh	(_NR12_REG + 0), a
+                                    784 ;src/gameboy_hal.c:164: NR13_REG = 0x00;
+    0000037B AF               [ 4]  785 	xor	a, a
+    0000037C E0r00            [12]  786 	ldh	(_NR13_REG + 0), a
+                                    787 ;src/gameboy_hal.c:165: NR14_REG = 0xC6;
+    0000037E 3E C6            [ 8]  788 	ld	a, #0xc6
+    00000380 E0r00            [12]  789 	ldh	(_NR14_REG + 0), a
+                                    790 ;src/gameboy_hal.c:166: break;
+    00000382 C9               [16]  791 	ret
+                                    792 ;src/gameboy_hal.c:167: case SOUND_BOMB:
+    00000383                        793 00106$:
+                                    794 ;src/gameboy_hal.c:168: NR41_REG = 0x1F;
+    00000383 3E 1F            [ 8]  795 	ld	a, #0x1f
+    00000385 E0r00            [12]  796 	ldh	(_NR41_REG + 0), a
+                                    797 ;src/gameboy_hal.c:169: NR42_REG = 0xF7;
+    00000387 3E F7            [ 8]  798 	ld	a, #0xf7
+    00000389 E0r00            [12]  799 	ldh	(_NR42_REG + 0), a
+                                    800 ;src/gameboy_hal.c:170: NR43_REG = 0x57;
+    0000038B 3E 57            [ 8]  801 	ld	a, #0x57
+    0000038D E0r00            [12]  802 	ldh	(_NR43_REG + 0), a
+                                    803 ;src/gameboy_hal.c:171: NR44_REG = 0xC0;
+    0000038F 3E C0            [ 8]  804 	ld	a, #0xc0
+    00000391 E0r00            [12]  805 	ldh	(_NR44_REG + 0), a
+                                    806 ;src/gameboy_hal.c:172: break;
+    00000393 C9               [16]  807 	ret
+                                    808 ;src/gameboy_hal.c:173: case SOUND_KEY:
+    00000394                        809 00107$:
+                                    810 ;src/gameboy_hal.c:174: NR21_REG = 0x80;
+    00000394 3E 80            [ 8]  811 	ld	a, #0x80
+    00000396 E0r00            [12]  812 	ldh	(_NR21_REG + 0), a
+                                    813 ;src/gameboy_hal.c:175: NR22_REG = 0xF2;
+    00000398 3E F2            [ 8]  814 	ld	a, #0xf2
+    0000039A E0r00            [12]  815 	ldh	(_NR22_REG + 0), a
+                                    816 ;src/gameboy_hal.c:176: NR23_REG = 0xF0;
+    0000039C 3E F0            [ 8]  817 	ld	a, #0xf0
+    0000039E E0r00            [12]  818 	ldh	(_NR23_REG + 0), a
+                                    819 ;src/gameboy_hal.c:177: NR24_REG = 0xC6;
+    000003A0 3E C6            [ 8]  820 	ld	a, #0xc6
+    000003A2 E0r00            [12]  821 	ldh	(_NR24_REG + 0), a
+                                    822 ;src/gameboy_hal.c:178: break;
+    000003A4 C9               [16]  823 	ret
+                                    824 ;src/gameboy_hal.c:179: case SOUND_DIE:
+    000003A5                        825 00108$:
+                                    826 ;src/gameboy_hal.c:180: NR10_REG = 0x3F;
+    000003A5 3E 3F            [ 8]  827 	ld	a, #0x3f
+    000003A7 E0r00            [12]  828 	ldh	(_NR10_REG + 0), a
+                                    829 ;src/gameboy_hal.c:181: NR11_REG = 0x80;
+    000003A9 3E 80            [ 8]  830 	ld	a, #0x80
+    000003AB E0r00            [12]  831 	ldh	(_NR11_REG + 0), a
+                                    832 ;src/gameboy_hal.c:182: NR12_REG = 0xF5;
+    000003AD 3E F5            [ 8]  833 	ld	a, #0xf5
+    000003AF E0r00            [12]  834 	ldh	(_NR12_REG + 0), a
+                                    835 ;src/gameboy_hal.c:183: NR13_REG = 0x50;
+    000003B1 3E 50            [ 8]  836 	ld	a, #0x50
+    000003B3 E0r00            [12]  837 	ldh	(_NR13_REG + 0), a
+                                    838 ;src/gameboy_hal.c:184: NR14_REG = 0xC3;
+    000003B5 3E C3            [ 8]  839 	ld	a, #0xc3
+    000003B7 E0r00            [12]  840 	ldh	(_NR14_REG + 0), a
+                                    841 ;src/gameboy_hal.c:185: break;
+    000003B9 C9               [16]  842 	ret
+                                    843 ;src/gameboy_hal.c:186: case SOUND_WARP:
+    000003BA                        844 00109$:
+                                    845 ;src/gameboy_hal.c:187: NR10_REG = 0x0E;
+    000003BA 3E 0E            [ 8]  846 	ld	a, #0x0e
+    000003BC E0r00            [12]  847 	ldh	(_NR10_REG + 0), a
+                                    848 ;src/gameboy_hal.c:188: NR11_REG = 0x40;
+    000003BE 3E 40            [ 8]  849 	ld	a, #0x40
+    000003C0 E0r00            [12]  850 	ldh	(_NR11_REG + 0), a
+                                    851 ;src/gameboy_hal.c:189: NR12_REG = 0xF3;
+    000003C2 3E F3            [ 8]  852 	ld	a, #0xf3
+    000003C4 E0r00            [12]  853 	ldh	(_NR12_REG + 0), a
+                                    854 ;src/gameboy_hal.c:190: NR13_REG = 0x00;
+    000003C6 AF               [ 4]  855 	xor	a, a
+    000003C7 E0r00            [12]  856 	ldh	(_NR13_REG + 0), a
+                                    857 ;src/gameboy_hal.c:191: NR14_REG = 0xC7;
+    000003C9 3E C7            [ 8]  858 	ld	a, #0xc7
+    000003CB E0r00            [12]  859 	ldh	(_NR14_REG + 0), a
+                                    860 ;src/gameboy_hal.c:193: }
+                                    861 ;src/gameboy_hal.c:194: }
+    000003CD C9               [16]  862 	ret
+                                    863 	.area _CODE
+                                    864 	.area _INITIALIZER
+    00000000                        865 __xinit__sound_initialized:
+    00000000 00                     866 	.db #0x00	;  0
+                                    867 	.area _CABS (ABS)

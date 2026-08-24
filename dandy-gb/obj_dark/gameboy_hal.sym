@@ -1,0 +1,72 @@
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (GameBoy)                  Page 1
+Hexadecimal [32-Bits]
+
+Symbol Table
+
+    .__.$$$.                                                    =   00002710 L
+    .__.ABS.                                                    =   00000000 G
+    .__.CPU.                                                    =   00000000 L
+    .__.H$L.                                                    =   00000000 L
+    _NR10_REG                                                       ******** GX
+    _NR11_REG                                                       ******** GX
+    _NR12_REG                                                       ******** GX
+    _NR13_REG                                                       ******** GX
+    _NR14_REG                                                       ******** GX
+    _NR21_REG                                                       ******** GX
+    _NR22_REG                                                       ******** GX
+    _NR23_REG                                                       ******** GX
+    _NR24_REG                                                       ******** GX
+    _NR41_REG                                                       ******** GX
+    _NR42_REG                                                       ******** GX
+    _NR43_REG                                                       ******** GX
+    _NR44_REG                                                       ******** GX
+    _NR50_REG                                                       ******** GX
+    _NR51_REG                                                       ******** GX
+    _NR52_REG                                                       ******** GX
+  0 ___str_0                                                        00000284 R
+  0 ___str_1                                                        0000028C R
+  0 ___str_2                                                        00000294 R
+  0 ___str_3                                                        0000029C R
+  0 ___str_4                                                        000002A3 R
+    __divsint                                                       ******** GX
+    __divuint                                                       ******** GX
+    __modsint                                                       ******** GX
+    __moduint                                                       ******** GX
+  8 __xinit__sound_initialized                                      00000000 R
+    _current_level                                                  ******** GX
+    _fill_bkg_rect                                                  ******** GX
+  0 _hal_clear_sprites                                              000002AB GR
+  0 _hal_draw_string                                                00000000 GR
+  0 _hal_draw_string_inverted                                       0000002E R
+  0 _hal_draw_tile                                                  00000146 GR
+  0 _hal_play_sound                                                 00000316 GR
+  0 _hal_set_sprite                                                 000002C0 GR
+  0 _hal_update_hud                                                 00000169 GR
+    _local_player_idx                                               ******** GX
+    _player_bombs                                                   ******** GX
+    _player_health                                                  ******** GX
+    _player_keys                                                    ******** GX
+    _player_score                                                   ******** GX
+  0 _s16_to_str                                                     000000AC R
+    _set_bkg_tile_xy                                                ******** GX
+    _shadow_OAM                                                     ******** GX
+  3 _sound_initialized                                              00000000 R
+  0 _u16_to_str                                                     0000005C R
+
+
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (GameBoy)                  Page 2
+Hexadecimal [32-Bits]
+
+Area Table
+
+   0 _CODE                                      size      3CE   flags    0
+   1 _HRAM                                      size        0   flags    0
+   2 _DATA                                      size        0   flags    0
+   3 _INITIALIZED                               size        1   flags    0
+   4 _DABS                                      size        0   flags    8
+   5 _HOME                                      size        0   flags    0
+   6 _GSINIT                                    size        0   flags    0
+   7 _GSFINAL                                   size        0   flags    0
+   8 _INITIALIZER                               size        1   flags    0
+   9 _CABS                                      size        0   flags    8
+

@@ -1,0 +1,1016 @@
+{
+  "tile_frequencies": {
+    "0": {
+      "char": " ",
+      "count": 24609,
+      "percentage": 52.583
+    },
+    "1": {
+      "char": "*",
+      "count": 15069,
+      "percentage": 32.199
+    },
+    "2": {
+      "char": "D",
+      "count": 501,
+      "percentage": 1.071
+    },
+    "3": {
+      "char": "u",
+      "count": 26,
+      "percentage": 0.056
+    },
+    "4": {
+      "char": "d",
+      "count": 28,
+      "percentage": 0.06
+    },
+    "5": {
+      "char": "K",
+      "count": 151,
+      "percentage": 0.323
+    },
+    "6": {
+      "char": "F",
+      "count": 301,
+      "percentage": 0.643
+    },
+    "7": {
+      "char": "$",
+      "count": 2804,
+      "percentage": 5.991
+    },
+    "8": {
+      "char": "i",
+      "count": 92,
+      "percentage": 0.197
+    },
+    "9": {
+      "char": "1",
+      "count": 1027,
+      "percentage": 2.194
+    },
+    "10": {
+      "char": "2",
+      "count": 925,
+      "percentage": 1.976
+    },
+    "11": {
+      "char": "3",
+      "count": 409,
+      "percentage": 0.874
+    },
+    "12": {
+      "char": "m",
+      "count": 484,
+      "percentage": 1.034
+    },
+    "13": {
+      "char": "n",
+      "count": 146,
+      "percentage": 0.312
+    },
+    "14": {
+      "char": "o",
+      "count": 151,
+      "percentage": 0.323
+    },
+    "15": {
+      "char": "p",
+      "count": 77,
+      "percentage": 0.165
+    }
+  },
+  "border_analysis": {
+    "is_100_percent_walls": true,
+    "non_wall_tiles_count": 0,
+    "non_wall_tiles": [],
+    "savings_bytes_per_level": 88,
+    "savings_percentage": 9.778,
+    "database_size_without_elision_bytes": 23400,
+    "database_size_with_elision_bytes": 21112,
+    "total_savings_bytes": 2288
+  },
+  "meta_tiles": {
+    "full_map": {
+      "2x2": {
+        "total_blocks": 11700,
+        "unique_blocks": 667,
+        "top_10": [
+          {
+            "block": [
+              0,
+              0,
+              0,
+              0
+            ],
+            "count": 2510,
+            "percentage": 21.453
+          },
+          {
+            "block": [
+              1,
+              1,
+              0,
+              0
+            ],
+            "count": 1022,
+            "percentage": 8.735
+          },
+          {
+            "block": [
+              0,
+              0,
+              1,
+              1
+            ],
+            "count": 934,
+            "percentage": 7.983
+          },
+          {
+            "block": [
+              1,
+              0,
+              1,
+              0
+            ],
+            "count": 502,
+            "percentage": 4.291
+          },
+          {
+            "block": [
+              0,
+              1,
+              0,
+              1
+            ],
+            "count": 486,
+            "percentage": 4.154
+          },
+          {
+            "block": [
+              1,
+              1,
+              1,
+              1
+            ],
+            "count": 474,
+            "percentage": 4.051
+          },
+          {
+            "block": [
+              1,
+              0,
+              0,
+              1
+            ],
+            "count": 373,
+            "percentage": 3.188
+          },
+          {
+            "block": [
+              1,
+              0,
+              0,
+              0
+            ],
+            "count": 293,
+            "percentage": 2.504
+          },
+          {
+            "block": [
+              1,
+              1,
+              0,
+              1
+            ],
+            "count": 269,
+            "percentage": 2.299
+          },
+          {
+            "block": [
+              1,
+              0,
+              1,
+              1
+            ],
+            "count": 229,
+            "percentage": 1.957
+          }
+        ]
+      },
+      "2x3": {
+        "total_blocks": 7800,
+        "unique_blocks": 1347,
+        "top_10": [
+          {
+            "block": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            "count": 1086,
+            "percentage": 13.923
+          },
+          {
+            "block": [
+              1,
+              1,
+              0,
+              0,
+              0,
+              0
+            ],
+            "count": 487,
+            "percentage": 6.244
+          },
+          {
+            "block": [
+              0,
+              0,
+              0,
+              0,
+              1,
+              1
+            ],
+            "count": 424,
+            "percentage": 5.436
+          },
+          {
+            "block": [
+              1,
+              0,
+              1,
+              0,
+              1,
+              0
+            ],
+            "count": 221,
+            "percentage": 2.833
+          },
+          {
+            "block": [
+              0,
+              1,
+              0,
+              1,
+              0,
+              1
+            ],
+            "count": 216,
+            "percentage": 2.769
+          },
+          {
+            "block": [
+              0,
+              0,
+              1,
+              1,
+              0,
+              0
+            ],
+            "count": 180,
+            "percentage": 2.308
+          },
+          {
+            "block": [
+              1,
+              1,
+              1,
+              1,
+              1,
+              1
+            ],
+            "count": 172,
+            "percentage": 2.205
+          },
+          {
+            "block": [
+              1,
+              1,
+              1,
+              1,
+              0,
+              0
+            ],
+            "count": 122,
+            "percentage": 1.564
+          },
+          {
+            "block": [
+              0,
+              0,
+              1,
+              1,
+              1,
+              1
+            ],
+            "count": 109,
+            "percentage": 1.397
+          },
+          {
+            "block": [
+              1,
+              1,
+              0,
+              0,
+              1,
+              1
+            ],
+            "count": 101,
+            "percentage": 1.295
+          }
+        ]
+      },
+      "4x4": {
+        "total_blocks": 2730,
+        "unique_blocks": 1785,
+        "top_10": [
+          {
+            "block": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            "count": 127,
+            "percentage": 4.652
+          },
+          {
+            "block": [
+              1,
+              1,
+              1,
+              1,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            "count": 72,
+            "percentage": 2.637
+          },
+          {
+            "block": [
+              0,
+              0,
+              0,
+              0,
+              1,
+              1,
+              1,
+              1,
+              1,
+              1,
+              1,
+              1,
+              0,
+              0,
+              0,
+              0
+            ],
+            "count": 54,
+            "percentage": 1.978
+          },
+          {
+            "block": [
+              1,
+              0,
+              0,
+              0,
+              1,
+              0,
+              0,
+              0,
+              1,
+              0,
+              0,
+              0,
+              1,
+              0,
+              0,
+              0
+            ],
+            "count": 46,
+            "percentage": 1.685
+          },
+          {
+            "block": [
+              0,
+              0,
+              0,
+              1,
+              0,
+              0,
+              0,
+              1,
+              0,
+              0,
+              0,
+              1,
+              0,
+              0,
+              0,
+              1
+            ],
+            "count": 36,
+            "percentage": 1.319
+          },
+          {
+            "block": [
+              1,
+              0,
+              0,
+              0,
+              9,
+              1,
+              0,
+              1,
+              1,
+              0,
+              0,
+              0,
+              0,
+              0,
+              7,
+              0
+            ],
+            "count": 31,
+            "percentage": 1.136
+          },
+          {
+            "block": [
+              1,
+              0,
+              0,
+              0,
+              11,
+              1,
+              0,
+              1,
+              1,
+              0,
+              0,
+              0,
+              0,
+              0,
+              7,
+              0
+            ],
+            "count": 27,
+            "percentage": 0.989
+          },
+          {
+            "block": [
+              0,
+              0,
+              0,
+              0,
+              1,
+              1,
+              1,
+              1,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            "count": 22,
+            "percentage": 0.806
+          },
+          {
+            "block": [
+              7,
+              7,
+              7,
+              7,
+              7,
+              7,
+              7,
+              7,
+              7,
+              7,
+              7,
+              7,
+              7,
+              7,
+              7,
+              7
+            ],
+            "count": 22,
+            "percentage": 0.806
+          },
+          {
+            "block": [
+              1,
+              0,
+              0,
+              0,
+              10,
+              1,
+              0,
+              1,
+              1,
+              0,
+              0,
+              0,
+              0,
+              0,
+              7,
+              0
+            ],
+            "count": 18,
+            "percentage": 0.659
+          }
+        ]
+      }
+    },
+    "inner_map": {
+      "2x2": {
+        "total_blocks": 10556,
+        "unique_blocks": 626,
+        "top_10": [
+          {
+            "block": [
+              0,
+              0,
+              0,
+              0
+            ],
+            "count": 2979,
+            "percentage": 28.221
+          },
+          {
+            "block": [
+              0,
+              0,
+              1,
+              1
+            ],
+            "count": 509,
+            "percentage": 4.822
+          },
+          {
+            "block": [
+              1,
+              1,
+              1,
+              1
+            ],
+            "count": 457,
+            "percentage": 4.329
+          },
+          {
+            "block": [
+              1,
+              1,
+              0,
+              0
+            ],
+            "count": 447,
+            "percentage": 4.235
+          },
+          {
+            "block": [
+              1,
+              0,
+              0,
+              1
+            ],
+            "count": 404,
+            "percentage": 3.827
+          },
+          {
+            "block": [
+              0,
+              1,
+              0,
+              1
+            ],
+            "count": 326,
+            "percentage": 3.088
+          },
+          {
+            "block": [
+              1,
+              0,
+              1,
+              0
+            ],
+            "count": 310,
+            "percentage": 2.937
+          },
+          {
+            "block": [
+              1,
+              0,
+              0,
+              0
+            ],
+            "count": 301,
+            "percentage": 2.851
+          },
+          {
+            "block": [
+              0,
+              0,
+              0,
+              1
+            ],
+            "count": 288,
+            "percentage": 2.728
+          },
+          {
+            "block": [
+              7,
+              7,
+              7,
+              7
+            ],
+            "count": 263,
+            "percentage": 2.491
+          }
+        ]
+      },
+      "2x3": {
+        "total_blocks": 6786,
+        "unique_blocks": 1203,
+        "top_10": [
+          {
+            "block": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            "count": 1303,
+            "percentage": 19.201
+          },
+          {
+            "block": [
+              0,
+              0,
+              0,
+              0,
+              1,
+              1
+            ],
+            "count": 243,
+            "percentage": 3.581
+          },
+          {
+            "block": [
+              1,
+              1,
+              0,
+              0,
+              0,
+              0
+            ],
+            "count": 201,
+            "percentage": 2.962
+          },
+          {
+            "block": [
+              0,
+              0,
+              1,
+              1,
+              0,
+              0
+            ],
+            "count": 190,
+            "percentage": 2.8
+          },
+          {
+            "block": [
+              7,
+              7,
+              7,
+              7,
+              7,
+              7
+            ],
+            "count": 150,
+            "percentage": 2.21
+          },
+          {
+            "block": [
+              0,
+              1,
+              0,
+              1,
+              0,
+              1
+            ],
+            "count": 117,
+            "percentage": 1.724
+          },
+          {
+            "block": [
+              1,
+              0,
+              1,
+              0,
+              1,
+              0
+            ],
+            "count": 109,
+            "percentage": 1.606
+          },
+          {
+            "block": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              1
+            ],
+            "count": 99,
+            "percentage": 1.459
+          },
+          {
+            "block": [
+              1,
+              0,
+              0,
+              1,
+              1,
+              0
+            ],
+            "count": 99,
+            "percentage": 1.459
+          },
+          {
+            "block": [
+              1,
+              1,
+              1,
+              1,
+              0,
+              0
+            ],
+            "count": 97,
+            "percentage": 1.429
+          }
+        ]
+      },
+      "4x4": {
+        "total_blocks": 2548,
+        "unique_blocks": 1604,
+        "top_10": [
+          {
+            "block": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            "count": 191,
+            "percentage": 7.496
+          },
+          {
+            "block": [
+              1,
+              1,
+              1,
+              1,
+              1,
+              1,
+              1,
+              1,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            "count": 70,
+            "percentage": 2.747
+          },
+          {
+            "block": [
+              1,
+              0,
+              1,
+              11,
+              0,
+              0,
+              0,
+              1,
+              0,
+              7,
+              0,
+              0,
+              0,
+              0,
+              0,
+              1
+            ],
+            "count": 46,
+            "percentage": 1.805
+          },
+          {
+            "block": [
+              7,
+              7,
+              7,
+              7,
+              7,
+              7,
+              7,
+              7,
+              7,
+              7,
+              7,
+              7,
+              7,
+              7,
+              7,
+              7
+            ],
+            "count": 36,
+            "percentage": 1.413
+          },
+          {
+            "block": [
+              1,
+              0,
+              1,
+              9,
+              0,
+              0,
+              0,
+              1,
+              0,
+              7,
+              0,
+              0,
+              0,
+              0,
+              0,
+              1
+            ],
+            "count": 29,
+            "percentage": 1.138
+          },
+          {
+            "block": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              1,
+              1,
+              1,
+              1,
+              0,
+              0,
+              0,
+              0
+            ],
+            "count": 22,
+            "percentage": 0.863
+          },
+          {
+            "block": [
+              1,
+              0,
+              1,
+              0,
+              0,
+              1,
+              0,
+              1,
+              1,
+              0,
+              1,
+              0,
+              0,
+              1,
+              0,
+              1
+            ],
+            "count": 20,
+            "percentage": 0.785
+          },
+          {
+            "block": [
+              0,
+              0,
+              0,
+              0,
+              1,
+              1,
+              1,
+              1,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            "count": 19,
+            "percentage": 0.746
+          },
+          {
+            "block": [
+              1,
+              0,
+              1,
+              10,
+              0,
+              0,
+              0,
+              1,
+              0,
+              7,
+              0,
+              0,
+              0,
+              0,
+              0,
+              1
+            ],
+            "count": 18,
+            "percentage": 0.706
+          },
+          {
+            "block": [
+              1,
+              1,
+              1,
+              1,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            "count": 17,
+            "percentage": 0.667
+          }
+        ]
+      }
+    }
+  }
+}

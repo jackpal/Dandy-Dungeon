@@ -1,0 +1,197 @@
+Converting levels from JS to C header...
+python3 tools/convert_levels.py
+Converting levels from JS to C header...
+python3 tools/convert_levels.py
+Compiling downscaled sprite assets using FHDA...
+.venv/bin/python tools/downscale_sprites.py --input teamwork_graphics/strike_original.png --output-c src/tiles.c --output-h src/tiles.h --output-preview teamwork_graphics/downscale_preview.png
+make USE_BLACK_FLOOR=1 all
+Compiling downscaled sprite assets using FHDA...
+.venv/bin/python tools/downscale_sprites.py --input teamwork_graphics/strike_original.png --output-c src/tiles.c --output-h src/tiles.h --output-preview teamwork_graphics/downscale_preview.png
+/usr/local/google/home/jackpal/Developer/gbdk/bin/lcc -Wf--opt-code-size  -c -o obj/gameboy_hal.o src/gameboy_hal.c
+make[1]: Entering directory '/usr/local/google/home/jackpal/Developer/Dandy-Dungeon/dandy-gb'
+Converting levels from JS to C header...
+python3 tools/convert_levels.py
+Converting levels from JS to C header...
+python3 tools/convert_levels.py
+Compiling downscaled sprite assets using FHDA...
+.venv/bin/python tools/downscale_sprites.py --input teamwork_graphics/strike_original.png --output-c src/tiles.c --output-h src/tiles.h --output-preview teamwork_graphics/downscale_preview.png
+Reading levels from /usr/local/google/home/jackpal/Developer/Dandy-Dungeon/dandy-js/levels.js...
+Found 26 levels.
+Writing C header to /usr/local/google/home/jackpal/Developer/Dandy-Dungeon/dandy-gb/src/levels.h...
+Level  0: Raw=1800B -> B2= 357B (Saved 80.2%)
+Level  1: Raw=1800B -> B2= 323B (Saved 82.1%)
+Level  2: Raw=1800B -> B2= 391B (Saved 78.3%)
+Level  3: Raw=1800B -> B2= 383B (Saved 78.7%)
+Level  4: Raw=1800B -> B2= 656B (Saved 63.6%)
+Level  5: Raw=1800B -> B2= 610B (Saved 66.1%)
+Level  6: Raw=1800B -> B2= 409B (Saved 77.3%)
+Level  7: Raw=1800B -> B2= 390B (Saved 78.3%)
+Level  8: Raw=1800B -> B2= 492B (Saved 72.7%)
+Level  9: Raw=1800B -> B2= 358B (Saved 80.1%)
+Level 10: Raw=1800B -> B2= 292B (Saved 83.8%)
+Level 11: Raw=1800B -> B2= 354B (Saved 80.3%)
+Level 12: Raw=1800B -> B2= 383B (Saved 78.7%)
+Level 13: Raw=1800B -> B2= 449B (Saved 75.1%)
+Level 14: Raw=1800B -> B2= 389B (Saved 78.4%)
+Level 15: Raw=1800B -> B2= 370B (Saved 79.4%)
+Level 16: Raw=1800B -> B2= 304B (Saved 83.1%)
+Level 17: Raw=1800B -> B2= 452B (Saved 74.9%)
+Level 18: Raw=1800B -> B2= 288B (Saved 84.0%)
+Level 19: Raw=1800B -> B2= 304B (Saved 83.1%)
+Level 20: Raw=1800B -> B2= 425B (Saved 76.4%)
+Level 21: Raw=1800B -> B2= 398B (Saved 77.9%)
+Level 22: Raw=1800B -> B2= 338B (Saved 81.2%)
+Level 23: Raw=1800B -> B2= 316B (Saved 82.4%)
+Level 24: Raw=1800B -> B2= 403B (Saved 77.6%)
+Level 25: Raw=1800B -> B2=1216B (Saved 32.4%)
+--------------------------------------------------
+TOTAL MAP BUDGET Footprint in ROM:
+Raw uncompressed:  46800 Bytes (45.7 KB)
+B2 compressed:     11050 Bytes (10.8 KB)
+Overall savings:   76.4%
+--------------------------------------------------
+Writing C source to /usr/local/google/home/jackpal/Developer/Dandy-Dungeon/dandy-gb/src/levels.c...
+Conversion complete!
+Reading levels from /usr/local/google/home/jackpal/Developer/Dandy-Dungeon/dandy-js/levels.js...
+Found 26 levels.
+Writing C header to /usr/local/google/home/jackpal/Developer/Dandy-Dungeon/dandy-gb/src/levels.h...
+Level  0: Raw=1800B -> B2= 357B (Saved 80.2%)
+Level  1: Raw=1800B -> B2= 323B (Saved 82.1%)
+Level  2: Raw=1800B -> B2= 391B (Saved 78.3%)
+Level  3: Raw=1800B -> B2= 383B (Saved 78.7%)
+Level  4: Raw=1800B -> B2= 656B (Saved 63.6%)
+Level  5: Raw=1800B -> B2= 610B (Saved 66.1%)
+Level  6: Raw=1800B -> B2= 409B (Saved 77.3%)
+Level  7: Raw=1800B -> B2= 390B (Saved 78.3%)
+Level  8: Raw=1800B -> B2= 492B (Saved 72.7%)
+Level  9: Raw=1800B -> B2= 358B (Saved 80.1%)
+Level 10: Raw=1800B -> B2= 292B (Saved 83.8%)
+Level 11: Raw=1800B -> B2= 354B (Saved 80.3%)
+Level 12: Raw=1800B -> B2= 383B (Saved 78.7%)
+Level 13: Raw=1800B -> B2= 449B (Saved 75.1%)
+Level 14: Raw=1800B -> B2= 389B (Saved 78.4%)
+Level 15: Raw=1800B -> B2= 370B (Saved 79.4%)
+Level 16: Raw=1800B -> B2= 304B (Saved 83.1%)
+Level 17: Raw=1800B -> B2= 452B (Saved 74.9%)
+Level 18: Raw=1800B -> B2= 288B (Saved 84.0%)
+Level 19: Raw=1800B -> B2= 304B (Saved 83.1%)
+Level 20: Raw=1800B -> B2= 425B (Saved 76.4%)
+Level 21: Raw=1800B -> B2= 398B (Saved 77.9%)
+Level 22: Raw=1800B -> B2= 338B (Saved 81.2%)
+Level 23: Raw=1800B -> B2= 316B (Saved 82.4%)
+Level 24: Raw=1800B -> B2= 403B (Saved 77.6%)
+Level 25: Raw=1800B -> B2=1216B (Saved 32.4%)
+--------------------------------------------------
+TOTAL MAP BUDGET Footprint in ROM:
+Raw uncompressed:  46800 Bytes (45.7 KB)
+B2 compressed:     11050 Bytes (10.8 KB)
+Overall savings:   76.4%
+--------------------------------------------------
+Writing C source to /usr/local/google/home/jackpal/Developer/Dandy-Dungeon/dandy-gb/src/levels.c...
+Conversion complete!
+Reading levels from /usr/local/google/home/jackpal/Developer/Dandy-Dungeon/dandy-js/levels.js...
+Found 26 levels.
+Writing C header to /usr/local/google/home/jackpal/Developer/Dandy-Dungeon/dandy-gb/src/levels.h...
+Level  0: Raw=1800B -> B2= 357B (Saved 80.2%)
+Level  1: Raw=1800B -> B2= 323B (Saved 82.1%)
+Level  2: Raw=1800B -> B2= 391B (Saved 78.3%)
+Level  3: Raw=1800B -> B2= 383B (Saved 78.7%)
+Level  4: Raw=1800B -> B2= 656B (Saved 63.6%)
+Level  5: Raw=1800B -> B2= 610B (Saved 66.1%)
+Level  6: Raw=1800B -> B2= 409B (Saved 77.3%)
+Level  7: Raw=1800B -> B2= 390B (Saved 78.3%)
+Level  8: Raw=1800B -> B2= 492B (Saved 72.7%)
+Level  9: Raw=1800B -> B2= 358B (Saved 80.1%)
+Level 10: Raw=1800B -> B2= 292B (Saved 83.8%)
+Level 11: Raw=1800B -> B2= 354B (Saved 80.3%)
+Level 12: Raw=1800B -> B2= 383B (Saved 78.7%)
+Level 13: Raw=1800B -> B2= 449B (Saved 75.1%)
+Level 14: Raw=1800B -> B2= 389B (Saved 78.4%)
+Level 15: Raw=1800B -> B2= 370B (Saved 79.4%)
+Level 16: Raw=1800B -> B2= 304B (Saved 83.1%)
+Level 17: Raw=1800B -> B2= 452B (Saved 74.9%)
+Level 18: Raw=1800B -> B2= 288B (Saved 84.0%)
+Level 19: Raw=1800B -> B2= 304B (Saved 83.1%)
+Level 20: Raw=1800B -> B2= 425B (Saved 76.4%)
+Level 21: Raw=1800B -> B2= 398B (Saved 77.9%)
+Level 22: Raw=1800B -> B2= 338B (Saved 81.2%)
+Level 23: Raw=1800B -> B2= 316B (Saved 82.4%)
+Level 24: Raw=1800B -> B2= 403B (Saved 77.6%)
+Level 25: Raw=1800B -> B2=1216B (Saved 32.4%)
+--------------------------------------------------
+TOTAL MAP BUDGET Footprint in ROM:
+Raw uncompressed:  46800 Bytes (45.7 KB)
+B2 compressed:     11050 Bytes (10.8 KB)
+Overall savings:   76.4%
+--------------------------------------------------
+Writing C source to /usr/local/google/home/jackpal/Developer/Dandy-Dungeon/dandy-gb/src/levels.c...
+Conversion complete!
+/usr/local/google/home/jackpal/Developer/gbdk/bin/lcc -Wf--opt-code-size  -c -o obj/dandy_core.o src/dandy_core.c
+Compiling downscaled sprite assets using FHDA...
+.venv/bin/python tools/downscale_sprites.py --input teamwork_graphics/strike_original.png --output-c src/tiles.c --output-h src/tiles.h --output-preview teamwork_graphics/downscale_preview.png
+Reading levels from /usr/local/google/home/jackpal/Developer/Dandy-Dungeon/dandy-js/levels.js...
+Found 26 levels.
+Writing C header to /usr/local/google/home/jackpal/Developer/Dandy-Dungeon/dandy-gb/src/levels.h...
+Level  0: Raw=1800B -> B2= 357B (Saved 80.2%)
+Level  1: Raw=1800B -> B2= 323B (Saved 82.1%)
+Level  2: Raw=1800B -> B2= 391B (Saved 78.3%)
+Level  3: Raw=1800B -> B2= 383B (Saved 78.7%)
+Level  4: Raw=1800B -> B2= 656B (Saved 63.6%)
+Level  5: Raw=1800B -> B2= 610B (Saved 66.1%)
+Level  6: Raw=1800B -> B2= 409B (Saved 77.3%)
+Level  7: Raw=1800B -> B2= 390B (Saved 78.3%)
+Level  8: Raw=1800B -> B2= 492B (Saved 72.7%)
+Level  9: Raw=1800B -> B2= 358B (Saved 80.1%)
+Level 10: Raw=1800B -> B2= 292B (Saved 83.8%)
+Level 11: Raw=1800B -> B2= 354B (Saved 80.3%)
+Level 12: Raw=1800B -> B2= 383B (Saved 78.7%)
+Level 13: Raw=1800B -> B2= 449B (Saved 75.1%)
+Level 14: Raw=1800B -> B2= 389B (Saved 78.4%)
+Level 15: Raw=1800B -> B2= 370B (Saved 79.4%)
+Level 16: Raw=1800B -> B2= 304B (Saved 83.1%)
+Level 17: Raw=1800B -> B2= 452B (Saved 74.9%)
+Level 18: Raw=1800B -> B2= 288B (Saved 84.0%)
+Level 19: Raw=1800B -> B2= 304B (Saved 83.1%)
+Level 20: Raw=1800B -> B2= 425B (Saved 76.4%)
+Level 21: Raw=1800B -> B2= 398B (Saved 77.9%)
+Level 22: Raw=1800B -> B2= 338B (Saved 81.2%)
+Level 23: Raw=1800B -> B2= 316B (Saved 82.4%)
+Level 24: Raw=1800B -> B2= 403B (Saved 77.6%)
+Level 25: Raw=1800B -> B2=1216B (Saved 32.4%)
+--------------------------------------------------
+TOTAL MAP BUDGET Footprint in ROM:
+Raw uncompressed:  46800 Bytes (45.7 KB)
+B2 compressed:     11050 Bytes (10.8 KB)
+Overall savings:   76.4%
+--------------------------------------------------
+Writing C source to /usr/local/google/home/jackpal/Developer/Dandy-Dungeon/dandy-gb/src/levels.c...
+Conversion complete!
+/usr/local/google/home/jackpal/Developer/gbdk/bin/lcc -Wf--opt-code-size -DUSE_BLACK_FLOOR -c -o obj_dark/gameboy_hal.o src/gameboy_hal.c
+/usr/local/google/home/jackpal/Developer/gbdk/bin/lcc -Wf--opt-code-size -DUSE_BLACK_FLOOR -c -o obj_dark/dandy_core.o src/dandy_core.c
+/usr/local/google/home/jackpal/Developer/gbdk/bin/lcc -Wf-bo1  -c -o obj/levels.o src/levels.c
+/usr/local/google/home/jackpal/Developer/gbdk/bin/lcc -Wf-bo1 -DUSE_BLACK_FLOOR -c -o obj_dark/levels.o src/levels.c
+Success: Graphics pipeline downscaling completed successfully.
+Success: Graphics pipeline downscaling completed successfully.
+/usr/local/google/home/jackpal/Developer/gbdk/bin/lcc -Wf--opt-code-size  -c -o obj/main.o src/main.c
+src/main.c:51: error 20: Undefined identifier 'DANDY_NUM_TILES'
+src/main.c:51: error 20: Undefined identifier 'dandy_tiles'
+src/main.c:51: warning 154: converting integral to pointer without a cast
+from type 'int fixed'
+  to type 'const-unsigned-char generic* fixed'
+src/main.c:52: error 20: Undefined identifier 'DANDY_NUM_TILES'
+src/main.c:52: error 20: Undefined identifier 'dandy_tiles'
+src/main.c:52: warning 154: converting integral to pointer without a cast
+from type 'int fixed'
+  to type 'const-unsigned-char generic* fixed'
+/usr/local/google/home/jackpal/Developer/gbdk/bin/lcc -Wf--opt-code-size  -c -o obj/tiles.o src/tiles.c
+make: *** [Makefile:60: obj/main.o] Error 1
+make: *** Waiting for unfinished jobs....
+Success: Graphics pipeline downscaling completed successfully.
+Success: Graphics pipeline downscaling completed successfully.
+/usr/local/google/home/jackpal/Developer/gbdk/bin/lcc -Wf--opt-code-size -DUSE_BLACK_FLOOR -c -o obj_dark/main.o src/main.c
+/usr/local/google/home/jackpal/Developer/gbdk/bin/lcc -Wf--opt-code-size -DUSE_BLACK_FLOOR -c -o obj_dark/tiles.o src/tiles.c
+/usr/local/google/home/jackpal/Developer/gbdk/bin/lcc -Wa-l -Wl-m -Wl-yo2 -o bin/dandy_dark.gb obj_dark/main.o obj_dark/dandy_core.o obj_dark/gameboy_hal.o obj_dark/levels.o obj_dark/tiles.o
+----------------------------------------
+Build successful: bin/dandy_dark.gb
+----------------------------------------
+make[1]: Leaving directory '/usr/local/google/home/jackpal/Developer/Dandy-Dungeon/dandy-gb'

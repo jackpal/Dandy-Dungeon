@@ -1,0 +1,430 @@
+test_01_valid_baseline (__main__.AdversarialStressTest.test_01_valid_baseline)
+Test that the baseline valid tiles.c runs successfully. ... ok
+test_02_empty_file (__main__.AdversarialStressTest.test_02_empty_file)
+Test that an empty tiles.c fails gracefully. ... FAIL
+test_03_truncated_array (__main__.AdversarialStressTest.test_03_truncated_array)
+Test that a truncated dandy_tiles array fails gracefully. ... FAIL
+test_04_oversized_array (__main__.AdversarialStressTest.test_04_oversized_array)
+Test that an oversized dandy_tiles array fails gracefully. ... FAIL
+test_05_valid_comments (__main__.AdversarialStressTest.test_05_valid_comments)
+Test that various valid comments are stripped successfully and don't block parsing. ... ok
+test_06_comment_with_curly_brace (__main__.AdversarialStressTest.test_06_comment_with_curly_brace)
+Test how the script handles a closing curly brace inside a comment in the array. ... ok
+test_07_invalid_hex_characters (__main__.AdversarialStressTest.test_07_invalid_hex_characters)
+Test that invalid hex characters are detected as errors instead of silently accepted or crashing. ... FAIL
+test_08_out_of_range_decimal (__main__.AdversarialStressTest.test_08_out_of_range_decimal)
+Test that decimal values out of 0-255 range fail gracefully. ... FAIL
+test_09_out_of_range_hex (__main__.AdversarialStressTest.test_09_out_of_range_hex)
+Test that hex values out of 0-255 range (e.g., 0x100) fail gracefully. ... FAIL
+test_10_negative_values (__main__.AdversarialStressTest.test_10_negative_values)
+Test that negative values fail gracefully instead of being silently converted to positive or crashing. ... FAIL
+test_11_missing_sprite_sheet (__main__.AdversarialStressTest.test_11_missing_sprite_sheet)
+Test that missing strike_original.png fails gracefully. ... FAIL
+test_12_invalid_cli_arguments (__main__.AdversarialStressTest.test_12_invalid_cli_arguments)
+Test that invalid CLI arguments fail gracefully. ... ok
+test_13_alternative_array_declarations (__main__.AdversarialStressTest.test_13_alternative_array_declarations)
+Test if the script can parse alternative valid C array declarations. ... FAIL
+
+======================================================================
+FAIL: test_02_empty_file (__main__.AdversarialStressTest.test_02_empty_file)
+Test that an empty tiles.c fails gracefully.
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/usr/local/google/home/jackpal/Developer/Dandy-Dungeon/.agents/challenger_graphics_m1_1_gen3/adversarial_harness.py", line 101, in test_02_empty_file
+    result = self.run_tool(expect_success=False)
+  File "/usr/local/google/home/jackpal/Developer/Dandy-Dungeon/.agents/challenger_graphics_m1_1_gen3/adversarial_harness.py", line 73, in run_tool
+    self.assertFalse(
+    ~~~~~~~~~~~~~~~~^
+        has_traceback,
+        ^^^^^^^^^^^^^^
+        f"Unhandled Python exception/traceback detected!\nStderr:\n{result.stderr}\nStdout:\n{result.stdout}"
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+AssertionError: True is not false : Unhandled Python exception/traceback detected!
+Stderr:
+Traceback (most recent call last):
+  File "/tmp/verify_graphics_stress_xci70jff/tools/verify_graphics.py", line 281, in <module>
+    main()
+    ~~~~^^
+  File "/tmp/verify_graphics_stress_xci70jff/tools/verify_graphics.py", line 198, in main
+    tiles_bytes = parse_tiles_c(tiles_c_path)
+  File "/tmp/verify_graphics_stress_xci70jff/tools/verify_graphics.py", line 72, in parse_tiles_c
+    raise ValueError("Could not find 'dandy_tiles' array in tiles.c")
+ValueError: Could not find 'dandy_tiles' array in tiles.c
+
+Stdout:
+Reading tiles definition from /tmp/verify_graphics_stress_xci70jff/src/tiles.c...
+
+
+======================================================================
+FAIL: test_03_truncated_array (__main__.AdversarialStressTest.test_03_truncated_array)
+Test that a truncated dandy_tiles array fails gracefully.
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/usr/local/google/home/jackpal/Developer/Dandy-Dungeon/.agents/challenger_graphics_m1_1_gen3/adversarial_harness.py", line 108, in test_03_truncated_array
+    result = self.run_tool(expect_success=False)
+  File "/usr/local/google/home/jackpal/Developer/Dandy-Dungeon/.agents/challenger_graphics_m1_1_gen3/adversarial_harness.py", line 73, in run_tool
+    self.assertFalse(
+    ~~~~~~~~~~~~~~~~^
+        has_traceback,
+        ^^^^^^^^^^^^^^
+        f"Unhandled Python exception/traceback detected!\nStderr:\n{result.stderr}\nStdout:\n{result.stdout}"
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+AssertionError: True is not false : Unhandled Python exception/traceback detected!
+Stderr:
+Traceback (most recent call last):
+  File "/tmp/verify_graphics_stress_xci70jff/tools/verify_graphics.py", line 281, in <module>
+    main()
+    ~~~~^^
+  File "/tmp/verify_graphics_stress_xci70jff/tools/verify_graphics.py", line 198, in main
+    tiles_bytes = parse_tiles_c(tiles_c_path)
+  File "/tmp/verify_graphics_stress_xci70jff/tools/verify_graphics.py", line 78, in parse_tiles_c
+    raise ValueError(f"Expected exactly 512 values (32 tiles * 16 bytes), but found {len(num_strings)}")
+ValueError: Expected exactly 512 values (32 tiles * 16 bytes), but found 3
+
+Stdout:
+Reading tiles definition from /tmp/verify_graphics_stress_xci70jff/src/tiles.c...
+
+
+======================================================================
+FAIL: test_04_oversized_array (__main__.AdversarialStressTest.test_04_oversized_array)
+Test that an oversized dandy_tiles array fails gracefully.
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/usr/local/google/home/jackpal/Developer/Dandy-Dungeon/.agents/challenger_graphics_m1_1_gen3/adversarial_harness.py", line 117, in test_04_oversized_array
+    result = self.run_tool(expect_success=False)
+  File "/usr/local/google/home/jackpal/Developer/Dandy-Dungeon/.agents/challenger_graphics_m1_1_gen3/adversarial_harness.py", line 73, in run_tool
+    self.assertFalse(
+    ~~~~~~~~~~~~~~~~^
+        has_traceback,
+        ^^^^^^^^^^^^^^
+        f"Unhandled Python exception/traceback detected!\nStderr:\n{result.stderr}\nStdout:\n{result.stdout}"
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+AssertionError: True is not false : Unhandled Python exception/traceback detected!
+Stderr:
+Traceback (most recent call last):
+  File "/tmp/verify_graphics_stress_xci70jff/tools/verify_graphics.py", line 281, in <module>
+    main()
+    ~~~~^^
+  File "/tmp/verify_graphics_stress_xci70jff/tools/verify_graphics.py", line 198, in main
+    tiles_bytes = parse_tiles_c(tiles_c_path)
+  File "/tmp/verify_graphics_stress_xci70jff/tools/verify_graphics.py", line 78, in parse_tiles_c
+    raise ValueError(f"Expected exactly 512 values (32 tiles * 16 bytes), but found {len(num_strings)}")
+ValueError: Expected exactly 512 values (32 tiles * 16 bytes), but found 513
+
+Stdout:
+Reading tiles definition from /tmp/verify_graphics_stress_xci70jff/src/tiles.c...
+
+
+======================================================================
+FAIL: test_07_invalid_hex_characters (__main__.AdversarialStressTest.test_07_invalid_hex_characters)
+Test that invalid hex characters are detected as errors instead of silently accepted or crashing.
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/usr/local/google/home/jackpal/Developer/Dandy-Dungeon/.agents/challenger_graphics_m1_1_gen3/adversarial_harness.py", line 155, in test_07_invalid_hex_characters
+    result = self.run_tool(expect_success=False)
+  File "/usr/local/google/home/jackpal/Developer/Dandy-Dungeon/.agents/challenger_graphics_m1_1_gen3/adversarial_harness.py", line 84, in run_tool
+    self.assertNotEqual(
+    ~~~~~~~~~~~~~~~~~~~^
+        result.returncode, 0,
+        ^^^^^^^^^^^^^^^^^^^^^
+        f"Expected failure (exit code != 0), but got {result.returncode}.\nStdout:\n{result.stdout}\nStderr:\n{result.stderr}"
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+AssertionError: 0 == 0 : Expected failure (exit code != 0), but got 0.
+Stdout:
+Reading tiles definition from /tmp/verify_graphics_stress_xci70jff/src/tiles.c...
+Loading original sprite sheet from /tmp/verify_graphics_stress_xci70jff/teamwork_graphics/strike_original.png...
+Stitching side-by-side comparison sheet...
+Saving audit sheet to /tmp/verify_graphics_stress_xci70jff/teamwork_graphics/graphics_audit.png...
+Verification and audit sheet generation complete!
+
+Stderr:
+
+
+======================================================================
+FAIL: test_08_out_of_range_decimal (__main__.AdversarialStressTest.test_08_out_of_range_decimal)
+Test that decimal values out of 0-255 range fail gracefully.
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/usr/local/google/home/jackpal/Developer/Dandy-Dungeon/.agents/challenger_graphics_m1_1_gen3/adversarial_harness.py", line 164, in test_08_out_of_range_decimal
+    result = self.run_tool(expect_success=False)
+  File "/usr/local/google/home/jackpal/Developer/Dandy-Dungeon/.agents/challenger_graphics_m1_1_gen3/adversarial_harness.py", line 73, in run_tool
+    self.assertFalse(
+    ~~~~~~~~~~~~~~~~^
+        has_traceback,
+        ^^^^^^^^^^^^^^
+        f"Unhandled Python exception/traceback detected!\nStderr:\n{result.stderr}\nStdout:\n{result.stdout}"
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+AssertionError: True is not false : Unhandled Python exception/traceback detected!
+Stderr:
+Traceback (most recent call last):
+  File "/tmp/verify_graphics_stress_xci70jff/tools/verify_graphics.py", line 281, in <module>
+    main()
+    ~~~~^^
+  File "/tmp/verify_graphics_stress_xci70jff/tools/verify_graphics.py", line 198, in main
+    tiles_bytes = parse_tiles_c(tiles_c_path)
+  File "/tmp/verify_graphics_stress_xci70jff/tools/verify_graphics.py", line 87, in parse_tiles_c
+    return bytes(bytes_list)
+ValueError: bytes must be in range(0, 256)
+
+Stdout:
+Reading tiles definition from /tmp/verify_graphics_stress_xci70jff/src/tiles.c...
+
+
+======================================================================
+FAIL: test_09_out_of_range_hex (__main__.AdversarialStressTest.test_09_out_of_range_hex)
+Test that hex values out of 0-255 range (e.g., 0x100) fail gracefully.
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/usr/local/google/home/jackpal/Developer/Dandy-Dungeon/.agents/challenger_graphics_m1_1_gen3/adversarial_harness.py", line 173, in test_09_out_of_range_hex
+    result = self.run_tool(expect_success=False)
+  File "/usr/local/google/home/jackpal/Developer/Dandy-Dungeon/.agents/challenger_graphics_m1_1_gen3/adversarial_harness.py", line 73, in run_tool
+    self.assertFalse(
+    ~~~~~~~~~~~~~~~~^
+        has_traceback,
+        ^^^^^^^^^^^^^^
+        f"Unhandled Python exception/traceback detected!\nStderr:\n{result.stderr}\nStdout:\n{result.stdout}"
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+AssertionError: True is not false : Unhandled Python exception/traceback detected!
+Stderr:
+Traceback (most recent call last):
+  File "/tmp/verify_graphics_stress_xci70jff/tools/verify_graphics.py", line 281, in <module>
+    main()
+    ~~~~^^
+  File "/tmp/verify_graphics_stress_xci70jff/tools/verify_graphics.py", line 198, in main
+    tiles_bytes = parse_tiles_c(tiles_c_path)
+  File "/tmp/verify_graphics_stress_xci70jff/tools/verify_graphics.py", line 87, in parse_tiles_c
+    return bytes(bytes_list)
+ValueError: bytes must be in range(0, 256)
+
+Stdout:
+Reading tiles definition from /tmp/verify_graphics_stress_xci70jff/src/tiles.c...
+
+
+======================================================================
+FAIL: test_10_negative_values (__main__.AdversarialStressTest.test_10_negative_values)
+Test that negative values fail gracefully instead of being silently converted to positive or crashing.
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/usr/local/google/home/jackpal/Developer/Dandy-Dungeon/.agents/challenger_graphics_m1_1_gen3/adversarial_harness.py", line 182, in test_10_negative_values
+    result = self.run_tool(expect_success=False)
+  File "/usr/local/google/home/jackpal/Developer/Dandy-Dungeon/.agents/challenger_graphics_m1_1_gen3/adversarial_harness.py", line 84, in run_tool
+    self.assertNotEqual(
+    ~~~~~~~~~~~~~~~~~~~^
+        result.returncode, 0,
+        ^^^^^^^^^^^^^^^^^^^^^
+        f"Expected failure (exit code != 0), but got {result.returncode}.\nStdout:\n{result.stdout}\nStderr:\n{result.stderr}"
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+AssertionError: 0 == 0 : Expected failure (exit code != 0), but got 0.
+Stdout:
+Reading tiles definition from /tmp/verify_graphics_stress_xci70jff/src/tiles.c...
+Loading original sprite sheet from /tmp/verify_graphics_stress_xci70jff/teamwork_graphics/strike_original.png...
+Stitching side-by-side comparison sheet...
+Saving audit sheet to /tmp/verify_graphics_stress_xci70jff/teamwork_graphics/graphics_audit.png...
+Verification and audit sheet generation complete!
+
+Stderr:
+
+
+======================================================================
+FAIL: test_11_missing_sprite_sheet (__main__.AdversarialStressTest.test_11_missing_sprite_sheet)
+Test that missing strike_original.png fails gracefully.
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/usr/local/google/home/jackpal/Developer/Dandy-Dungeon/.agents/challenger_graphics_m1_1_gen3/adversarial_harness.py", line 192, in test_11_missing_sprite_sheet
+    result = self.run_tool(expect_success=False)
+  File "/usr/local/google/home/jackpal/Developer/Dandy-Dungeon/.agents/challenger_graphics_m1_1_gen3/adversarial_harness.py", line 73, in run_tool
+    self.assertFalse(
+    ~~~~~~~~~~~~~~~~^
+        has_traceback,
+        ^^^^^^^^^^^^^^
+        f"Unhandled Python exception/traceback detected!\nStderr:\n{result.stderr}\nStdout:\n{result.stdout}"
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+AssertionError: True is not false : Unhandled Python exception/traceback detected!
+Stderr:
+Traceback (most recent call last):
+  File "/tmp/verify_graphics_stress_xci70jff/tools/verify_graphics.py", line 281, in <module>
+    main()
+    ~~~~^^
+  File "/tmp/verify_graphics_stress_xci70jff/tools/verify_graphics.py", line 195, in main
+    raise FileNotFoundError(f"Original sprite sheet not found at {strike_png_path}. Please run extract_sprites.py first.")
+FileNotFoundError: Original sprite sheet not found at /tmp/verify_graphics_stress_xci70jff/teamwork_graphics/strike_original.png. Please run extract_sprites.py first.
+
+Stdout:
+
+
+======================================================================
+FAIL: test_13_alternative_array_declarations (__main__.AdversarialStressTest.test_13_alternative_array_declarations)
+Test if the script can parse alternative valid C array declarations.
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/usr/local/google/home/jackpal/Developer/Dandy-Dungeon/.agents/challenger_graphics_m1_1_gen3/adversarial_harness.py", line 214, in test_13_alternative_array_declarations
+    self.run_tool(expect_success=True)
+    ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/google/home/jackpal/Developer/Dandy-Dungeon/.agents/challenger_graphics_m1_1_gen3/adversarial_harness.py", line 73, in run_tool
+    self.assertFalse(
+    ~~~~~~~~~~~~~~~~^
+        has_traceback,
+        ^^^^^^^^^^^^^^
+        f"Unhandled Python exception/traceback detected!\nStderr:\n{result.stderr}\nStdout:\n{result.stdout}"
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+AssertionError: True is not false : Unhandled Python exception/traceback detected!
+Stderr:
+Traceback (most recent call last):
+  File "/tmp/verify_graphics_stress_xci70jff/tools/verify_graphics.py", line 281, in <module>
+    main()
+    ~~~~^^
+  File "/tmp/verify_graphics_stress_xci70jff/tools/verify_graphics.py", line 198, in main
+    tiles_bytes = parse_tiles_c(tiles_c_path)
+  File "/tmp/verify_graphics_stress_xci70jff/tools/verify_graphics.py", line 72, in parse_tiles_c
+    raise ValueError("Could not find 'dandy_tiles' array in tiles.c")
+ValueError: Could not find 'dandy_tiles' array in tiles.c
+
+Stdout:
+Reading tiles definition from /tmp/verify_graphics_stress_xci70jff/src/tiles.c...
+
+
+----------------------------------------------------------------------
+Ran 13 tests in 3.573s
+
+FAILED (failures=9)
+
+--- TRACEBACK DETECTED ---
+Cmd: /usr/local/google/home/jackpal/Developer/Dandy-Dungeon/dandy-gb/.venv/bin/python /tmp/verify_graphics_stress_xci70jff/tools/verify_graphics.py
+Stdout:
+Reading tiles definition from /tmp/verify_graphics_stress_xci70jff/src/tiles.c...
+
+Stderr:
+Traceback (most recent call last):
+  File "/tmp/verify_graphics_stress_xci70jff/tools/verify_graphics.py", line 281, in <module>
+    main()
+    ~~~~^^
+  File "/tmp/verify_graphics_stress_xci70jff/tools/verify_graphics.py", line 198, in main
+    tiles_bytes = parse_tiles_c(tiles_c_path)
+  File "/tmp/verify_graphics_stress_xci70jff/tools/verify_graphics.py", line 72, in parse_tiles_c
+    raise ValueError("Could not find 'dandy_tiles' array in tiles.c")
+ValueError: Could not find 'dandy_tiles' array in tiles.c
+
+--------------------------
+
+--- TRACEBACK DETECTED ---
+Cmd: /usr/local/google/home/jackpal/Developer/Dandy-Dungeon/dandy-gb/.venv/bin/python /tmp/verify_graphics_stress_xci70jff/tools/verify_graphics.py
+Stdout:
+Reading tiles definition from /tmp/verify_graphics_stress_xci70jff/src/tiles.c...
+
+Stderr:
+Traceback (most recent call last):
+  File "/tmp/verify_graphics_stress_xci70jff/tools/verify_graphics.py", line 281, in <module>
+    main()
+    ~~~~^^
+  File "/tmp/verify_graphics_stress_xci70jff/tools/verify_graphics.py", line 198, in main
+    tiles_bytes = parse_tiles_c(tiles_c_path)
+  File "/tmp/verify_graphics_stress_xci70jff/tools/verify_graphics.py", line 78, in parse_tiles_c
+    raise ValueError(f"Expected exactly 512 values (32 tiles * 16 bytes), but found {len(num_strings)}")
+ValueError: Expected exactly 512 values (32 tiles * 16 bytes), but found 3
+
+--------------------------
+
+--- TRACEBACK DETECTED ---
+Cmd: /usr/local/google/home/jackpal/Developer/Dandy-Dungeon/dandy-gb/.venv/bin/python /tmp/verify_graphics_stress_xci70jff/tools/verify_graphics.py
+Stdout:
+Reading tiles definition from /tmp/verify_graphics_stress_xci70jff/src/tiles.c...
+
+Stderr:
+Traceback (most recent call last):
+  File "/tmp/verify_graphics_stress_xci70jff/tools/verify_graphics.py", line 281, in <module>
+    main()
+    ~~~~^^
+  File "/tmp/verify_graphics_stress_xci70jff/tools/verify_graphics.py", line 198, in main
+    tiles_bytes = parse_tiles_c(tiles_c_path)
+  File "/tmp/verify_graphics_stress_xci70jff/tools/verify_graphics.py", line 78, in parse_tiles_c
+    raise ValueError(f"Expected exactly 512 values (32 tiles * 16 bytes), but found {len(num_strings)}")
+ValueError: Expected exactly 512 values (32 tiles * 16 bytes), but found 513
+
+--------------------------
+
+--- TRACEBACK DETECTED ---
+Cmd: /usr/local/google/home/jackpal/Developer/Dandy-Dungeon/dandy-gb/.venv/bin/python /tmp/verify_graphics_stress_xci70jff/tools/verify_graphics.py
+Stdout:
+Reading tiles definition from /tmp/verify_graphics_stress_xci70jff/src/tiles.c...
+
+Stderr:
+Traceback (most recent call last):
+  File "/tmp/verify_graphics_stress_xci70jff/tools/verify_graphics.py", line 281, in <module>
+    main()
+    ~~~~^^
+  File "/tmp/verify_graphics_stress_xci70jff/tools/verify_graphics.py", line 198, in main
+    tiles_bytes = parse_tiles_c(tiles_c_path)
+  File "/tmp/verify_graphics_stress_xci70jff/tools/verify_graphics.py", line 87, in parse_tiles_c
+    return bytes(bytes_list)
+ValueError: bytes must be in range(0, 256)
+
+--------------------------
+
+--- TRACEBACK DETECTED ---
+Cmd: /usr/local/google/home/jackpal/Developer/Dandy-Dungeon/dandy-gb/.venv/bin/python /tmp/verify_graphics_stress_xci70jff/tools/verify_graphics.py
+Stdout:
+Reading tiles definition from /tmp/verify_graphics_stress_xci70jff/src/tiles.c...
+
+Stderr:
+Traceback (most recent call last):
+  File "/tmp/verify_graphics_stress_xci70jff/tools/verify_graphics.py", line 281, in <module>
+    main()
+    ~~~~^^
+  File "/tmp/verify_graphics_stress_xci70jff/tools/verify_graphics.py", line 198, in main
+    tiles_bytes = parse_tiles_c(tiles_c_path)
+  File "/tmp/verify_graphics_stress_xci70jff/tools/verify_graphics.py", line 87, in parse_tiles_c
+    return bytes(bytes_list)
+ValueError: bytes must be in range(0, 256)
+
+--------------------------
+
+--- TRACEBACK DETECTED ---
+Cmd: /usr/local/google/home/jackpal/Developer/Dandy-Dungeon/dandy-gb/.venv/bin/python /tmp/verify_graphics_stress_xci70jff/tools/verify_graphics.py
+Stdout:
+
+Stderr:
+Traceback (most recent call last):
+  File "/tmp/verify_graphics_stress_xci70jff/tools/verify_graphics.py", line 281, in <module>
+    main()
+    ~~~~^^
+  File "/tmp/verify_graphics_stress_xci70jff/tools/verify_graphics.py", line 195, in main
+    raise FileNotFoundError(f"Original sprite sheet not found at {strike_png_path}. Please run extract_sprites.py first.")
+FileNotFoundError: Original sprite sheet not found at /tmp/verify_graphics_stress_xci70jff/teamwork_graphics/strike_original.png. Please run extract_sprites.py first.
+
+--------------------------
+
+--- TRACEBACK DETECTED ---
+Cmd: /usr/local/google/home/jackpal/Developer/Dandy-Dungeon/dandy-gb/.venv/bin/python /tmp/verify_graphics_stress_xci70jff/tools/verify_graphics.py
+Stdout:
+Reading tiles definition from /tmp/verify_graphics_stress_xci70jff/src/tiles.c...
+
+Stderr:
+Traceback (most recent call last):
+  File "/tmp/verify_graphics_stress_xci70jff/tools/verify_graphics.py", line 281, in <module>
+    main()
+    ~~~~^^
+  File "/tmp/verify_graphics_stress_xci70jff/tools/verify_graphics.py", line 198, in main
+    tiles_bytes = parse_tiles_c(tiles_c_path)
+  File "/tmp/verify_graphics_stress_xci70jff/tools/verify_graphics.py", line 72, in parse_tiles_c
+    raise ValueError("Could not find 'dandy_tiles' array in tiles.c")
+ValueError: Could not find 'dandy_tiles' array in tiles.c
+
+--------------------------

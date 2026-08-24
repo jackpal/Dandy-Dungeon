@@ -1,0 +1,254 @@
+                                      1 ;--------------------------------------------------------
+                                      2 ; File Created by SDCC : free open source ISO C Compiler
+                                      3 ; Version 4.5.1 #15267 (Linux)
+                                      4 ;--------------------------------------------------------
+                                      5 	.module main
+                                      6 	
+                                      7 ;--------------------------------------------------------
+                                      8 ; Public variables in this module
+                                      9 ;--------------------------------------------------------
+                                     10 	.globl _main
+                                     11 	.globl _get_joypad_buttons
+                                     12 	.globl _dandy_draw_viewport
+                                     13 	.globl _dandy_step
+                                     14 	.globl _dandy_init
+                                     15 	.globl _font_set
+                                     16 	.globl _font_load
+                                     17 	.globl _font_init
+                                     18 	.globl _set_sprite_data
+                                     19 	.globl _get_bkg_data
+                                     20 	.globl _set_bkg_data
+                                     21 	.globl _display_off
+                                     22 	.globl _wait_vbl_done
+                                     23 	.globl _joypad
+                                     24 ;--------------------------------------------------------
+                                     25 ; special function registers
+                                     26 ;--------------------------------------------------------
+                                     27 	.area _HRAM
+                                     28 ;--------------------------------------------------------
+                                     29 ; ram data
+                                     30 ;--------------------------------------------------------
+                                     31 	.area _DATA
+                                     32 ;--------------------------------------------------------
+                                     33 ; ram data
+                                     34 ;--------------------------------------------------------
+                                     35 	.area _INITIALIZED
+                                     36 ;--------------------------------------------------------
+                                     37 ; absolute external ram data
+                                     38 ;--------------------------------------------------------
+                                     39 	.area _DABS (ABS)
+                                     40 ;--------------------------------------------------------
+                                     41 ; global & static initialisations
+                                     42 ;--------------------------------------------------------
+                                     43 	.area _HOME
+                                     44 	.area _GSINIT
+                                     45 	.area _GSFINAL
+                                     46 	.area _GSINIT
+                                     47 ;--------------------------------------------------------
+                                     48 ; Home
+                                     49 ;--------------------------------------------------------
+                                     50 	.area _HOME
+                                     51 	.area _HOME
+                                     52 ;--------------------------------------------------------
+                                     53 ; code
+                                     54 ;--------------------------------------------------------
+                                     55 	.area _CODE
+                                     56 ;src/main.c:12: uint8_t get_joypad_buttons(void) {
+                                     57 ;	---------------------------------
+                                     58 ; Function get_joypad_buttons
+                                     59 ; ---------------------------------
+    00000000                         60 _get_joypad_buttons::
+                                     61 ;src/main.c:13: uint8_t joy = joypad();
+    00000000 CDr00r00         [24]   62 	call	_joypad
+    00000003 4F               [ 4]   63 	ld	c, a
+                                     64 ;src/main.c:14: uint8_t buttons = 0;
+    00000004 AF               [ 4]   65 	xor	a, a
+                                     66 ;src/main.c:16: if (joy & J_LEFT)   buttons |= BUTTON_LEFT;
+    00000005 CB 49            [ 8]   67 	bit	1, c
+    00000007 28 02            [12]   68 	jr	Z, 00102$
+    00000009 3E 01            [ 8]   69 	ld	a, #0x01
+    0000000B                         70 00102$:
+                                     71 ;src/main.c:17: if (joy & J_RIGHT)  buttons |= BUTTON_RIGHT;
+    0000000B CB 41            [ 8]   72 	bit	0, c
+    0000000D 28 02            [12]   73 	jr	Z, 00104$
+    0000000F CB CF            [ 8]   74 	set	1, a
+    00000011                         75 00104$:
+                                     76 ;src/main.c:18: if (joy & J_UP)     buttons |= BUTTON_UP;
+    00000011 CB 51            [ 8]   77 	bit	2, c
+    00000013 28 02            [12]   78 	jr	Z, 00106$
+    00000015 CB D7            [ 8]   79 	set	2, a
+    00000017                         80 00106$:
+                                     81 ;src/main.c:19: if (joy & J_DOWN)   buttons |= BUTTON_DOWN;
+    00000017 CB 59            [ 8]   82 	bit	3, c
+    00000019 28 02            [12]   83 	jr	Z, 00108$
+    0000001B CB DF            [ 8]   84 	set	3, a
+    0000001D                         85 00108$:
+                                     86 ;src/main.c:20: if (joy & J_A)      buttons |= BUTTON_FIRE; // Button A fires arrow
+    0000001D CB 61            [ 8]   87 	bit	4, c
+    0000001F 28 02            [12]   88 	jr	Z, 00110$
+    00000021 CB E7            [ 8]   89 	set	4, a
+    00000023                         90 00110$:
+                                     91 ;src/main.c:21: if (joy & J_B)      buttons |= BUTTON_BOMB; // Button B uses smart bomb
+    00000023 CB 69            [ 8]   92 	bit	5, c
+    00000025 C8               [20]   93 	ret	Z
+    00000026 CB EF            [ 8]   94 	set	5, a
+                                     95 ;src/main.c:23: return buttons;
+                                     96 ;src/main.c:24: }
+    00000028 C9               [16]   97 	ret
+                                     98 ;src/main.c:26: void main(void) {
+                                     99 ;	---------------------------------
+                                    100 ; Function main
+                                    101 ; ---------------------------------
+    00000029                        102 _main::
+    00000029 E8 F0            [16]  103 	add	sp, #-16
+                                    104 ;src/main.c:30: DISPLAY_OFF; // Turn off screen during VRAM modifications
+    0000002B CDr00r00         [24]  105 	call	_display_off
+                                    106 ;src/main.c:42: BGP_REG = 0xE4;
+    0000002E 3E E4            [ 8]  107 	ld	a, #0xe4
+    00000030 E0r00            [12]  108 	ldh	(_BGP_REG + 0), a
+                                    109 ;src/main.c:44: OBP0_REG = 0xD8;
+    00000032 3E D8            [ 8]  110 	ld	a, #0xd8
+    00000034 E0r00            [12]  111 	ldh	(_OBP0_REG + 0), a
+                                    112 ;src/main.c:45: OBP1_REG = 0xD8;
+    00000036 3E D8            [ 8]  113 	ld	a, #0xd8
+    00000038 E0r00            [12]  114 	ldh	(_OBP1_REG + 0), a
+                                    115 ;src/main.c:51: font_init();
+    0000003A CDr00r00         [24]  116 	call	_font_init
+                                    117 ;src/main.c:52: ibm_font = font_load(font_ibm);
+    0000003D 11r00r00         [12]  118 	ld	de, #_font_ibm
+    00000040 D5               [16]  119 	push	de
+    00000041 CDr00r00         [24]  120 	call	_font_load
+    00000044 E1               [12]  121 	pop	hl
+                                    122 ;src/main.c:53: font_set(ibm_font);
+    00000045 D5               [16]  123 	push	de
+    00000046 CDr00r00         [24]  124 	call	_font_set
+    00000049 E1               [12]  125 	pop	hl
+                                    126 ;src/main.c:60: set_bkg_data(128, DANDY_NUM_TILES, dandy_tiles_light);
+    0000004A 01r00r00         [12]  127 	ld	bc, #_dandy_tiles_light+0
+    0000004D C5               [16]  128 	push	bc
+    0000004E 21 80 20         [12]  129 	ld	hl, #0x2080
+    00000051 E5               [16]  130 	push	hl
+    00000052 CDr00r00         [24]  131 	call	_set_bkg_data
+    00000055 E8 04            [16]  132 	add	sp, #4
+                                    133 ;src/main.c:61: set_sprite_data(128, DANDY_NUM_TILES, dandy_tiles_light);
+    00000057 C5               [16]  134 	push	bc
+    00000058 21 80 20         [12]  135 	ld	hl, #0x2080
+    0000005B E5               [16]  136 	push	hl
+    0000005C CDr00r00         [24]  137 	call	_set_sprite_data
+    0000005F E8 04            [16]  138 	add	sp, #4
+                                    139 ;src/main.c:70: for (uint16_t i = 0; i < 96; ++i) {
+    00000061 01 00 00         [12]  140 	ld	bc, #0x0000
+    00000064                        141 00112$:
+    00000064 59               [ 4]  142 	ld	e, c
+    00000065 50               [ 4]  143 	ld	d, b
+    00000066 7B               [ 4]  144 	ld	a, e
+    00000067 D6 60            [ 8]  145 	sub	a, #0x60
+    00000069 7A               [ 4]  146 	ld	a, d
+    0000006A DE 00            [ 8]  147 	sbc	a, #0x00
+    0000006C 30 40            [12]  148 	jr	NC, 00102$
+                                    149 ;src/main.c:71: get_bkg_data(i, 1, tile_buf);
+    0000006E 51               [ 4]  150 	ld	d, c
+    0000006F D5               [16]  151 	push	de
+    00000070 21 02 00         [12]  152 	ld	hl, #2
+    00000073 39               [ 8]  153 	add	hl, sp
+    00000074 E5               [16]  154 	push	hl
+    00000075 3E 01            [ 8]  155 	ld	a, #0x01
+    00000077 F5               [16]  156 	push	af
+    00000078 33               [ 8]  157 	inc	sp
+    00000079 D5               [16]  158 	push	de
+    0000007A 33               [ 8]  159 	inc	sp
+    0000007B CDr00r00         [24]  160 	call	_get_bkg_data
+    0000007E E8 04            [16]  161 	add	sp, #4
+    00000080 D1               [12]  162 	pop	de
+                                    163 ;src/main.c:72: for (uint8_t j = 0; j < 16; ++j) {
+    00000081 1E 00            [ 8]  164 	ld	e, #0x00
+    00000083                        165 00109$:
+    00000083 7B               [ 4]  166 	ld	a, e
+    00000084 D6 10            [ 8]  167 	sub	a, #0x10
+    00000086 30 0F            [12]  168 	jr	NC, 00101$
+                                    169 ;src/main.c:73: tile_buf[j] = ~tile_buf[j];
+    00000088 D5               [16]  170 	push	de
+    00000089 16 00            [ 8]  171 	ld	d, #0x00
+    0000008B 21 02 00         [12]  172 	ld	hl, #2
+    0000008E 39               [ 8]  173 	add	hl, sp
+    0000008F 19               [ 8]  174 	add	hl, de
+    00000090 D1               [12]  175 	pop	de
+    00000091 7E               [ 8]  176 	ld	a, (hl)
+    00000092 2F               [ 4]  177 	cpl
+    00000093 77               [ 8]  178 	ld	(hl), a
+                                    179 ;src/main.c:72: for (uint8_t j = 0; j < 16; ++j) {
+    00000094 1C               [ 4]  180 	inc	e
+    00000095 18 EC            [12]  181 	jr	00109$
+    00000097                        182 00101$:
+                                    183 ;src/main.c:75: set_bkg_data(160 + i, 1, tile_buf);
+    00000097 7A               [ 4]  184 	ld	a, d
+    00000098 C6 A0            [ 8]  185 	add	a, #0xa0
+    0000009A 57               [ 4]  186 	ld	d, a
+    0000009B 21 00 00         [12]  187 	ld	hl, #0
+    0000009E 39               [ 8]  188 	add	hl, sp
+    0000009F E5               [16]  189 	push	hl
+    000000A0 3E 01            [ 8]  190 	ld	a, #0x01
+    000000A2 F5               [16]  191 	push	af
+    000000A3 33               [ 8]  192 	inc	sp
+    000000A4 D5               [16]  193 	push	de
+    000000A5 33               [ 8]  194 	inc	sp
+    000000A6 CDr00r00         [24]  195 	call	_set_bkg_data
+    000000A9 E8 04            [16]  196 	add	sp, #4
+                                    197 ;src/main.c:70: for (uint16_t i = 0; i < 96; ++i) {
+    000000AB 03               [ 8]  198 	inc	bc
+    000000AC 18 B6            [12]  199 	jr	00112$
+    000000AE                        200 00102$:
+                                    201 ;src/main.c:80: SHOW_BKG;
+    000000AE F0r00            [12]  202 	ldh	a, (_LCDC_REG + 0)
+    000000B0 F6 01            [ 8]  203 	or	a, #0x01
+    000000B2 E0r00            [12]  204 	ldh	(_LCDC_REG + 0), a
+                                    205 ;src/main.c:81: SHOW_SPRITES;
+    000000B4 F0r00            [12]  206 	ldh	a, (_LCDC_REG + 0)
+    000000B6 F6 02            [ 8]  207 	or	a, #0x02
+    000000B8 E0r00            [12]  208 	ldh	(_LCDC_REG + 0), a
+                                    209 ;src/main.c:83: DISPLAY_ON; // Turn screen back on
+    000000BA F0r00            [12]  210 	ldh	a, (_LCDC_REG + 0)
+    000000BC F6 80            [ 8]  211 	or	a, #0x80
+    000000BE E0r00            [12]  212 	ldh	(_LCDC_REG + 0), a
+                                    213 ;src/main.c:86: dandy_init();
+    000000C0 CDr00r00         [24]  214 	call	_dandy_init
+                                    215 ;src/main.c:89: while (1) {
+    000000C3                        216 00106$:
+                                    217 ;src/main.c:91: uint8_t inputs[MAX_PLAYERS] = {0, 0, 0, 0};
+    000000C3 F8 0C            [12]  218 	ldhl	sp,	#12
+    000000C5 AF               [ 4]  219 	xor	a, a
+    000000C6 22               [ 8]  220 	ld	(hl+), a
+    000000C7 22               [ 8]  221 	ld	(hl+), a
+    000000C8 AF               [ 4]  222 	xor	a, a
+    000000C9 22               [ 8]  223 	ld	(hl+), a
+    000000CA 77               [ 8]  224 	ld	(hl), a
+                                    225 ;src/main.c:92: inputs[0] = get_joypad_buttons();
+    000000CB CDr00r00         [24]  226 	call	_get_joypad_buttons
+    000000CE F8 0C            [12]  227 	ldhl	sp,	#12
+    000000D0 77               [ 8]  228 	ld	(hl), a
+                                    229 ;src/main.c:93: dandy_step(inputs);
+    000000D1 21 0C 00         [12]  230 	ld	hl, #12
+    000000D4 39               [ 8]  231 	add	hl, sp
+    000000D5 5D               [ 4]  232 	ld	e, l
+    000000D6 54               [ 4]  233 	ld	d, h
+    000000D7 CDr00r00         [24]  234 	call	_dandy_step
+                                    235 ;src/main.c:96: if (is_dirty) {
+    000000DA 21r00r00         [12]  236 	ld	hl, #_is_dirty
+    000000DD CB 46            [12]  237 	bit	0, (hl)
+    000000DF 28 0A            [12]  238 	jr	Z, 00104$
+                                    239 ;src/main.c:97: dandy_draw_viewport(local_player_idx);
+    000000E1 FAr00r00         [16]  240 	ld	a, (_local_player_idx)
+    000000E4 CDr00r00         [24]  241 	call	_dandy_draw_viewport
+                                    242 ;src/main.c:98: is_dirty = false;
+    000000E7 AF               [ 4]  243 	xor	a, a
+    000000E8 EAr00r00         [16]  244 	ld	(#_is_dirty),a
+    000000EB                        245 00104$:
+                                    246 ;src/main.c:102: wait_vbl_done();
+    000000EB CDr00r00         [24]  247 	call	_wait_vbl_done
+    000000EE 18 D3            [12]  248 	jr	00106$
+                                    249 ;src/main.c:104: }
+    000000F0 E8 10            [16]  250 	add	sp, #16
+    000000F2 C9               [16]  251 	ret
+                                    252 	.area _CODE
+                                    253 	.area _INITIALIZER
+                                    254 	.area _CABS (ABS)

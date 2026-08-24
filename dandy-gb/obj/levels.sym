@@ -1,0 +1,56 @@
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (GameBoy)                  Page 1
+Hexadecimal [32-Bits]
+
+Symbol Table
+
+    .__.$$$.                                                    =   00002710 L
+    .__.ABS.                                                    =   00000000 G
+    .__.CPU.                                                    =   00000000 L
+    .__.H$L.                                                    =   00000000 L
+  8 _dandy_level_0                                                  00000000 GR
+  8 _dandy_level_1                                                  00000165 GR
+  8 _dandy_level_10                                                 00001111 GR
+  8 _dandy_level_11                                                 00001235 GR
+  8 _dandy_level_12                                                 00001397 GR
+  8 _dandy_level_13                                                 00001516 GR
+  8 _dandy_level_14                                                 000016D7 GR
+  8 _dandy_level_15                                                 0000185C GR
+  8 _dandy_level_16                                                 000019CE GR
+  8 _dandy_level_17                                                 00001AFE GR
+  8 _dandy_level_18                                                 00001CC2 GR
+  8 _dandy_level_19                                                 00001DE2 GR
+  8 _dandy_level_2                                                  000002A8 GR
+  8 _dandy_level_20                                                 00001F12 GR
+  8 _dandy_level_21                                                 000020BB GR
+  8 _dandy_level_22                                                 00002249 GR
+  8 _dandy_level_23                                                 0000239B GR
+  8 _dandy_level_24                                                 000024D7 GR
+  8 _dandy_level_25                                                 0000266A GR
+  8 _dandy_level_3                                                  0000042F GR
+  8 _dandy_level_4                                                  000005AE GR
+  8 _dandy_level_5                                                  0000083E GR
+  8 _dandy_level_6                                                  00000AA0 GR
+  8 _dandy_level_7                                                  00000C39 GR
+  8 _dandy_level_8                                                  00000DBF GR
+  8 _dandy_level_9                                                  00000FAB GR
+  8 _dandy_level_sizes                                              00002B5E GR
+  8 _dandy_levels                                                   00002B2A GR
+
+
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (GameBoy)                  Page 2
+Hexadecimal [32-Bits]
+
+Area Table
+
+   0 _CODE                                      size        0   flags    0
+   1 _HRAM                                      size        0   flags    0
+   2 _DATA                                      size        0   flags    0
+   3 _INITIALIZED                               size        0   flags    0
+   4 _DABS                                      size        0   flags    8
+   5 _HOME                                      size        0   flags    0
+   6 _GSINIT                                    size        0   flags    0
+   7 _GSFINAL                                   size        0   flags    0
+   8 _CODE_1                                    size     2B92   flags    0
+   9 _INITIALIZER                               size        0   flags    0
+   A _CABS                                      size        0   flags    8
+

@@ -1,0 +1,93 @@
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (GameBoy)                  Page 1
+Hexadecimal [32-Bits]
+
+Symbol Table
+
+    .__.$$$.                                                    =   00002710 L
+    .__.ABS.                                                    =   00000000 G
+    .__.CPU.                                                    =   00000000 L
+    .__.H$L.                                                    =   00000000 L
+    __divuchar                                                      ******** GX
+    __divuint                                                       ******** GX
+  8 __xinit__flood_stack_ptr                                        00000000 R
+  2 _arrow_dir                                                      0000073F GR
+  2 _arrow_x                                                        00000737 GR
+  2 _arrow_y                                                        0000073B GR
+  0 _buttons_to_dir                                                 00000077 GR
+  0 _clamp                                                          000016AB R
+  2 _current_level                                                  00000708 GR
+  0 _dandy_draw_viewport                                            00000523 GR
+  0 _dandy_init                                                     00000091 GR
+  0 _dandy_is_player_joined                                         000017C5 GR
+  0 _dandy_join_player                                              00001730 GR
+    _dandy_level_sizes                                              ******** GX
+    _dandy_levels                                                   ******** GX
+  0 _dandy_load_level                                               00000100 GR
+  2 _dandy_map                                                      00000000 GR
+  0 _dandy_num_levels                                               00000090 GR
+  0 _dandy_step                                                     00000310 GR
+  0 _delta_to_dir                                                   00000087 GR
+  0 _dir_delta_x                                                    00000064 GR
+  0 _dir_delta_y                                                    0000006C GR
+  0 _do_bomb                                                        00000EE5 R
+  0 _do_player_buttons                                              00000924 R
+  2 _do_player_buttons_old_buttons_10000_160                        000007C4 R
+  0 _end_game                                                       000008CC R
+  0 _flood_push                                                     00000000 R
+  3 _flood_stack_ptr                                                00000000 R
+  2 _flood_stack_x                                                  00000744 R
+  2 _flood_stack_y                                                  00000784 R
+  0 _get_camera_target                                              0000041E R
+  0 _get_nearest_player                                             00000FB3 R
+    _hal_clear_sprites                                              ******** GX
+    _hal_draw_tile                                                  ******** GX
+    _hal_play_sound                                                 ******** GX
+    _hal_set_sprite                                                 ******** GX
+    _hal_update_hud                                                 ******** GX
+  2 _is_dirty                                                       00000743 GR
+  0 _iterative_flood_fill                                           00001564 R
+  2 _local_player_idx                                               0000070E GR
+    _memset                                                         ******** GX
+  2 _monster_rotor                                                  00000709 GR
+  0 _move_arrows                                                    00000C1D R
+  0 _move_monsters                                                  000010BC R
+  2 _move_monsters_rand_seed_80002_267                              000007C8 R
+  0 _move_player                                                    00000A3B R
+  0 _next_level                                                     000008BD R
+  2 _player_bombs                                                   00000727 GR
+  2 _player_dir                                                     0000072F GR
+  2 _player_health                                                  00000717 GR
+  2 _player_joined                                                  0000070A GR
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (GameBoy)                  Page 2
+Hexadecimal [32-Bits]
+
+Symbol Table
+
+  2 _player_keys                                                    0000072B GR
+  2 _player_move_timer                                              00000733 GR
+  2 _player_score                                                   0000071F GR
+  2 _player_x                                                       0000070F GR
+  2 _player_y                                                       00000713 GR
+  0 _row_offsets                                                    00000028 GR
+  0 _search_order                                                   00000074 GR
+  0 _set_player_start_position                                      00000743 R
+  0 _spawn_offsets_x                                                000008B5 R
+  0 _spawn_offsets_y                                                000008B9 R
+  0 _to_delta                                                       000016F6 R
+
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (GameBoy)                  Page 3
+Hexadecimal [32-Bits]
+
+Area Table
+
+   0 _CODE                                      size     17D4   flags    0
+   1 _HRAM                                      size        0   flags    0
+   2 _DATA                                      size      7CA   flags    0
+   3 _INITIALIZED                               size        1   flags    0
+   4 _DABS                                      size        0   flags    8
+   5 _HOME                                      size        0   flags    0
+   6 _GSINIT                                    size       1A   flags    0
+   7 _GSFINAL                                   size        0   flags    0
+   8 _INITIALIZER                               size        1   flags    0
+   9 _CABS                                      size        0   flags    8
+

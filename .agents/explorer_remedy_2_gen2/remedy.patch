@@ -1,0 +1,235 @@
+diff --git a/dandy-gb/src/dandy_core.h b/dandy-gb/src/dandy_core.h
+index 61ad3cf..c4bc90a 100644
+--- a/dandy-gb/src/dandy_core.h
++++ b/dandy-gb/src/dandy_core.h
+@@ -45,5 +45,6 @@ extern uint8_t monster_rotor;
+ extern bool player_joined[MAX_PLAYERS];
+ extern uint8_t local_player_idx;
++extern const uint8_t dandy_num_levels;
+ 
+ /* Player State Arrays (extern) */
+diff --git a/dandy-gb/src/dandy_core.c b/dandy-gb/src/dandy_core.c
+index a15bc8a..d92c732 100644
+--- a/dandy-gb/src/dandy_core.c
++++ b/dandy-gb/src/dandy_core.c
+@@ -58,4 +58,5 @@ bool player_joined[MAX_PLAYERS];
+ uint8_t local_player_idx;
++const uint8_t dandy_num_levels = DANDY_NUM_LEVELS;
+ 
+ /* Player State Arrays */
+@@ -134,4 +135,7 @@ static int16_t clamp(int16_t val, int16_t min, int16_t max);
+ void dandy_load_level(uint8_t level_idx) {
++    if (level_idx >= DANDY_NUM_LEVELS) {
++        level_idx = DANDY_NUM_LEVELS - 1;
++    }
+     // Decompress level data from ROM to RAM map (RLE decoding)
+     const uint8_t* src = dandy_levels[level_idx];
+@@ -159,4 +163,11 @@ void dandy_load_level(uint8_t level_idx) {
+ void dandy_step(const uint8_t player_inputs[MAX_PLAYERS]) {
++    // Bounds check player positions to prevent out-of-bounds memory access
++    for (uint8_t p = 0; p < MAX_PLAYERS; ++p) {
++        if (player_joined[p]) {
++            if (player_x[p] >= DANDY_LEVEL_WIDTH) player_x[p] = DANDY_LEVEL_WIDTH - 1;
++            if (player_y[p] >= DANDY_LEVEL_HEIGHT) player_y[p] = DANDY_LEVEL_HEIGHT - 1;
++        }
++    }
+     for (uint8_t p = 0; p < MAX_PLAYERS; ++p) {
+diff --git a/dandy-gb/tests/dandy_env.py b/dandy-gb/tests/dandy_env.py
+index bce1291..d911ac2 100644
+--- a/dandy-gb/tests/dandy_env.py
++++ b/dandy-gb/tests/dandy_env.py
+@@ -167,4 +167,5 @@ class DandyEnv:
+         self._local_player_idx = ctypes.c_uint8.in_dll(self._lib, "local_player_idx")
+         self._is_dirty = ctypes.c_bool.in_dll(self._lib, "is_dirty")
++        self._dandy_num_levels = ctypes.c_uint8.in_dll(self._lib, "dandy_num_levels")
+         
+         self._player_x = (ctypes.c_uint8 * self.MAX_PLAYERS).in_dll(self._lib, "player_x")
+@@ -197,4 +198,8 @@ class DandyEnv:
+     
+     @property
++    def num_levels(self):
++        return self._dandy_num_levels.value
++
++    @property
+     def dandy_map(self):
+diff --git a/dandy-gb/tests/test_tier1.py b/dandy-gb/tests/test_tier1.py
+index c6d9ab1..e982110 100644
+--- a/dandy-gb/tests/test_tier1.py
++++ b/dandy-gb/tests/test_tier1.py
+@@ -1005,4 +1005,8 @@ class TestTier1(unittest.TestCase):
+         self.env.draw_viewport(0)
+         
++        # Assert C Globals (Double-Assert)
++        self.assertEqual(self.env.get_player_x(0), 25)
++        self.assertEqual(self.env.get_player_y(0), 15)
++        
+         # Assert HAL: Camera coordinates (25 - 10, 15 - 5) = (15, 10)
+         cam_x, cam_y = self.env.get_camera()
+@@ -1017,4 +1021,8 @@ class TestTier1(unittest.TestCase):
+         self.env.draw_viewport(0)
+         
++        # Assert C Globals (Double-Assert)
++        self.assertEqual(self.env.get_player_x(0), 5)
++        self.assertEqual(self.env.get_player_y(0), 3)
++        
+         # Assert HAL: Clamped to (0, 0)
+         cam_x, cam_y = self.env.get_camera()
+@@ -1029,4 +1037,8 @@ class TestTier1(unittest.TestCase):
+         self.env.draw_viewport(0)
+         
++        # Assert C Globals (Double-Assert)
++        self.assertEqual(self.env.get_player_x(0), 55)
++        self.assertEqual(self.env.get_player_y(0), 27)
++        
+         # Assert HAL: Clamped to (40, 20)
+         cam_x, cam_y = self.env.get_camera()
+@@ -1056,4 +1068,13 @@ class TestTier1(unittest.TestCase):
+         self.env.draw_viewport(0)
+         
++        # Assert C Globals (Double-Assert)
++        self.assertEqual(self.env.get_player_health(0), 0)
++        self.assertEqual(self.env.get_player_health(1), 100)
++        self.assertEqual(self.env.get_player_x(1), 20)
++        self.assertEqual(self.env.get_player_y(1), 10)
++        self.assertEqual(self.env.get_player_health(2), 100)
++        self.assertEqual(self.env.get_player_x(2), 20)
++        self.assertEqual(self.env.get_player_y(2), 20)
++        
+         # Assert HAL: Camera centered on centroid
+         cam_x, cam_y = self.env.get_camera()
+@@ -1090,5 +1111,6 @@ class TestTier1(unittest.TestCase):
+         """F-10: Stepping on stairs at maximum level (4) clamps level and reloads level 4."""
+         self.helper_setup_clean_map(10, 10)
+-        self.env.current_level = 4  # Maximum level (DANDY_NUM_LEVELS - 1 = 4)
+-        self.env.load_level(4)
++        max_level = self.env.num_levels - 1
++        self.env.current_level = max_level
++        self.env.load_level(max_level)
+         # Find starting position of player in level 4
+@@ -1106,3 +1128,3 @@ class TestTier1(unittest.TestCase):
+         # Assert Globals: Level remains 4, reloaded
+-        self.assertEqual(self.env.current_level, 4)
++        self.assertEqual(self.env.current_level, max_level)
+         self.assertEqual(self.env.get_player_x(0), px)
+@@ -1153,6 +1175,15 @@ class TestTier1(unittest.TestCase):
+         
+         # Assert HAL
+         self.env.draw_viewport(0)
+         # Verify coordinates reset dynamically to level 0 portal
+         self.assertEqual(self.env.get_player_x(0), p0_start_x)
+         self.assertEqual(self.env.get_player_y(0), p0_start_y)
++        
++        # Assert HAL (Double-Assert)
++        cam_x, cam_y = self.env.get_camera()
++        expected_cam_x = max(0, min(40, p0_start_x - 10))
++        expected_cam_y = max(0, min(20, p0_start_y - 5))
++        self.assertEqual(cam_x, expected_cam_x)
++        self.assertEqual(cam_y, expected_cam_y)
++        self.assertEqual(self.env.get_draw_count(), 200)
++        
+         self.env.assert_outer_border_walls(self)
+@@ -1185,4 +1216,13 @@ class TestTier1(unittest.TestCase):
+         # Assert HAL
+         self.env.draw_viewport(0)
++        
++        # Assert HAL (Double-Assert)
++        self.assertEqual(self.env.get_draw_count(), 200)
++        p0_start_x = self.env.get_player_x(0)
++        p0_start_y = self.env.get_player_y(0)
++        cam_x, cam_y = self.env.get_camera()
++        expected_cam_x = max(0, min(40, p0_start_x - 10))
++        expected_cam_y = max(0, min(20, p0_start_y - 5))
++        self.assertEqual(cam_x, expected_cam_x)
++        self.assertEqual(cam_y, expected_cam_y)
++        
+         self.env.assert_outer_border_walls(self)
+diff --git a/dandy-gb/tests/test_tier2.py b/dandy-gb/tests/test_tier2.py
+index a2bb56c..92f8bda 100644
+--- a/dandy-gb/tests/test_tier2.py
++++ b/dandy-gb/tests/test_tier2.py
+@@ -947,4 +947,9 @@ class TestTier2(unittest.TestCase):
+         self.env.draw_viewport(0)
+         
++        # Assert C Globals (Double-Assert)
++        self.assertEqual(self.env.get_player_x(0), 10)
++        self.assertEqual(self.env.get_player_y(0), 10)
++        self.assertEqual(self.env.dandy_map.count(self.env.TILE_MONSTER1), 50)
++        
+         # Get active sprites
+         sprites = self.env.get_sprites()
+@@ -975,4 +980,13 @@ class TestTier2(unittest.TestCase):
+         self.env.draw_viewport(0)
+         
++        # Assert C Globals (Double-Assert)
++        self.assertEqual(self.env.get_player_health(0), 0)
++        self.assertEqual(self.env.get_player_health(1), 100)
++        self.assertEqual(self.env.get_player_x(1), 20)
++        self.assertEqual(self.env.get_player_y(1), 10)
++        self.assertEqual(self.env.get_player_health(2), 100)
++        self.assertEqual(self.env.get_player_x(2), 20)
++        self.assertEqual(self.env.get_player_y(2), 20)
++        
+         cam_x, cam_y = self.env.get_camera()
+         self.assertEqual(cam_x, 10)
+@@ -992,4 +1006,9 @@ class TestTier2(unittest.TestCase):
+         self.env.draw_viewport(0)
+         
++        # Assert C Globals (Double-Assert)
++        self.assertEqual(self.env.get_player_health(0), 0)
++        self.assertEqual(self.env.get_player_health(1), 0)
++        self.assertEqual(self.env.get_player_x(0), 10)
++        self.assertEqual(self.env.get_player_y(0), 10)
+         cam_x, cam_y = self.env.get_camera()
+         self.assertEqual(cam_x, 0)  # 10 - 10 = 0
+@@ -1002,4 +1021,6 @@ class TestTier2(unittest.TestCase):
+         self.helper_setup_clean_map(0, 0)
+         self.env.draw_viewport(0)
++        self.assertEqual(self.env.get_player_x(0), 0)
++        self.assertEqual(self.env.get_player_y(0), 0)
+         cam_x, cam_y = self.env.get_camera()
+         self.assertEqual(cam_x, 0)
+@@ -1009,4 +1030,6 @@ class TestTier2(unittest.TestCase):
+         self.helper_setup_clean_map(59, 0)
+         self.env.draw_viewport(0)
++        self.assertEqual(self.env.get_player_x(0), 59)
++        self.assertEqual(self.env.get_player_y(0), 0)
+         cam_x, cam_y = self.env.get_camera()
+         self.assertEqual(cam_x, 40)
+@@ -1015,4 +1038,6 @@ class TestTier2(unittest.TestCase):
+         self.helper_setup_clean_map(0, 29)
+         self.env.draw_viewport(0)
++        self.assertEqual(self.env.get_player_x(0), 0)
++        self.assertEqual(self.env.get_player_y(0), 29)
+         cam_x, cam_y = self.env.get_camera()
+         self.assertEqual(cam_x, 0)
+@@ -1022,4 +1047,6 @@ class TestTier2(unittest.TestCase):
+         self.helper_setup_clean_map(59, 29)
+         self.env.draw_viewport(0)
++        self.assertEqual(self.env.get_player_x(0), 59)
++        self.assertEqual(self.env.get_player_y(0), 29)
+         cam_x, cam_y = self.env.get_camera()
+         self.assertEqual(cam_x, 40)
+diff --git a/dandy-gb/tests/test_infra_stress.py b/dandy-gb/tests/test_infra_stress.py
+index b11ba21..d12bb0a 100644
+--- a/dandy-gb/tests/test_infra_stress.py
++++ b/dandy-gb/tests/test_infra_stress.py
+@@ -210,5 +210,6 @@ class TestInfraStress(unittest.TestCase):
+         
+-        # We EXPECT a crash (exit code < 0, e.g. -11 for SIGSEGV), which confirms the vulnerability!
+-        self.assertLess(p.returncode, 0, "Vulnerability missing! Engine did not crash when loading invalid level index.")
++        # With bounds checking implemented in the C engine, loading an invalid level index
++        # should now be handled safely (clamped to the maximum level) and NOT crash (exit code 0).
++        self.assertEqual(p.returncode, 0, f"Engine crashed or failed with exit code {p.returncode}! Out-of-bounds level index should be handled safely.")
++        self.assertIn("SUCCESS", stdout.decode(), "Subprocess did not complete successfully or print SUCCESS.")
+ 
+@@ -267,6 +268,5 @@ class TestInfraStress(unittest.TestCase):
+         
+-        # We expect either a crash (exit code < 0) or corruption detected in stdout
+-        if p.returncode < 0:
+-            print(f"Engine crashed with signal {-p.returncode} (this is a valid vulnerability confirmation!)")
+-        else:
+-            self.assertIn("CORRUPTION_DETECTED", output_str, "Vulnerability missing! Out-of-bounds y-coordinate did not cause memory corruption.")
++        # With bounds checking implemented in the C engine, setting an out-of-bounds player y-coordinate
++        # should now be safely clamped, preventing any out-of-bounds memory write/corruption.
++        self.assertEqual(p.returncode, 0, f"Engine crashed with exit code {p.returncode}!")
++        self.assertIn("NO_CORRUPTION", output_str, "Memory corruption detected! Out-of-bounds y-coordinate was not safely clamped.")

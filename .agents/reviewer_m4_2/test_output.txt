@@ -1,0 +1,303 @@
+test_env_loading_and_globals (test_infra_check.TestInfraCheck.test_env_loading_and_globals)
+Verify that DandyEnv can be loaded, initialized, and that globals are bound. ... ok
+test_game_loop_step_and_sound (test_infra_check.TestInfraCheck.test_game_loop_step_and_sound)
+Verify engine step, global variable updates, and mock HAL sound recording (E2E style). ... ok
+test_mock_hal_logging_viewport (test_infra_check.TestInfraCheck.test_mock_hal_logging_viewport)
+Verify that drawing the viewport logs tile updates and camera positions in the mock HAL. ... ok
+test_state_isolation (test_infra_check.TestInfraCheck.test_state_isolation)
+Verify that multiple DandyEnv instances have 100% isolated static states (Copy-on-Load). ... ok
+test_lifecycle_and_leak_stability_1000_runs (test_infra_stress.TestInfraStress.test_lifecycle_and_leak_stability_1000_runs)
+Instantiate and delete DandyEnv 1000 times to verify no FD, library, temp dir, or memory leaks. ... ERROR
+test_robustness_extreme_inputs_direct (test_infra_stress.TestInfraStress.test_robustness_extreme_inputs_direct)
+Test extreme and boundary inputs directly on DandyEnv python wrapper without crashing. ... ERROR
+test_robustness_out_of_bounds_level_crash (test_infra_stress.TestInfraStress.test_robustness_out_of_bounds_level_crash)
+Verify that loading an invalid level index triggers an out-of-bounds read and crashes (SIGSEGV). ... ok
+test_robustness_out_of_bounds_player_y_corruption (test_infra_stress.TestInfraStress.test_robustness_out_of_bounds_player_y_corruption)
+Verify that setting an out-of-bounds player y-coordinate causes out-of-bounds writes (silent memory corruption). ... ok
+test_state_isolation_parallel (test_infra_stress.TestInfraStress.test_state_isolation_parallel)
+Verify that multiple concurrent DandyEnv instances have 100% isolated states. ... ok
+test_f01_dead_player_ignored (test_tier1.TestTier1.test_f01_dead_player_ignored)
+F-01: Dead players (health <= 0) do not process inputs. ... ok
+test_f01_move_cooldown_blocking (test_tier1.TestTier1.test_f01_move_cooldown_blocking)
+F-01: player_move_timer prevents movement until it reaches 0. ... ok
+test_f01_move_success_cardinal (test_tier1.TestTier1.test_f01_move_success_cardinal)
+F-01: Moving into TILE_SPACE cardinally updates coordinates and sets move timer. ... ok
+test_f01_move_success_diagonal (test_tier1.TestTier1.test_f01_move_success_diagonal)
+F-01: Moving into TILE_SPACE diagonally updates coordinates and sets move timer. ... ok
+test_f01_unjoined_player_ignored (test_tier1.TestTier1.test_f01_unjoined_player_ignored)
+F-01: Inputs for unjoined players are ignored. ... ok
+test_f02_slide_all_blocked (test_tier1.TestTier1.test_f02_slide_all_blocked)
+F-02: If main direction and both adjacent slide directions are blocked, player remains stationary. ... ok
+test_f02_slide_cardinal_blocked_clockwise (test_tier1.TestTier1.test_f02_slide_cardinal_blocked_clockwise)
+F-02: Moving Right blocked by wall slides player Down-Right (clockwise) if free. ... ok
+test_f02_slide_cardinal_blocked_counterclockwise (test_tier1.TestTier1.test_f02_slide_cardinal_blocked_counterclockwise)
+F-02: Moving Right blocked by wall slides player Up-Right (counter-clockwise) if free. ... ok
+test_f02_slide_diagonal_blocked_clockwise (test_tier1.TestTier1.test_f02_slide_diagonal_blocked_clockwise)
+F-02: Moving Up-Right blocked by wall slides player Right (clockwise) if free. ... ok
+test_f02_slide_diagonal_blocked_counterclockwise (test_tier1.TestTier1.test_f02_slide_diagonal_blocked_counterclockwise)
+F-02: Moving Up-Right blocked by wall slides player Up (counter-clockwise) if free. ... ok
+test_f03_collect_bomb (test_tier1.TestTier1.test_f03_collect_bomb)
+F-03: Collecting TILE_BOMB increments bombs by 1, plays SOUND_KEY. ... ok
+test_f03_collect_food (test_tier1.TestTier1.test_f03_collect_food)
+F-03: Collecting TILE_FOOD adds 100 HP, plays SOUND_FOOD, and can exceed 100 HP. ... ok
+test_f03_collect_key (test_tier1.TestTier1.test_f03_collect_key)
+F-03: Collecting TILE_KEY increments keys by 1, plays SOUND_KEY. ... ok
+test_f03_collect_money (test_tier1.TestTier1.test_f03_collect_money)
+F-03: Collecting TILE_MONEY adds 100 to score, plays SOUND_KEY. ... ok
+test_f03_collect_multiple_items (test_tier1.TestTier1.test_f03_collect_multiple_items)
+F-03: Multiple items collected in sequence update inventory and play sounds. ... ok
+test_f04_door_blocked_with_no_key (test_tier1.TestTier1.test_f04_door_blocked_with_no_key)
+F-04: Moving onto TILE_DOOR with 0 keys is blocked. ... ok
+test_f04_door_flood_fill_diagonal (test_tier1.TestTier1.test_f04_door_flood_fill_diagonal)
+F-04: Unlocking a door flood-fills and clears diagonally-connected door tiles (8-way). ... ok
+test_f04_door_flood_fill_horizontal (test_tier1.TestTier1.test_f04_door_flood_fill_horizontal)
+F-04: Unlocking a door flood-fills and clears contiguous horizontal door tiles. ... ok
+test_f04_door_flood_fill_large_network (test_tier1.TestTier1.test_f04_door_flood_fill_large_network)
+F-04: Unlocking a door clears a large complex contiguous door network with 1 key. ... ok
+test_f04_door_unlock_single (test_tier1.TestTier1.test_f04_door_unlock_single)
+F-04: Moving onto isolated TILE_DOOR with >= 1 key consumes 1 key, unlocks it, plays SOUND_KEY. ... ok
+test_f05_arrow_flight (test_tier1.TestTier1.test_f05_arrow_flight)
+F-05: Active arrow travels 1 tile per tick in its direction. ... ok
+test_f05_arrow_hit_generator_destroy (test_tier1.TestTier1.test_f05_arrow_hit_generator_destroy)
+F-05: Arrow hitting a generator replaces it with TILE_SPACE, plays SOUND_HIT. ... ok
+test_f05_arrow_hit_monster_degrade (test_tier1.TestTier1.test_f05_arrow_hit_monster_degrade)
+F-05: Arrow hitting TILE_MONSTER2 degrades it to TILE_MONSTER1, plays SOUND_HIT, destroys arrow. ... ok
+test_f05_arrow_hit_wall (test_tier1.TestTier1.test_f05_arrow_hit_wall)
+F-05: Arrow hitting a solid wall is destroyed, no sound is played. ... ok
+test_f05_shoot_arrow_empty_space (test_tier1.TestTier1.test_f05_shoot_arrow_empty_space)
+F-05: Pressing FIRE spawns an arrow in player's direction, plays SOUND_SHOOT. ... ok
+test_f06_bomb_by_shooting_bomb_tile (test_tier1.TestTier1.test_f06_bomb_by_shooting_bomb_tile)
+F-06: Shooting TILE_BOMB with an arrow triggers a viewport explosion without consuming inventory bombs. ... ok
+test_f06_bomb_does_not_affect_outside (test_tier1.TestTier1.test_f06_bomb_does_not_affect_outside)
+F-06: BOMB clears ONLY monsters/generators inside player's 10x20 viewport, leaving off-screen ones intact. ... ok
+test_f06_bomb_no_bombs (test_tier1.TestTier1.test_f06_bomb_no_bombs)
+F-06: Pressing BOMB with 0 bombs in inventory does nothing. ... ok
+test_f06_bomb_success_clears_generators (test_tier1.TestTier1.test_f06_bomb_success_clears_generators)
+F-06: Pressing BOMB clears all generators in player's viewport. ... ok
+test_f06_bomb_success_clears_monsters (test_tier1.TestTier1.test_f06_bomb_success_clears_monsters)
+F-06: Pressing BOMB consumes 1 bomb, plays SOUND_BOMB, and clears all monsters in viewport. ... ok
+test_f07_monster_contact_damage (test_tier1.TestTier1.test_f07_monster_contact_damage)
+F-07: Monster colliding with player deals 10 * level damage, plays SOUND_HIT, and is removed. ... ok
+test_f07_monster_contact_damage_by_level (test_tier1.TestTier1.test_f07_monster_contact_damage_by_level)
+F-07: Level 3 monster deals 30 damage. ... ok
+test_f07_monster_pathfinding_towards_player (test_tier1.TestTier1.test_f07_monster_pathfinding_towards_player)
+F-07: Visible monster pathfinds towards nearest player on its active rotor tick. ... ok
+test_f07_off_screen_monster_frozen (test_tier1.TestTier1.test_f07_off_screen_monster_frozen)
+F-07: Monsters outside any active player's viewport remain frozen (do not pathfind). ... ok
+test_f07_player_death_removes_tile (test_tier1.TestTier1.test_f07_player_death_removes_tile)
+F-07: Player dying (HP <= 0) clears player tile immediately and plays SOUND_DIE. ... ok
+test_f08_generator_no_spawn_on_fail_tick (test_tier1.TestTier1.test_f08_generator_no_spawn_on_fail_tick)
+F-08: Generator ticks sharing LFSR seed update; third tick fails spawning condition. ... ok
+test_f08_generator_off_screen_frozen (test_tier1.TestTier1.test_f08_generator_off_screen_frozen)
+F-08: Off-screen generators remain frozen (do not tick or spawn monsters). ... ok
+test_f08_generator_spawn_dir_blocked (test_tier1.TestTier1.test_f08_generator_spawn_dir_blocked)
+F-08: If primary spawn direction is blocked, generator spawns in next clockwise direction. ... ok
+test_f08_generator_spawn_level1 (test_tier1.TestTier1.test_f08_generator_spawn_level1)
+F-08: Generator 1 spawns Level 1 monster on its seed tick in adjacent cardinal space. ... ok
+test_f08_generator_spawn_level3 (test_tier1.TestTier1.test_f08_generator_spawn_level3)
+F-08: Generator 3 spawns Level 3 monster. ... ok
+test_f09_camera_centering (test_tier1.TestTier1.test_f09_camera_centering)
+F-09: Viewport centers on local player coordinates (target_x - 10, target_y - 5). ... ok
+test_f09_camera_clamping_left_top (test_tier1.TestTier1.test_f09_camera_clamping_left_top)
+F-09: Viewport camera is clamped to (0, 0) at top-left map boundaries. ... ok
+test_f09_camera_clamping_right_bottom (test_tier1.TestTier1.test_f09_camera_clamping_right_bottom)
+F-09: Viewport camera is clamped to (40, 20) at bottom-right map boundaries (60x30). ... ok
+test_f09_multiplayer_join (test_tier1.TestTier1.test_f09_multiplayer_join)
+F-09: Multiple players can join, spawning at specific offsets around the portal. ... ok
+test_f09_spectator_mode (test_tier1.TestTier1.test_f09_spectator_mode)
+F-09: Spectator Mode: Camera follows the centroid of remaining alive players when local player dies. ... ok
+test_f10_game_over_clears_inventories_multiplayer (test_tier1.TestTier1.test_f10_game_over_clears_inventories_multiplayer)
+F-10: Game Over in multiplayer (all joined players die) resets entire game state. ... ok
+test_f10_game_over_resets_to_level_0 (test_tier1.TestTier1.test_f10_game_over_resets_to_level_0)
+F-10: When all players die, game resets: progress/inventories wiped, reloads level 0. ... ok
+test_f10_manual_level_load (test_tier1.TestTier1.test_f10_manual_level_load)
+F-10: Programmatic load_level loads map, resets coordinates, plays no sound. ... ok
+test_f10_next_level_clamps_at_max (test_tier1.TestTier1.test_f10_next_level_clamps_at_max)
+F-10: Stepping on stairs at maximum level (4) clamps level and reloads level 4. ... ok
+test_f10_stairs_loads_next_level (test_tier1.TestTier1.test_f10_stairs_loads_next_level)
+F-10: Stepping onto TILE_DOWN increments level, warps coordinates to portal, plays SOUND_WARP. ... ok
+test_f01_t2_all_directions_pressed (test_tier2.TestTier2.test_f01_t2_all_directions_pressed)
+F-01: Pressing all 4 directions results in no movement and no cooldown. ... ok
+test_f01_t2_conflicting_cardinal_input (test_tier2.TestTier2.test_f01_t2_conflicting_cardinal_input)
+F-01: Conflicting cardinal inputs (Left+Right or Up+Down) result in no movement and no cooldown. ... ok
+test_f01_t2_move_clamp_bottom (test_tier2.TestTier2.test_f01_t2_move_clamp_bottom)
+F-01: Player moving Down at y=29 clamps coordinate to y=29 when slide directions are blocked. ... ok
+test_f01_t2_move_clamp_left (test_tier2.TestTier2.test_f01_t2_move_clamp_left)
+F-01: Player moving Left at x=0 clamps coordinate to x=0 when slide directions are blocked. ... ok
+test_f01_t2_move_clamp_right (test_tier2.TestTier2.test_f01_t2_move_clamp_right)
+F-01: Player moving Right at x=59 clamps coordinate to x=59 when slide directions are blocked. ... ok
+test_f01_t2_move_clamp_top (test_tier2.TestTier2.test_f01_t2_move_clamp_top)
+F-01: Player moving Up at y=0 clamps coordinate to y=0 when slide directions are blocked. ... ok
+test_f01_t2_move_diagonal_clamp (test_tier2.TestTier2.test_f01_t2_move_diagonal_clamp)
+F-01: Player moving diagonally (Up-Left at 0,0) clamps both coordinates. ... ok
+test_f02_t2_slide_blocked_both_adjacent (test_tier2.TestTier2.test_f02_t2_slide_blocked_both_adjacent)
+F-02: Moving cardinally when target and both adjacent slide offsets are blocked results in no movement but incurs a 4-tick cooldown. ... ok
+test_f02_t2_slide_boundary_clamp_bottom (test_tier2.TestTier2.test_f02_t2_slide_boundary_clamp_bottom)
+F-02: Moving Left (blocked by wall) at bottom boundary (y=29). CCW slide Up-Left is free, CW slide Down-Left is out of bounds. Slides Up-Left successfully. ... ok
+test_f02_t2_slide_boundary_clamp_left (test_tier2.TestTier2.test_f02_t2_slide_boundary_clamp_left)
+F-02: Moving Left (blocked by wall) at left boundary (x=1). Up-Left is blocked, Down-Left is free; slides Down-Left. ... ok
+test_f02_t2_slide_boundary_clamp_right (test_tier2.TestTier2.test_f02_t2_slide_boundary_clamp_right)
+F-02: Moving Right (blocked by wall) at right boundary (x=58). Up-Right is blocked, Down-Right is free; slides Down-Right. ... ok
+test_f02_t2_slide_boundary_clamp_top (test_tier2.TestTier2.test_f02_t2_slide_boundary_clamp_top)
+F-02: Moving Up-Right at top boundary (y=0) when Right is blocked. Top is out of bounds, so player stays stationary. ... ok
+test_f02_t2_slide_clockwise_priority (test_tier2.TestTier2.test_f02_t2_slide_clockwise_priority)
+F-02: When moving cardinal blocked and both adjacent are free, verify search priority order. CCW (-1) is checked before CW (+1), so it slides CCW. ... ok
+test_f03_t2_collect_bomb_wrap (test_tier2.TestTier2.test_f03_t2_collect_bomb_wrap)
+F-03: Player with 255 bombs collects bomb. Bombs count wraps to 0 (unsigned 8-bit). ... ok
+test_f03_t2_collect_food_health_overflow (test_tier2.TestTier2.test_f03_t2_collect_food_health_overflow)
+F-03: Player with 32700 HP collects food (+100). Health overflows to -32736 (signed 16-bit) and player dies. ... ok
+test_f03_t2_collect_item_at_health_0 (test_tier2.TestTier2.test_f03_t2_collect_item_at_health_0)
+F-03: Dead player (health 0) cannot collect items; items remain on the map. ... ok
+test_f03_t2_collect_key_wrap (test_tier2.TestTier2.test_f03_t2_collect_key_wrap)
+F-03: Player with 255 keys collects key. Keys count wraps to 0 (unsigned 8-bit). ... ok
+test_f03_t2_collect_money_score_wrap (test_tier2.TestTier2.test_f03_t2_collect_money_score_wrap)
+F-03: Player with 65500 score collects money (+100). Score wraps to 64 (unsigned 16-bit). ... ok
+test_f04_t2_door_flood_fill_boundary (test_tier2.TestTier2.test_f04_t2_door_flood_fill_boundary)
+F-04: Door network touching map boundaries clears successfully. ... ok
+test_f04_t2_door_flood_fill_circular (test_tier2.TestTier2.test_f04_t2_door_flood_fill_circular)
+F-04: A circular ring of doors is completely cleared by a single unlock without infinite looping. ... ok
+test_f04_t2_door_flood_fill_stack_overflow (test_tier2.TestTier2.test_f04_t2_door_flood_fill_stack_overflow)
+F-04: Contiguous door network of 625 door tiles (25x25 block). Unlocking clears a portion and leaves some doors locked due to FLOOD_STACK_SIZE=64 limit. ... ok
+test_f04_t2_door_unlock_multi_key (test_tier2.TestTier2.test_f04_t2_door_unlock_multi_key)
+F-04: Unlocking a large door network consumes exactly 1 key, even if player has multiple keys. ... ok
+test_f04_t2_door_unlock_no_key_blocked_slide (test_tier2.TestTier2.test_f04_t2_door_unlock_no_key_blocked_slide)
+F-04: Moving into door with 0 keys and blocked slide offsets leaves player stationary. ... ok
+test_f05_t2_arrow_destroy_at_map_boundary (test_tier2.TestTier2.test_f05_t2_arrow_destroy_at_map_boundary)
+F-05: Arrow shot at map edge destroys itself on the boundary immediately. ... ok
+test_f05_t2_arrow_destroy_at_wall (test_tier2.TestTier2.test_f05_t2_arrow_destroy_at_wall)
+F-05: Arrow hitting a wall destroys itself. ... ok
+test_f05_t2_arrow_destructible_outside_viewport (test_tier2.TestTier2.test_f05_t2_arrow_destructible_outside_viewport)
+F-05: Destructibles outside the active 10x20 viewport are immune to arrow damage because arrows destroy themselves at the viewport edge. ... ok
+test_f05_t2_arrow_hit_destructible_types (test_tier2.TestTier2.test_f05_t2_arrow_hit_destructible_types)
+F-05: Shooting at different destructible types has the correct effect. ... ok
+test_f05_t2_shoot_no_active_arrow (test_tier2.TestTier2.test_f05_t2_shoot_no_active_arrow)
+F-05: Pressing fire when an arrow is already active does nothing (cannot shoot multiple arrows). ... ok
+test_f06_t2_smart_bomb_clears_viewport_only (test_tier2.TestTier2.test_f06_t2_smart_bomb_clears_viewport_only)
+F-06: Smart bomb clears all monsters/generators inside player's 10x20 viewport, leaving those outside untouched. ... ok
+test_f06_t2_smart_bomb_no_bombs (test_tier2.TestTier2.test_f06_t2_smart_bomb_no_bombs)
+F-06: Pressing bomb button with 0 bombs does nothing. ... ok
+test_f06_t2_smart_bomb_no_entities (test_tier2.TestTier2.test_f06_t2_smart_bomb_no_entities)
+F-06: Viewport-wide bomb with no monsters/generators inside viewport consumes 1 bomb, plays sound, does not crash. ... ok
+test_f07_t2_monster_damage_scale (test_tier2.TestTier2.test_f07_t2_monster_damage_scale)
+F-07: Monster colliding with player deals 10 * level damage. ... ok
+test_f07_t2_monster_off_screen_freeze (test_tier2.TestTier2.test_f07_t2_monster_off_screen_freeze)
+F-07: Monsters outside any active player's viewport do not move (remain frozen). ... ok
+test_f07_t2_monster_pathfinding_blocked (test_tier2.TestTier2.test_f07_t2_monster_pathfinding_blocked)
+F-07: Monster with completely blocked path to player remains stationary. ... ok
+test_f07_t2_monster_rotor_ticks (test_tier2.TestTier2.test_f07_t2_monster_rotor_ticks)
+F-07: Monsters move only on their designated 16-tick sparse grid rotor ticks. ... ok
+test_f08_t2_generator_off_screen_freeze (test_tier2.TestTier2.test_f08_t2_generator_off_screen_freeze)
+F-08: Generators outside player's viewport are frozen (no spawn, seed does not update). ... ok
+test_f08_t2_generator_spawn_wrap_around_x (test_tier2.TestTier2.test_f08_t2_generator_spawn_wrap_around_x)
+F-08: Generator at x=59 (right edge) spawning Right wraps around to x=0 of the next row. ... ok
+test_f08_t2_generator_spawning_lfsr_determinism (test_tier2.TestTier2.test_f08_t2_generator_spawning_lfsr_determinism)
+F-08: LFSR starts at 0xACE1. Verify exact spawn ticks and directions on a fresh run. ... ok
+test_f08_t2_generator_surrounded (test_tier2.TestTier2.test_f08_t2_generator_surrounded)
+F-08: Generator completely surrounded by walls cannot spawn a monster. ... ok
+test_f09_t2_camera_clamping_corners (test_tier2.TestTier2.test_f09_t2_camera_clamping_corners)
+F-09: Viewport camera clamps correctly to map boundaries at all 4 corners. ... ok
+test_f09_t2_spectator_all_dead (test_tier2.TestTier2.test_f09_t2_spectator_all_dead)
+F-09: When all players are dead, camera defaults to local dead player's coordinate. ... ok
+test_f09_t2_spectator_centroid_averaging (test_tier2.TestTier2.test_f09_t2_spectator_centroid_averaging)
+F-09: When local player is dead, camera centers on the centroid of remaining alive players. ... ok
+test_f09_t2_viewport_hardware_sprite_limit (test_tier2.TestTier2.test_f09_t2_viewport_hardware_sprite_limit)
+F-09: If 50 monsters are in view, exactly 40 hardware sprites are registered. ... ok
+test_f10_t2_level_portal_overlap (test_tier2.TestTier2.test_f10_t2_level_portal_overlap)
+F-10: When starting portal is at (0,0), players overlap at (0,0) without crashing. ... ok
+test_f10_t2_level_transition_state_retention (test_tier2.TestTier2.test_f10_t2_level_transition_state_retention)
+F-10: Health, score, keys, bombs carry over on transition; active arrows are destroyed. ... ok
+test_f01_f05_t3_shoot_while_moving_cardinal (test_tier3.TestTier3.test_f01_f05_t3_shoot_while_moving_cardinal)
+Tier 3: Firing and moving in the same cardinal direction on the same tick causes the arrow (starting at player's old coordinate) to step into player's new coordinate, causing self-collision and self-destruction. ... ok
+test_f01_f05_t3_shoot_while_moving_perpendicular (test_tier3.TestTier3.test_f01_f05_t3_shoot_while_moving_perpendicular)
+Tier 3: Firing Up while moving Right on the same tick; arrow and player move independently and do not collide. ... ok
+test_f03_f04_t3_key_pickup_and_unlock (test_tier3.TestTier3.test_f03_f04_t3_key_pickup_and_unlock)
+Tier 3: Player walks onto a key and immediately unlocks a door in a single motion (two consecutive steps). ... ok
+test_f03_f07_t3_combat_and_food (test_tier3.TestTier3.test_f03_f07_t3_combat_and_food)
+Tier 3: Player collects food (+100 HP) and is hit by a Monster (-10 HP) in the same tick. Net health should be 190 HP. ... ok
+test_f04_f07_t3_monster_follows_through_open_door (test_tier3.TestTier3.test_f04_f07_t3_monster_follows_through_open_door)
+Tier 3: A monster tracks and moves through a door tile that the player unlocked in a previous tick. ... ok
+test_f05_f06_t3_arrow_hits_bomb_tile (test_tier3.TestTier3.test_f05_f06_t3_arrow_hits_bomb_tile)
+Tier 3: Shooting an arrow at a bomb tile triggers a smart bomb viewport clear in the same tick. ... ok
+test_f07_f09_t3_monsters_target_closest_player (test_tier3.TestTier3.test_f07_f09_t3_monsters_target_closest_player)
+Tier 3: In multiplayer, monsters split targeting and track their nearest player by Manhattan distance. ... ok
+test_f08_f10_t3_generator_spawn_during_transition (test_tier3.TestTier3.test_f08_f10_t3_generator_spawn_during_transition)
+Tier 3: A generator is about to spawn on its rotor tick, but player steps onto stairs; the transition aborts the spawn and loads the new level. ... ok
+test_level_0_complete_walkthrough (test_tier4.TestTier4.test_level_0_complete_walkthrough)
+Milestone 4: Detailed E2E Walkthrough of Level 0 with full assertions. ... ok
+test_scenario_a_coop_and_viewport (test_tier4.TestTier4.test_scenario_a_coop_and_viewport)
+Scenario A: Independent movement, camera centering, clamping, and viewport sprite filtering. ... ok
+test_scenario_a_generator_monster_swarm (test_tier4.TestTier4.test_scenario_a_generator_monster_swarm)
+Scenario A: Deterministic generator spawning, arrow combat, degradation, and clearing. ... ok
+test_scenario_b_smart_bomb_room_clear (test_tier4.TestTier4.test_scenario_b_smart_bomb_room_clear)
+Scenario B: Viewport-wide smart bomb room clear with strict boundary protection. ... ok
+test_scenario_b_spectator_and_game_over (test_tier4.TestTier4.test_scenario_b_spectator_and_game_over)
+Scenario B: Spectator mode following remaining players, centroid averaging, and game over state reset. ... ok
+
+======================================================================
+ERROR: test_lifecycle_and_leak_stability_1000_runs (test_infra_stress.TestInfraStress.test_lifecycle_and_leak_stability_1000_runs)
+Instantiate and delete DandyEnv 1000 times to verify no FD, library, temp dir, or memory leaks.
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/usr/local/google/home/jackpal/Developer/Dandy-Dungeon/dandy-gb/tests/test_infra_stress.py", line 81, in test_lifecycle_and_leak_stability_1000_runs
+    env = DandyEnv()
+  File "/usr/local/google/home/jackpal/Developer/Dandy-Dungeon/dandy-gb/tests/dandy_env.py", line 93, in __init__
+    raise e
+  File "/usr/local/google/home/jackpal/Developer/Dandy-Dungeon/dandy-gb/tests/dandy_env.py", line 87, in __init__
+    self._lib = ctypes.CDLL(self._temp_lib_path)
+                ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.13/ctypes/__init__.py", line 361, in __init__
+    self._handle = self._load_library(name, mode, handle, winmode)
+                   ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.13/ctypes/__init__.py", line 401, in _load_library
+    return _dlopen(name, mode)
+OSError: /usr/local/google/home/jackpal/Developer/Dandy-Dungeon/dandy-gb/tests/.temp_envs/dandy_env_u4n05frk/libdandy_test.so: file too short
+
+======================================================================
+ERROR: test_robustness_extreme_inputs_direct (test_infra_stress.TestInfraStress.test_robustness_extreme_inputs_direct)
+Test extreme and boundary inputs directly on DandyEnv python wrapper without crashing.
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/usr/local/google/home/jackpal/Developer/Dandy-Dungeon/dandy-gb/tests/test_infra_stress.py", line 153, in test_robustness_extreme_inputs_direct
+    env = DandyEnv()
+  File "/usr/local/google/home/jackpal/Developer/Dandy-Dungeon/dandy-gb/tests/dandy_env.py", line 93, in __init__
+    raise e
+  File "/usr/local/google/home/jackpal/Developer/Dandy-Dungeon/dandy-gb/tests/dandy_env.py", line 87, in __init__
+    self._lib = ctypes.CDLL(self._temp_lib_path)
+                ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.13/ctypes/__init__.py", line 361, in __init__
+    self._handle = self._load_library(name, mode, handle, winmode)
+                   ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.13/ctypes/__init__.py", line 401, in _load_library
+    return _dlopen(name, mode)
+OSError: /usr/local/google/home/jackpal/Developer/Dandy-Dungeon/dandy-gb/tests/.temp_envs/dandy_env_gwpr3cdf/libdandy_test.so: file too short
+
+----------------------------------------------------------------------
+Ran 117 tests in 3.463s
+
+FAILED (errors=2)
+
+--- Starting Lifecycle and Leak Stability Test (1000 iterations) ---
+Initial state: FDs=15, Mapped Libs=0, Temp Dirs=1, RSS=18892 KB
+Stabilized state (after warmup): FDs=15, Mapped Libs=0, Temp Dirs=1, RSS=18892 KB
+[DandyEnv] ERROR: Temp lib file at /usr/local/google/home/jackpal/Developer/Dandy-Dungeon/dandy-gb/tests/.temp_envs/dandy_env_u4n05frk/libdandy_test.so is 0 bytes! Source was /usr/local/google/home/jackpal/Developer/Dandy-Dungeon/dandy-gb/libdandy_test.so (0 bytes)
+[DandyEnv] CDLL load failed. Temp lib size: 0 bytes.
+
+--- Starting Direct Robustness Tests ---
+[DandyEnv] ERROR: Temp lib file at /usr/local/google/home/jackpal/Developer/Dandy-Dungeon/dandy-gb/tests/.temp_envs/dandy_env_gwpr3cdf/libdandy_test.so is 0 bytes! Source was /usr/local/google/home/jackpal/Developer/Dandy-Dungeon/dandy-gb/libdandy_test.so (0 bytes)
+[DandyEnv] CDLL load failed. Temp lib size: 0 bytes.
+
+--- Starting Level Out-of-Bounds Crash Test (Subprocess) ---
+Level OOB exit code: 0 (expected < 0 due to SIGSEGV)
+Level OOB stdout: SUCCESS
+Level OOB stderr: 
+
+--- Starting Player Y Out-of-Bounds Corruption Test (Subprocess) ---
+Subprocess output:
+BEFORE - Memory at 2314: 99
+AFTER - Memory at 2314: 99
+NO_CORRUPTION
+
+Subprocess stderr:
+
+
+--- Starting Parallel State Isolation Test ---
