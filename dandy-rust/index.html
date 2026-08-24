@@ -1044,10 +1044,10 @@
                 <div class="difficulty-group">
                     <label for="select-difficulty" class="difficulty-label">DIFFICULTY:</label>
                     <select id="select-difficulty" class="input-code difficulty-select">
-                        <option value="0">Trivial (Delay 13)</option>
-                        <option value="1" selected>Easy (Delay 8)</option>
-                        <option value="2">Hard (Delay 5)</option>
-                        <option value="3">Deadly (Delay 2)</option>
+                        <option value="0">Trivial</option>
+                        <option value="1" selected>Easy</option>
+                        <option value="2">Hard</option>
+                        <option value="3">Deadly</option>
                     </select>
                 </div>
             </div>
@@ -2542,6 +2542,9 @@
                                     const stateBytes = bytes.subarray(1);
                                     app.load_state_bytes(stateBytes);
                                 }
+                                if (difficultySelect) {
+                                    difficultySelect.value = app.get_difficulty().toString();
+                                }
                                 isWaitingForHostSync = false;
                                 updateStatus("Connected", "#4caf50");
                                 updateSlotCards();
@@ -2578,6 +2581,17 @@
                                     broadcastPacket(bytes, peerId);
                                 }
                                 updateSlotCards();
+                                wakeLoop();
+                            } else if (pktType === 0x07) { // PKT_SET_DIFFICULTY
+                                const diffVal = bytes[1] & 0x03;
+                                app.set_difficulty(diffVal);
+                                if (difficultySelect) {
+                                    difficultySelect.value = diffVal.toString();
+                                }
+                                // If Host (localPlayerIdx == 0), relay to all other connected peers!
+                                if (localPlayerIdx === 0) {
+                                    broadcastPacket(bytes, peerId);
+                                }
                                 wakeLoop();
                             }
                         }
@@ -3708,6 +3722,11 @@
                 difficultySelect.addEventListener("change", (e) => {
                     const val = parseInt(e.target.value, 10);
                     app.set_difficulty(val);
+                    if (isOnlineMode) {
+                        const diffPkt = new Uint8Array([0x07, val & 0x03]);
+                        broadcastPacket(diffPkt);
+                    }
+                    wakeLoop();
                 });
             }
 
