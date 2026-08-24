@@ -543,10 +543,28 @@
                 <div class="lobby-row">
                     <button id="btn-create-room" class="btn btn-primary">⚡ Host Room</button>
                     <button id="btn-share-link" class="btn" style="display: none;">🔗 Copy Invite Link</button>
+                    <button id="btn-show-qr" class="btn" style="display: none;">📱 QR Code</button>
                     <span style="color: var(--text-secondary); font-size: 0.85rem;">or Join:</span>
                     <input type="text" id="input-room-code" class="input-code" placeholder="ROOM-CODE" maxlength="10">
                     <button id="btn-join-room" class="btn">Connect</button>
                     <button id="btn-manual-sdp-toggle" class="btn" style="font-size: 0.75rem;">Manual SDP ⚙</button>
+                </div>
+
+                <!-- QR Code Modal -->
+                <div id="qr-modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.75); z-index: 1000; align-items: center; justify-content: center;">
+                    <div style="background: var(--surface-color); border: 2px solid var(--accent-color); border-radius: 8px; padding: 20px; text-align: center; max-width: 320px; width: 90%; box-shadow: 0 8px 32px rgba(0,0,0,0.8);">
+                        <h3 style="margin-top: 0; color: var(--accent-color); font-size: 1.1rem;">📱 Scan to Join on Phone</h3>
+                        <div style="background: #ffffff; padding: 12px; border-radius: 6px; display: inline-block; margin: 10px 0;">
+                            <canvas id="qr-canvas" width="180" height="180" style="display: block;"></canvas>
+                        </div>
+                        <p style="font-size: 0.8rem; color: var(--text-secondary); margin: 6px 0 12px 0;">
+                            Scan with your iPhone Camera or Android to join immediately with mobile touch D-Pad controls.
+                        </p>
+                        <div style="display: flex; gap: 8px; justify-content: center;">
+                            <button id="btn-qr-copy-link" class="btn btn-primary" style="font-size: 0.8rem;">📋 Copy Link</button>
+                            <button id="btn-qr-close" class="btn" style="font-size: 0.8rem;">Close</button>
+                        </div>
+                    </div>
                 </div>
 
                 <div id="sdp-modal">
@@ -723,6 +741,268 @@
 
     <!-- WebRTC DataChannels & Rollback Multiplayer Orchestration -->
     <script type="module">
+        // -----------------------------------------------------------------
+        // Micro QR Code Generator (QR Model 2, Byte Mode, EC Level M)
+        // Self-contained, zero-dependency, renders directly to Canvas
+        // -----------------------------------------------------------------
+        const QRCodeGen = (function() {
+            const EXP = new Uint8Array(512), LOG = new Uint8Array(256);
+            for (let i = 0, x = 1; i < 255; i++) {
+                EXP[i] = x; EXP[i + 255] = x;
+                LOG[x] = i;
+                x = (x << 1) ^ ((x & 0x80) ? 0x11d : 0);
+            }
+            const gmult = (a, b) => (a === 0 || b === 0) ? 0 : EXP[LOG[a] + LOG[b]];
+
+            function getPoly(n) {
+                let poly = [1];
+                for (let i = 0; i < n; i++) {
+                    const next = new Array(poly.length + 1).fill(0);
+                    for (let j = 0; j < poly.length; j++) {
+                        next[j] ^= gmult(poly[j], EXP[i]);
+                        next[j + 1] ^= poly[j];
+                    }
+                    poly = next;
+                }
+                return poly;
+            }
+
+            function calculateEC(data, numEC) {
+                const gen = getPoly(numEC);
+                const res = new Uint8Array(numEC);
+                for (let i = 0; i < data.length; i++) {
+                    const factor = data[i] ^ res[0];
+                    for (let j = 0; j < numEC - 1; j++) {
+                        res[j] = res[j + 1] ^ gmult(gen[j + 1], factor);
+                    }
+                    res[numEC - 1] = gmult(gen[numEC], factor);
+                }
+                return res;
+            }
+
+            const SPECS = [
+                null,
+                [1, 21, 26, 10, 10, 1, 16, 0, 0],
+                [2, 25, 44, 16, 16, 1, 28, 0, 0],
+                [3, 29, 70, 26, 26, 1, 44, 0, 0],
+                [4, 33, 100, 36, 18, 2, 32, 0, 0],
+                [5, 37, 134, 48, 24, 2, 43, 0, 0],
+                [6, 41, 172, 64, 16, 4, 27, 0, 0],
+                [7, 45, 196, 72, 18, 4, 31, 0, 0],
+                [8, 49, 242, 88, 22, 2, 38, 2, 39],
+                [9, 53, 292, 110, 22, 3, 36, 2, 37],
+                [10, 57, 346, 130, 26, 4, 43, 1, 44]
+            ];
+
+            const ALIGN = [
+                [], [], [6, 18], [6, 22], [6, 26], [6, 30],
+                [6, 34], [6, 22, 38], [6, 24, 42], [6, 26, 46], [6, 28, 50]
+            ];
+
+            function encode(text) {
+                const textBytes = [];
+                for (let i = 0; i < text.length; i++) {
+                    let c = text.charCodeAt(i);
+                    if (c < 128) textBytes.push(c);
+                    else if (c < 2048) textBytes.push(192 | (c >> 6), 128 | (c & 63));
+                    else textBytes.push(224 | (c >> 12), 128 | ((c >> 6) & 63), 128 | (c & 63));
+                }
+
+                let ver = 1;
+                while (ver <= 10) {
+                    const spec = SPECS[ver];
+                    const dataCap = spec[2] - spec[3];
+                    const overhead = ver < 10 ? 12 : 20;
+                    const maxDataBytes = Math.floor((dataCap * 8 - overhead) / 8);
+                    if (textBytes.length <= maxDataBytes) break;
+                    ver++;
+                }
+                if (ver > 10) ver = 10;
+
+                const spec = SPECS[ver];
+                const dataCap = spec[2] - spec[3];
+                const bits = [];
+                function putBits(val, len) {
+                    for (let i = len - 1; i >= 0; i--) bits.push((val >> i) & 1);
+                }
+
+                putBits(0b0100, 4);
+                putBits(textBytes.length, ver < 10 ? 8 : 16);
+                for (let b of textBytes) putBits(b, 8);
+
+                const totalDataBits = dataCap * 8;
+                const termLen = Math.min(4, totalDataBits - bits.length);
+                putBits(0, termLen);
+                while (bits.length % 8 !== 0) bits.push(0);
+
+                const dataBytes = [];
+                for (let i = 0; i < bits.length; i += 8) {
+                    let b = 0;
+                    for (let j = 0; j < 8; j++) b = (b << 1) | bits[i + j];
+                    dataBytes.push(b);
+                }
+                let pad = 0;
+                while (dataBytes.length < dataCap) {
+                    dataBytes.push(pad % 2 === 0 ? 0xEC : 0x11);
+                    pad++;
+                }
+
+                const numB1 = spec[5], lenB1 = spec[6], numB2 = spec[7], lenB2 = spec[8];
+                const ecLen = spec[4];
+                const dataBlocks = [], ecBlocks = [];
+
+                let offset = 0;
+                for (let b = 0; b < numB1; b++) {
+                    const block = dataBytes.slice(offset, offset + lenB1);
+                    dataBlocks.push(block);
+                    ecBlocks.push(calculateEC(block, ecLen));
+                    offset += lenB1;
+                }
+                for (let b = 0; b < numB2; b++) {
+                    const block = dataBytes.slice(offset, offset + lenB2);
+                    dataBlocks.push(block);
+                    ecBlocks.push(calculateEC(block, ecLen));
+                    offset += lenB2;
+                }
+
+                const finalCodewords = [];
+                const maxLen = Math.max(lenB1, lenB2 || 0);
+                for (let i = 0; i < maxLen; i++) {
+                    for (let b = 0; b < dataBlocks.length; b++) {
+                        if (i < dataBlocks[b].length) finalCodewords.push(dataBlocks[b][i]);
+                    }
+                }
+                for (let i = 0; i < ecLen; i++) {
+                    for (let b = 0; b < ecBlocks.length; b++) {
+                        finalCodewords.push(ecBlocks[b][i]);
+                    }
+                }
+
+                const size = spec[1];
+                const matrix = Array.from({ length: size }, () => new Int8Array(size).fill(-1));
+
+                function setFinder(r, c) {
+                    for (let dr = -1; dr <= 7; dr++) {
+                        for (let dc = -1; dc <= 7; dc++) {
+                            const row = r + dr, col = c + dc;
+                            if (row < 0 || row >= size || col < 0 || col >= size) continue;
+                            if (dr === -1 || dr === 7 || dc === -1 || dc === 7) {
+                                matrix[row][col] = 0;
+                            } else if (dr === 0 || dr === 6 || dc === 0 || dc === 6 || (dr >= 2 && dr <= 4 && dc >= 2 && dc <= 4)) {
+                                matrix[row][col] = 1;
+                            } else {
+                                matrix[row][col] = 0;
+                            }
+                        }
+                    }
+                }
+
+                setFinder(0, 0);
+                setFinder(0, size - 7);
+                setFinder(size - 7, 0);
+
+                for (let i = 8; i < size - 8; i++) {
+                    matrix[6][i] = (i % 2 === 0) ? 1 : 0;
+                    matrix[i][6] = (i % 2 === 0) ? 1 : 0;
+                }
+
+                const alignCoords = ALIGN[ver];
+                for (let r of alignCoords) {
+                    for (let c of alignCoords) {
+                        if (matrix[r][c] !== -1) continue;
+                        for (let dr = -2; dr <= 2; dr++) {
+                            for (let dc = -2; dc <= 2; dc++) {
+                                if (Math.abs(dr) === 2 || Math.abs(dc) === 2 || (dr === 0 && dc === 0)) {
+                                    matrix[r + dr][c + dc] = 1;
+                                } else {
+                                    matrix[r + dr][c + dc] = 0;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                matrix[4 * ver + 9][8] = 1;
+
+                for (let i = 0; i < 9; i++) {
+                    if (matrix[8][i] === -1) matrix[8][i] = 0;
+                    if (matrix[i][8] === -1) matrix[i][8] = 0;
+                }
+                for (let i = 0; i < 8; i++) {
+                    if (matrix[8][size - 1 - i] === -1) matrix[8][size - 1 - i] = 0;
+                    if (matrix[size - 1 - i][8] === -1) matrix[size - 1 - i][8] = 0;
+                }
+
+                let bitIdx = 0;
+                const totalBits = finalCodewords.length * 8;
+                let right = size - 1;
+                let upward = true;
+
+                while (right > 0) {
+                    if (right === 6) right--;
+                    for (let i = 0; i < size; i++) {
+                        const r = upward ? (size - 1 - i) : i;
+                        for (let c = right; c >= right - 1; c--) {
+                            if (matrix[r][c] === -1) {
+                                let bit = 0;
+                                if (bitIdx < totalBits) {
+                                    const byteVal = finalCodewords[Math.floor(bitIdx / 8)];
+                                    bit = (byteVal >> (7 - (bitIdx % 8))) & 1;
+                                    bitIdx++;
+                                }
+                                if ((r + c) % 2 === 0) bit ^= 1;
+                                matrix[r][c] = bit;
+                            }
+                        }
+                    }
+                    right -= 2;
+                    upward = !upward;
+                }
+
+                const FORMAT_INFO = 0b101010000010010;
+                for (let i = 0; i < 15; i++) {
+                    const bit = (FORMAT_INFO >> (14 - i)) & 1;
+                    if (i < 6) matrix[8][i] = bit;
+                    else if (i === 6) matrix[8][7] = bit;
+                    else if (i === 7) matrix[8][8] = bit;
+                    else if (i === 8) matrix[7][8] = bit;
+                    else matrix[14 - i][8] = bit;
+
+                    if (i < 8) matrix[size - 1 - i][8] = bit;
+                    else matrix[8][size - 15 + i] = bit;
+                }
+
+                return matrix;
+            }
+
+            function drawToCanvas(text, canvas) {
+                if (!canvas) return;
+                const matrix = encode(text);
+                const size = matrix.length;
+                const quietZone = 2;
+                const totalModules = size + quietZone * 2;
+                const scale = Math.max(2, Math.floor(canvas.width / totalModules));
+                const renderSize = totalModules * scale;
+                canvas.width = renderSize;
+                canvas.height = renderSize;
+
+                const ctx = canvas.getContext("2d");
+                ctx.fillStyle = "#ffffff";
+                ctx.fillRect(0, 0, renderSize, renderSize);
+
+                ctx.fillStyle = "#000000";
+                for (let r = 0; r < size; r++) {
+                    for (let c = 0; c < size; c++) {
+                        if (matrix[r][c] === 1) {
+                            ctx.fillRect((c + quietZone) * scale, (r + quietZone) * scale, scale, scale);
+                        }
+                    }
+                }
+            }
+
+            return { encode, drawToCanvas };
+        })();
+
         window.addEventListener("TrunkApplicationStarted", (event) => {
             const wasm = event.detail.wasm;
             const { DandyApp, PlayerAction } = window.wasmBindings;
@@ -1489,11 +1769,49 @@
                 tabLocal.classList.add("active");
                 tabOnline.classList.remove("active");
                 onlinePanel.style.display = "none";
+                btnShareLink.style.display = "none";
+                btnShowQr.style.display = "none";
                 document.getElementById("net-stat-role").textContent = "LOCAL";
                 document.getElementById("net-stat-status").textContent = "Ready";
                 document.getElementById("net-stat-room").textContent = "NONE";
                 updateSlotCards();
                 wakeLoop();
+            });
+
+            const btnShowQr = document.getElementById("btn-show-qr");
+            const qrModal = document.getElementById("qr-modal");
+            const qrCanvas = document.getElementById("qr-canvas");
+            const btnQrClose = document.getElementById("btn-qr-close");
+            const btnQrCopyLink = document.getElementById("btn-qr-copy-link");
+
+            function updateQrCode() {
+                const url = window.location.href;
+                QRCodeGen.drawToCanvas(url, qrCanvas);
+            }
+
+            btnShowQr.addEventListener("click", () => {
+                updateQrCode();
+                qrModal.style.display = "flex";
+            });
+
+            btnQrClose.addEventListener("click", () => {
+                qrModal.style.display = "none";
+            });
+
+            qrModal.addEventListener("click", (e) => {
+                if (e.target === qrModal) {
+                    qrModal.style.display = "none";
+                }
+            });
+
+            btnQrCopyLink.addEventListener("click", () => {
+                const url = window.location.href;
+                navigator.clipboard.writeText(url).then(() => {
+                    btnQrCopyLink.textContent = "✓ Copied!";
+                    setTimeout(() => {
+                        btnQrCopyLink.textContent = "📋 Copy Link";
+                    }, 2000);
+                });
             });
 
             tabOnline.addEventListener("click", () => {
@@ -1523,7 +1841,9 @@
                 connectSignaling(randomId, () => {
                     btnShareLink.style.display = "inline-flex";
                     btnShareLink.textContent = "📋 Copy Link (" + randomId + ")";
+                    btnShowQr.style.display = "inline-flex";
                     window.location.hash = "room=" + randomId;
+                    updateQrCode();
                 });
             });
 
