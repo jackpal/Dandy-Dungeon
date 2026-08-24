@@ -1,6 +1,7 @@
 [build]
 target = "index.html"
 dist = "dist"
+public_url = "./"
 
 # Post-build: shrink the module with wasm-opt -Oz.
 # IMPORTANT: during post_build Trunk's freshly built output lives in
