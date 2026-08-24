@@ -491,7 +491,7 @@ impl Game {
         ];
 
         for player_slot in new_players.iter_mut().take(num_players.min(MAX_PLAYERS)) {
-            if offset + 25 > bytes.len() {
+            if offset + 29 > bytes.len() {
                 return false;
             }
 
@@ -1911,6 +1911,26 @@ mod tests {
 
         // Ghost at (1, 1) should have been scanned and moved towards player at (1, 3)
         assert_ne!(game.map.get(1, 1), GHOST, "Ghost at odd coordinate (1, 1) must be scanned and stepped");
+    }
+
+    #[test]
+    fn test_load_state_rejects_truncated_player_block() {
+        let mut game = Game::new();
+        game.load();
+        let valid_bytes = game.save_state_bytes();
+        assert!(game.load_state_bytes(&valid_bytes), "Valid bytes must load successfully");
+
+        // The header consumes 38 bytes (offset = 38).
+        // The first player block starts at offset 38 and requires 29 fixed bytes (up to offset 67).
+        // Test all truncated lengths between offset and offset + 28 (i.e. length 38..66):
+        for len in 38..67 {
+            let truncated = &valid_bytes[..len];
+            assert!(
+                !game.load_state_bytes(truncated),
+                "Truncated state bytes of length {} must be rejected cleanly without panic",
+                len
+            );
+        }
     }
 }
 

@@ -3261,12 +3261,18 @@
                                     broadcastPacket(bytes, peerId);
                                 }
                             } else if (pktType === 0x02) { // PKT_PING
-                                const pong = new Uint8Array([0x03, bytes[1], bytes[2], bytes[3], bytes[4]]);
-                                try { dc.send(pong); } catch (_) {}
+                                if (bytes.length >= 5) {
+                                    const pong = new Uint8Array([0x03, bytes[1], bytes[2], bytes[3], bytes[4]]);
+                                    try { dc.send(pong); } catch (_) {}
+                                }
                             } else if (pktType === 0x03) { // PKT_PONG
-                                const sentTime = new DataView(bytes.buffer, 1).getUint32(0, false);
-                                measuredPing = Math.max(1, Math.round(performance.now() - sentTime));
-                                document.getElementById("net-stat-ping").textContent = `${measuredPing} ms`;
+                                if (bytes.length >= 5) {
+                                    const dv = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+                                    const sentTime = dv.getUint32(1, false);
+                                    measuredPing = Math.max(1, Math.round(performance.now() - sentTime));
+                                    const pingEl = document.getElementById("net-stat-ping");
+                                    if (pingEl) pingEl.textContent = `${measuredPing} ms`;
+                                }
                             } else if (pktType === 0x04) { // PKT_STATE_SYNC
                                 if (bytes.length >= 5) {
                                     const dv = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
