@@ -977,8 +977,8 @@
     </style>
     
 <script type="module">
-import init, * as bindings from './dandy-rust-e04ab2bd1e552d48.js';
-const wasm = await init({ module_or_path: './dandy-rust-e04ab2bd1e552d48_bg.wasm' });
+import init, * as bindings from './dandy-rust-e422d4253883435c.js';
+const wasm = await init({ module_or_path: './dandy-rust-e422d4253883435c_bg.wasm' });
 
 
 window.wasmBindings = bindings;
@@ -987,7 +987,7 @@ window.wasmBindings = bindings;
 dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
 
 </script>
-<link rel="modulepreload" href="./dandy-rust-e04ab2bd1e552d48.js" crossorigin="anonymous" integrity="sha384-CdzftEjHA0rI1Y2R2HRXSgZZ+H5CsQAyrGzbo614Ix/P5KZ4JszJEkamYEiwN+5F"><link rel="preload" href="./dandy-rust-e04ab2bd1e552d48_bg.wasm" crossorigin="anonymous" integrity="sha384-XgalyJLrFjxBmIXf5Y0Sg3386SVZt6Z0qz6a7NrNjPwdEG03tGFRtay66RHnK2N+" as="fetch" type="application/wasm"></head>
+<link rel="modulepreload" href="./dandy-rust-e422d4253883435c.js" crossorigin="anonymous" integrity="sha384-CdzftEjHA0rI1Y2R2HRXSgZZ+H5CsQAyrGzbo614Ix/P5KZ4JszJEkamYEiwN+5F"><link rel="preload" href="./dandy-rust-e422d4253883435c_bg.wasm" crossorigin="anonymous" integrity="sha384-1GFkNTK26isqe0auuq85vOp/fRI3rOCNKcEUa3InOxwVJfZO0RlQYrSpgLr+jYfz" as="fetch" type="application/wasm"></head>
 <body>
     <div class="container">
         <header>
@@ -1931,13 +1931,17 @@ dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
                 1: 70,  // SOUND_HIT_PLAYER (Friendly fire / damage)
                 6: 65,  // SOUND_EAT_FOOD (Food restore)
                 4: 60,  // SOUND_OPEN_DOOR (Door unlocked)
-                16: 55, // SOUND_HIT_GENERATOR (Spawner hit / spawn)
+                16: 55, // SOUND_SPAWNING_1 (Spawner spawn 1)
+                17: 55, // SOUND_SPAWNING_2 (Spawner spawn 2)
+                18: 55, // SOUND_SPAWNING_3 (Spawner spawn 3)
+                19: 55, // SOUND_SPAWNING_4 (Spawner spawn 4)
                 11: 50, // SOUND_HIT_MONSTER_3 (Ghost tier 3)
                 10: 48, // SOUND_HIT_MONSTER_2 (Ghost tier 2)
                 9: 45,  // SOUND_HIT_MONSTER_1 (Ghost tier 1)
                 7: 40,  // SOUND_PICK_MONEY (Money treasure)
                 5: 35,  // SOUND_PICKUP_OBJECT (Key / Bomb pickup)
-                8: 20,  // SOUND_HIT_WALL (Wall thud)
+                20: 30, // SOUND_TO_HAND (To hand)
+                8: 20,  // SOUND_HAVE_NONE / SOUND_HIT_WALL (Wall thud / Have none)
                 2: 15,  // SOUND_SHOOT (Shoot arrow)
             };
 
@@ -1945,8 +1949,8 @@ dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
             const SOUND_PREFERRED_CHANNELS = {
                 3: 3, 13: 3, 14: 3, 15: 3, // Channel 3: Explosions, Death, Warps
                 12: 2,                     // Channel 2: Monster Bite
-                1: 1, 9: 1, 10: 1, 11: 1, 16: 1, // Channel 1: Impacts, Monsters, Spawners
-                2: 0, 4: 0, 5: 0, 6: 0, 7: 0, 8: 0  // Channel 0: Ambient, Items, Shooting, Doors, Walls
+                1: 1, 9: 1, 10: 1, 11: 1, 16: 1, 17: 1, 18: 1, 19: 1, // Channel 1: Impacts, Monsters, Spawners
+                2: 0, 4: 0, 5: 0, 6: 0, 7: 0, 8: 0, 20: 0  // Channel 0: Ambient, Items, Shooting, Doors, Walls, To Hand
             };
 
             const SOUND_DURATIONS_SEC = {
@@ -1958,13 +1962,17 @@ dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
                 1: 0.06, // Hit Player (60ms)
                 6: 0.50, // Eat Food (500ms)
                 4: 0.17, // Open Door (170ms)
-                16: 0.10, // Hit Generator (100ms)
+                16: 0.083, // Spawning 1 (83ms)
+                17: 0.083, // Spawning 2 (83ms)
+                18: 0.083, // Spawning 3 (83ms)
+                19: 0.083, // Spawning 4 (83ms)
                 11: 0.16, // Hit Monster 3 (160ms)
                 10: 0.16, // Hit Monster 2 (160ms)
                 9: 0.16,  // Hit Monster 1 (160ms)
                 7: 0.25, // Pick Money (250ms)
                 5: 0.17, // Pickup Object (170ms)
-                8: 0.08, // Hit Wall (80ms)
+                20: 0.50, // To Hand (500ms)
+                8: 0.08, // Have None / Hit Wall (80ms)
                 2: 0.083,// Shoot (83ms)
             };
 
@@ -2315,6 +2323,16 @@ dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
                 });
             }
 
+            function playToHandOnVoice(voice) {
+                playToneOnVoice(voice, 262, 0.16, "square", 0.20);
+                const timer = setTimeout(() => {
+                    if (voice.activeSoundId === 20) {
+                        playToneOnVoice(voice, 347, 0.33, "square", 0.20);
+                    }
+                }, 160);
+                voice.cleanupFns.push(() => clearTimeout(timer));
+            }
+
             function playSound(id) {
                 if (isMuted) return;
                 initAudio();
@@ -2340,7 +2358,7 @@ dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
                     case 5: playPickupOnVoice(voice); break;                          // Pickup Object
                     case 6: playEatFoodOnVoice(voice); break;                         // Eat Food
                     case 7: playPickMoneyOnVoice(voice); break;                       // Pick Money
-                    case 8: playToneOnVoice(voice, 316, 0.075, "square", 0.18); break;// Hit Wall
+                    case 8: playToneOnVoice(voice, 316, 0.075, "square", 0.18); break;// Have None / Hit Wall
                     case 9: playToneOnVoice(voice, 165, 0.16, "square", 0.22); break; // Hit Monster Tier 1
                     case 10: playToneOnVoice(voice, 147, 0.16, "square", 0.22); break;// Hit Monster Tier 2
                     case 11: playToneOnVoice(voice, 131, 0.16, "square", 0.22); break;// Hit Monster Tier 3
@@ -2348,7 +2366,11 @@ dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
                     case 13: playDeadPlayerOnVoice(voice); break;                      // Dead Player
                     case 14: playWarpOutOnVoice(voice); break;                         // Warp Out
                     case 15: playWarpInOnVoice(voice); break;                          // Warp In
-                    case 16: playToneOnVoice(voice, 492, 0.09, "square", 0.20); break;// Hit Generator
+                    case 16: playToneOnVoice(voice, 492, 0.083, "square", 0.20); break;// Spawning 1 (AUDF 64)
+                    case 17: playToneOnVoice(voice, 390, 0.083, "square", 0.20); break;// Spawning 2 (AUDF 81)
+                    case 18: playToneOnVoice(voice, 329, 0.083, "square", 0.20); break;// Spawning 3 (AUDF 96)
+                    case 19: playToneOnVoice(voice, 262, 0.083, "square", 0.20); break;// Spawning 4 (AUDF 121)
+                    case 20: playToHandOnVoice(voice); break;                          // To Hand
                 }
             }
 
