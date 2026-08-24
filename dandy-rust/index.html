@@ -480,11 +480,134 @@
             border: 1px solid #333;
             border-radius: 6px;
             padding: 8px;
+            transition: border-color 0.2s, background 0.2s;
         }
 
-        .control-card h3 {
-            margin: 0 0 6px 0;
+        .control-card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            flex-wrap: wrap;
+            gap: 4px;
+        }
+
+        .control-card-header h3 {
+            margin: 0;
             font-size: 0.85rem;
+        }
+
+        .control-status-badge {
+            font-size: 0.68rem;
+            font-weight: 700;
+            padding: 2px 6px;
+            border-radius: 3px;
+            letter-spacing: 0.03em;
+            text-transform: uppercase;
+        }
+
+        .badge-primary-local {
+            background: rgba(76, 175, 80, 0.2);
+            color: #81c784;
+            border: 1px solid rgba(76, 175, 80, 0.4);
+        }
+
+        .badge-extra-local {
+            background: rgba(33, 150, 243, 0.2);
+            color: #64b5f6;
+            border: 1px solid rgba(33, 150, 243, 0.4);
+        }
+
+        .badge-remote {
+            background: rgba(156, 39, 176, 0.2);
+            color: #ba68c8;
+            border: 1px solid rgba(156, 39, 176, 0.4);
+        }
+
+        .badge-open {
+            background: rgba(255, 167, 38, 0.15);
+            color: #ffb74d;
+            border: 1px solid rgba(255, 167, 38, 0.35);
+        }
+
+        .control-card.is-remote {
+            opacity: 0.8;
+            border-color: #382c44;
+            background: #15131a;
+        }
+
+        .control-card.is-open {
+            border-style: dashed;
+            border-color: #444;
+            background: #141414;
+        }
+
+        .control-card.is-primary {
+            border-color: rgba(76, 175, 80, 0.5);
+            background: #151a15;
+        }
+
+        .control-remote-desc {
+            font-size: 0.78rem;
+            color: var(--text-secondary);
+            line-height: 1.4;
+            padding: 6px 0;
+        }
+
+        .gamepad-status-bar {
+            background: #181818;
+            border: 1px solid #333;
+            border-radius: 6px;
+            padding: 8px 12px;
+            margin-bottom: 0.75rem;
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            color: var(--text-secondary);
+            transition: all 0.2s ease;
+        }
+
+        .gamepad-status-bar.active {
+            border-color: #2e7d32;
+            background: #142416;
+            color: #a5d6a7;
+        }
+
+        .gamepad-status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 500;
+        }
+
+        .gamepad-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            background: #1b5e20;
+            color: #c8e6c9;
+            border: 1px solid #2e7d32;
+            border-radius: 4px;
+            padding: 2px 6px;
+            font-size: 0.68rem;
+            font-weight: bold;
+            letter-spacing: 0.02em;
+        }
+
+        .gamepad-info {
+            margin-top: 6px;
+            padding-top: 6px;
+            border-top: 1px dashed #333;
+        }
+
+        .gamepad-info-title {
+            font-size: 0.72rem;
+            color: var(--text-secondary);
+            font-weight: 600;
+            margin-bottom: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
         }
 
         .control-item {
@@ -705,9 +828,18 @@
 
         <section id="controls">
             <h2>4-Player Local & Remote Controls</h2>
+            <div id="gamepad-status-bar" class="gamepad-status-bar">
+                <div class="gamepad-status-indicator">
+                    <span id="gamepad-status-icon">🎮</span>
+                    <span id="gamepad-status-text">No gamepads detected — connect a USB or Bluetooth controller</span>
+                </div>
+            </div>
             <div class="controls-grid">
-                <div class="control-card">
-                    <h3 style="color: var(--p1-color);">P1: Ruby (Red)</h3>
+                <div class="control-card" id="control-card-p1">
+                    <div class="control-card-header">
+                        <h3 style="color: var(--p1-color);">P1: Ruby (Red)</h3>
+                        <span id="gamepad-badge-p1" class="gamepad-badge" style="display: none;">🎮 Gamepad 1 Active</span>
+                    </div>
                     <div class="control-item">
                         <div class="keys"><kbd>←</kbd><kbd>↑</kbd><kbd>↓</kbd><kbd>→</kbd></div>
                         <span class="control-label">Move</span>
@@ -720,10 +852,28 @@
                         <div class="keys"><kbd>B</kbd></div>
                         <span class="control-label">Smart Bomb</span>
                     </div>
+                    <div class="gamepad-info">
+                        <div class="gamepad-info-title">🎮 Controller Mapping:</div>
+                        <div class="control-item">
+                            <div class="keys"><kbd>D-Pad</kbd><kbd>L-Stick</kbd></div>
+                            <span class="control-label">Move (8-way)</span>
+                        </div>
+                        <div class="control-item">
+                            <div class="keys"><kbd>A</kbd><kbd>RT</kbd></div>
+                            <span class="control-label">Fire Arrow</span>
+                        </div>
+                        <div class="control-item">
+                            <div class="keys"><kbd>B</kbd><kbd>X</kbd></div>
+                            <span class="control-label">Smart Bomb</span>
+                        </div>
+                    </div>
                 </div>
 
-                <div class="control-card">
-                    <h3 style="color: var(--p2-color);">P2: Sapphire (Blue)</h3>
+                <div class="control-card" id="control-card-p2">
+                    <div class="control-card-header">
+                        <h3 style="color: var(--p2-color);">P2: Sapphire (Blue)</h3>
+                        <span id="gamepad-badge-p2" class="gamepad-badge" style="display: none;">🎮 Gamepad 2 Active</span>
+                    </div>
                     <div class="control-item">
                         <div class="keys"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></div>
                         <span class="control-label">Move</span>
@@ -736,10 +886,28 @@
                         <div class="keys"><kbd>G</kbd></div>
                         <span class="control-label">Smart Bomb</span>
                     </div>
+                    <div class="gamepad-info">
+                        <div class="gamepad-info-title">🎮 Controller Mapping:</div>
+                        <div class="control-item">
+                            <div class="keys"><kbd>D-Pad</kbd><kbd>L-Stick</kbd></div>
+                            <span class="control-label">Move (8-way)</span>
+                        </div>
+                        <div class="control-item">
+                            <div class="keys"><kbd>A</kbd><kbd>RT</kbd></div>
+                            <span class="control-label">Fire Arrow</span>
+                        </div>
+                        <div class="control-item">
+                            <div class="keys"><kbd>B</kbd><kbd>X</kbd></div>
+                            <span class="control-label">Smart Bomb</span>
+                        </div>
+                    </div>
                 </div>
 
-                <div class="control-card">
-                    <h3 style="color: var(--p3-color);">P3: Topaz (Yellow)</h3>
+                <div class="control-card" id="control-card-p3">
+                    <div class="control-card-header">
+                        <h3 style="color: var(--p3-color);">P3: Topaz (Yellow)</h3>
+                        <span id="gamepad-badge-p3" class="gamepad-badge" style="display: none;">🎮 Gamepad 3 Active</span>
+                    </div>
                     <div class="control-item">
                         <div class="keys"><kbd>I</kbd><kbd>J</kbd><kbd>K</kbd><kbd>L</kbd></div>
                         <span class="control-label">Move</span>
@@ -752,10 +920,28 @@
                         <div class="keys"><kbd>P</kbd></div>
                         <span class="control-label">Smart Bomb</span>
                     </div>
+                    <div class="gamepad-info">
+                        <div class="gamepad-info-title">🎮 Controller Mapping:</div>
+                        <div class="control-item">
+                            <div class="keys"><kbd>D-Pad</kbd><kbd>L-Stick</kbd></div>
+                            <span class="control-label">Move (8-way)</span>
+                        </div>
+                        <div class="control-item">
+                            <div class="keys"><kbd>A</kbd><kbd>RT</kbd></div>
+                            <span class="control-label">Fire Arrow</span>
+                        </div>
+                        <div class="control-item">
+                            <div class="keys"><kbd>B</kbd><kbd>X</kbd></div>
+                            <span class="control-label">Smart Bomb</span>
+                        </div>
+                    </div>
                 </div>
 
-                <div class="control-card">
-                    <h3 style="color: var(--p4-color);">P4: Emerald (Green)</h3>
+                <div class="control-card" id="control-card-p4">
+                    <div class="control-card-header">
+                        <h3 style="color: var(--p4-color);">P4: Emerald (Green)</h3>
+                        <span id="gamepad-badge-p4" class="gamepad-badge" style="display: none;">🎮 Gamepad 4 Active</span>
+                    </div>
                     <div class="control-item">
                         <div class="keys"><kbd>Num8</kbd><kbd>4</kbd><kbd>5</kbd><kbd>6</kbd></div>
                         <span class="control-label">Move</span>
@@ -767,6 +953,21 @@
                     <div class="control-item">
                         <div class="keys"><kbd>Num.</kbd></div>
                         <span class="control-label">Smart Bomb</span>
+                    </div>
+                    <div class="gamepad-info">
+                        <div class="gamepad-info-title">🎮 Controller Mapping:</div>
+                        <div class="control-item">
+                            <div class="keys"><kbd>D-Pad</kbd><kbd>L-Stick</kbd></div>
+                            <span class="control-label">Move (8-way)</span>
+                        </div>
+                        <div class="control-item">
+                            <div class="keys"><kbd>A</kbd><kbd>RT</kbd></div>
+                            <span class="control-label">Fire Arrow</span>
+                        </div>
+                        <div class="control-item">
+                            <div class="keys"><kbd>B</kbd><kbd>X</kbd></div>
+                            <span class="control-label">Smart Bomb</span>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -1293,6 +1494,7 @@
             const app = new DandyApp();
             let isOnlineMode = false;
             let localPlayerIdx = 0; // Host is 0 (Ruby), Joiners are 1, 2, 3
+            let localPlayerOrder = [0]; // Local player slots controlled by this client in order of join
             let isWaitingForHostSync = false;
             let currentRoomId = null;
             let sleeping = false;
@@ -1346,82 +1548,145 @@
                 }
             }
 
+            let keyboardInputMasks = [0, 0, 0, 0];
+            let gamepadInputMasks = [0, 0, 0, 0];
+            let touchInputMask = 0;
+
             // -----------------------------------------------------------------
-            // Keyboard Control Mappings (All 4 Players)
+            // Dynamic Control Schemes & Relative Key Mappings
             // -----------------------------------------------------------------
-            const controlRegistry = {
-                // P1: Ruby (Arrows, Space, B)
-                "ArrowUp": { player: 0, action: PlayerAction.Up },
-                "ArrowDown": { player: 0, action: PlayerAction.Down },
-                "ArrowLeft": { player: 0, action: PlayerAction.Left },
-                "ArrowRight": { player: 0, action: PlayerAction.Right },
-                " ": { player: 0, action: PlayerAction.Shoot },
-                "b": { player: 0, action: PlayerAction.Bomb },
-                "B": { player: 0, action: PlayerAction.Bomb },
+            const CONTROL_SCHEMES = [
+                {
+                    name: "Arrows",
+                    keys: {
+                        "ArrowUp": PlayerAction.Up,
+                        "ArrowDown": PlayerAction.Down,
+                        "ArrowLeft": PlayerAction.Left,
+                        "ArrowRight": PlayerAction.Right,
+                        " ": PlayerAction.Shoot,
+                        "b": PlayerAction.Bomb,
+                        "B": PlayerAction.Bomb,
+                    },
+                    labels: {
+                        move: ["←", "↑", "↓", "→"],
+                        shoot: ["Space"],
+                        bomb: ["B"],
+                        shortHint: "Arrows/Space/B"
+                    }
+                },
+                {
+                    name: "WASD",
+                    keys: {
+                        "w": PlayerAction.Up,
+                        "W": PlayerAction.Up,
+                        "s": PlayerAction.Down,
+                        "S": PlayerAction.Down,
+                        "a": PlayerAction.Left,
+                        "A": PlayerAction.Left,
+                        "d": PlayerAction.Right,
+                        "D": PlayerAction.Right,
+                        "f": PlayerAction.Shoot,
+                        "F": PlayerAction.Shoot,
+                        "g": PlayerAction.Bomb,
+                        "G": PlayerAction.Bomb,
+                    },
+                    labels: {
+                        move: ["W", "A", "S", "D"],
+                        shoot: ["F"],
+                        bomb: ["G"],
+                        shortHint: "WASD/F/G"
+                    }
+                },
+                {
+                    name: "IJKL",
+                    keys: {
+                        "i": PlayerAction.Up,
+                        "I": PlayerAction.Up,
+                        "k": PlayerAction.Down,
+                        "K": PlayerAction.Down,
+                        "j": PlayerAction.Left,
+                        "J": PlayerAction.Left,
+                        "l": PlayerAction.Right,
+                        "L": PlayerAction.Right,
+                        "o": PlayerAction.Shoot,
+                        "O": PlayerAction.Shoot,
+                        "p": PlayerAction.Bomb,
+                        "P": PlayerAction.Bomb,
+                    },
+                    labels: {
+                        move: ["I", "J", "K", "L"],
+                        shoot: ["O"],
+                        bomb: ["P"],
+                        shortHint: "IJKL/O/P"
+                    }
+                },
+                {
+                    name: "Numpad",
+                    keys: {
+                        "8": PlayerAction.Up,
+                        "5": PlayerAction.Down,
+                        "4": PlayerAction.Left,
+                        "6": PlayerAction.Right,
+                        "0": PlayerAction.Shoot,
+                        ".": PlayerAction.Bomb,
+                    },
+                    labels: {
+                        move: ["Num8", "4", "5", "6"],
+                        shoot: ["Num0"],
+                        bomb: ["Num."],
+                        shortHint: "Num8456/0/."
+                    }
+                }
+            ];
 
-                // P2: Sapphire (WASD, F, G)
-                "w": { player: 1, action: PlayerAction.Up },
-                "W": { player: 1, action: PlayerAction.Up },
-                "s": { player: 1, action: PlayerAction.Down },
-                "S": { player: 1, action: PlayerAction.Down },
-                "a": { player: 1, action: PlayerAction.Left },
-                "A": { player: 1, action: PlayerAction.Left },
-                "d": { player: 1, action: PlayerAction.Right },
-                "D": { player: 1, action: PlayerAction.Right },
-                "f": { player: 1, action: PlayerAction.Shoot },
-                "F": { player: 1, action: PlayerAction.Shoot },
-                "g": { player: 1, action: PlayerAction.Bomb },
-                "G": { player: 1, action: PlayerAction.Bomb },
-
-                // P3: Topaz (IJKL, O, P)
-                "i": { player: 2, action: PlayerAction.Up },
-                "I": { player: 2, action: PlayerAction.Up },
-                "k": { player: 2, action: PlayerAction.Down },
-                "K": { player: 2, action: PlayerAction.Down },
-                "j": { player: 2, action: PlayerAction.Left },
-                "J": { player: 2, action: PlayerAction.Left },
-                "l": { player: 2, action: PlayerAction.Right },
-                "L": { player: 2, action: PlayerAction.Right },
-                "o": { player: 2, action: PlayerAction.Shoot },
-                "O": { player: 2, action: PlayerAction.Shoot },
-                "p": { player: 2, action: PlayerAction.Bomb },
-                "P": { player: 2, action: PlayerAction.Bomb },
-
-                // P4: Emerald (Numpad 8456, Num0, Num.)
-                "8": { player: 3, action: PlayerAction.Up },
-                "5": { player: 3, action: PlayerAction.Down },
-                "4": { player: 3, action: PlayerAction.Left },
-                "6": { player: 3, action: PlayerAction.Right },
-                "0": { player: 3, action: PlayerAction.Shoot },
-                ".": { player: 3, action: PlayerAction.Bomb }
-            };
+            const KEY_TO_SCHEME_ACTION = {};
+            for (let s = 0; s < CONTROL_SCHEMES.length; s++) {
+                for (const [k, action] of Object.entries(CONTROL_SCHEMES[s].keys)) {
+                    KEY_TO_SCHEME_ACTION[k] = { schemeIdx: s, action };
+                }
+            }
 
             window.addEventListener("keydown", (e) => {
-                const bind = controlRegistry[e.key];
+                const bind = KEY_TO_SCHEME_ACTION[e.key];
                 if (bind !== undefined) {
                     pressedKeys.add(e.key);
-                    const targetPlayer = bind.player;
+                    const schemeIdx = bind.schemeIdx;
+                    const action = bind.action;
+                    let targetSlot = null;
 
-                    if (isOnlineMode) {
-                        if (isWaitingForHostSync) {
-                            // Suppress movement while waiting for host snapshot state sync
-                        } else if (app.net_is_local_player(targetPlayer)) {
-                            app.net_set_player_local_action(targetPlayer, bind.action, true);
-                        } else if (!app.net_is_player_joined(targetPlayer)) {
-                            // Hot-join this open slot locally!
-                            app.net_set_is_local_player(targetPlayer, true);
-                            app.net_set_player_joined(targetPlayer, true);
-                            app.net_set_player_local_action(targetPlayer, bind.action, true);
-                            broadcastPacket(new Uint8Array([0x05, targetPlayer, 1]));
-                            updateSlotCards();
+                    if (schemeIdx < localPlayerOrder.length) {
+                        targetSlot = localPlayerOrder[schemeIdx];
+                    } else if (schemeIdx === localPlayerOrder.length) {
+                        // Next available local control scheme -> attempt dynamic hot-join
+                        if (isOnlineMode) {
+                            if (!isWaitingForHostSync) {
+                                for (let p = 0; p < 4; p++) {
+                                    if (!app.net_is_player_joined(p)) {
+                                        targetSlot = p;
+                                        localPlayerOrder.push(p);
+                                        app.net_set_is_local_player(p, true);
+                                        app.net_set_player_joined(p, true);
+                                        broadcastPacket(new Uint8Array([0x05, p, 1]));
+                                        updateSlotCards();
+                                        break;
+                                    }
+                                }
+                            }
+                        } else {
+                            for (let p = 0; p < 4; p++) {
+                                if (!app.is_player_active(p)) {
+                                    targetSlot = p;
+                                    localPlayerOrder.push(p);
+                                    app.spawn_player(p);
+                                    updateSlotCards();
+                                    break;
+                                }
+                            }
                         }
-                    } else {
-                        // In local co-op mode, map to respective player slot 0..3
-                        if (!app.is_player_active(targetPlayer)) {
-                            app.spawn_player(targetPlayer);
-                            updateSlotCards();
-                        }
-                        app.set_action(targetPlayer, bind.action, true);
+                    }
+
+                    if (targetSlot !== null && targetSlot < 4) {
+                        keyboardInputMasks[targetSlot] |= (1 << action);
                     }
                     wakeLoop();
 
@@ -1432,22 +1697,26 @@
             });
 
             window.addEventListener("keyup", (e) => {
-                const bind = controlRegistry[e.key];
+                const bind = KEY_TO_SCHEME_ACTION[e.key];
                 if (bind !== undefined) {
                     pressedKeys.delete(e.key);
-                    const targetPlayer = bind.player;
-                    if (isOnlineMode) {
-                        if (app.net_is_local_player(targetPlayer)) {
-                            app.net_set_player_local_action(targetPlayer, bind.action, false);
-                        }
-                    } else {
-                        app.set_action(targetPlayer, bind.action, false);
+                    const schemeIdx = bind.schemeIdx;
+                    const action = bind.action;
+                    let targetSlot = null;
+
+                    if (schemeIdx < localPlayerOrder.length) {
+                        targetSlot = localPlayerOrder[schemeIdx];
                     }
+
+                    if (targetSlot !== null && targetSlot < 4) {
+                        keyboardInputMasks[targetSlot] &= ~(1 << action);
+                    }
+                    wakeLoop();
                 }
             });
 
             // -----------------------------------------------------------------
-            // Touch Controls Setup
+            // Touch Controls Setup (Mapped to Primary Local Player)
             // -----------------------------------------------------------------
             const touchActionMap = {
                 "Up": PlayerAction.Up,
@@ -1468,13 +1737,7 @@
                     e.preventDefault();
                     try { btn.setPointerCapture(e.pointerId); } catch (_) {}
                     btn.classList.add("active");
-                    if (isOnlineMode) {
-                        if (!isWaitingForHostSync) {
-                            app.net_set_local_action(action, true);
-                        }
-                    } else {
-                        app.set_action(0, action, true);
-                    }
+                    touchInputMask |= (1 << action);
                     activeTouches.set(e.pointerId, { btn, action });
                     wakeLoop();
                 };
@@ -1483,14 +1746,13 @@
                     e.preventDefault();
                     try { btn.releasePointerCapture(e.pointerId); } catch (_) {}
                     btn.classList.remove("active");
-                    if (isOnlineMode) {
-                        if (!isWaitingForHostSync) {
-                            app.net_set_local_action(action, false);
-                        }
-                    } else {
-                        app.set_action(0, action, false);
-                    }
                     activeTouches.delete(e.pointerId);
+                    let mask = 0;
+                    for (const [_, t] of activeTouches) {
+                        if (t && t.action !== undefined) mask |= (1 << t.action);
+                    }
+                    touchInputMask = mask;
+                    wakeLoop();
                 };
 
                 btn.addEventListener("pointerdown", press);
@@ -1498,10 +1760,230 @@
                 btn.addEventListener("pointercancel", release);
             });
 
+            // -----------------------------------------------------------------
+            // HTML5 Gamepad API Support & Adaptive Legend
+            // -----------------------------------------------------------------
+            function isGamepadButtonPressed(btn) {
+                if (!btn) return false;
+                if (typeof btn === "object") {
+                    return Boolean(btn.pressed || (typeof btn.value === "number" && btn.value > 0.5));
+                }
+                if (typeof btn === "number") {
+                    return btn > 0.5;
+                }
+                return Boolean(btn);
+            }
+
+            function getGamepadInputMask(gp) {
+                if (!gp || !gp.connected) return 0;
+                let mask = 0;
+
+                const buttons = gp.buttons || [];
+                const axes = gp.axes || [];
+                const axisX = axes.length > 0 ? axes[0] : 0;
+                const axisY = axes.length > 1 ? axes[1] : 0;
+                const DEADZONE = 0.25;
+
+                // 1. Directional Movement: D-Pad buttons (12: Up, 13: Down, 14: Left, 15: Right) and Left Analog Stick (Axes 0 & 1 with a deadzone of ~0.25)
+                const up = isGamepadButtonPressed(buttons[12]) || axisY < -DEADZONE;
+                const down = isGamepadButtonPressed(buttons[13]) || axisY > DEADZONE;
+                const left = isGamepadButtonPressed(buttons[14]) || axisX < -DEADZONE;
+                const right = isGamepadButtonPressed(buttons[15]) || axisX > DEADZONE;
+
+                // 2. Fire Arrow: Button 0 (A / Cross) or Button 7 (Right Trigger)
+                const shoot = isGamepadButtonPressed(buttons[0]) || isGamepadButtonPressed(buttons[7]);
+
+                // 3. Smart Bomb: Button 1 (B / Circle) or Button 2 (X / Square)
+                const bomb = isGamepadButtonPressed(buttons[1]) || isGamepadButtonPressed(buttons[2]);
+
+                if (up) mask |= (1 << PlayerAction.Up);
+                if (down) mask |= (1 << PlayerAction.Down);
+                if (left) mask |= (1 << PlayerAction.Left);
+                if (right) mask |= (1 << PlayerAction.Right);
+                if (shoot) mask |= (1 << PlayerAction.Shoot);
+                if (bomb) mask |= (1 << PlayerAction.Bomb);
+
+                return mask;
+            }
+
+            let lastGamepadConnectedCount = -1;
+
+            function updateGamepadLegend() {
+                const rawGamepads = (typeof navigator !== "undefined" && typeof navigator.getGamepads === "function") ? navigator.getGamepads() : [];
+                const connectedGamepads = [];
+                if (rawGamepads) {
+                    for (let i = 0; i < rawGamepads.length; i++) {
+                        const gp = rawGamepads[i];
+                        if (gp && gp.connected) {
+                            connectedGamepads.push(gp);
+                        }
+                    }
+                }
+
+                const statusBar = document.getElementById("gamepad-status-bar");
+                const statusText = document.getElementById("gamepad-status-text");
+                if (statusBar && statusText) {
+                    if (connectedGamepads.length === 0) {
+                        statusBar.classList.remove("active");
+                        statusText.textContent = "No gamepads detected — connect a USB or Bluetooth controller";
+                    } else if (connectedGamepads.length === 1) {
+                        statusBar.classList.add("active");
+                        const gp = connectedGamepads[0];
+                        const slotIdx = (0 < localPlayerOrder.length) ? localPlayerOrder[0] : 0;
+                        const playerLabel = playerLabels[slotIdx < 4 ? slotIdx : 0];
+                        statusText.textContent = `🎮 1 Gamepad Connected: Gamepad ${gp.index + 1} (${playerLabel}) — Ready`;
+                    } else {
+                        statusBar.classList.add("active");
+                        const names = connectedGamepads.map((gp, g) => {
+                            const slotIdx = (g < localPlayerOrder.length) ? localPlayerOrder[g] : gp.index;
+                            return `Gamepad ${gp.index + 1} (${playerLabels[slotIdx < 4 ? slotIdx : 0]})`;
+                        }).join(", ");
+                        statusText.textContent = `🎮 ${connectedGamepads.length} Gamepads Connected: ${names} — Ready`;
+                    }
+                }
+
+                // Update per-player Gamepad badges on the Control cards
+                for (let p = 0; p < 4; p++) {
+                    const badge = document.getElementById(`gamepad-badge-p${p + 1}`);
+                    if (!badge) continue;
+
+                    let hasGp = false;
+                    let gpNum = p + 1;
+                    for (let g = 0; g < connectedGamepads.length; g++) {
+                        const gp = connectedGamepads[g];
+                        const mappedSlot = (g < localPlayerOrder.length) ? localPlayerOrder[g] : null;
+                        if (mappedSlot === p) {
+                            hasGp = true;
+                            gpNum = gp.index + 1;
+                            break;
+                        }
+                    }
+
+                    if (hasGp) {
+                        badge.style.display = "inline-flex";
+                        badge.textContent = `🎮 Gamepad ${gpNum} Active`;
+                    } else {
+                        badge.style.display = "none";
+                    }
+                }
+
+                lastGamepadConnectedCount = connectedGamepads.length;
+            }
+
+            window.addEventListener("gamepadconnected", (e) => {
+                if (e && e.gamepad) {
+                    console.log(`[Gamepad] Connected: ${e.gamepad.id} at index ${e.gamepad.index}`);
+                }
+                updateGamepadLegend();
+                wakeLoop();
+            });
+
+            window.addEventListener("gamepaddisconnected", (e) => {
+                if (e && e.gamepad) {
+                    console.log(`[Gamepad] Disconnected: ${e.gamepad.id} at index ${e.gamepad.index}`);
+                }
+                updateGamepadLegend();
+                wakeLoop();
+            });
+
+            function pollGamepads() {
+                const rawGamepads = (typeof navigator !== "undefined" && typeof navigator.getGamepads === "function") ? navigator.getGamepads() : [];
+                if (!rawGamepads) return false;
+
+                const gamepads = [];
+                for (let i = 0; i < rawGamepads.length; i++) {
+                    const gp = rawGamepads[i];
+                    if (gp && gp.connected) {
+                        gamepads.push(gp);
+                    }
+                }
+
+                let anyInput = false;
+                const activeMappedSlots = new Set();
+
+                // Map connected gamepads to local player slots
+                for (let gpIdx = 0; gpIdx < Math.min(4, gamepads.length); gpIdx++) {
+                    const gp = gamepads[gpIdx];
+                    const gpMask = getGamepadInputMask(gp);
+                    if (gpMask > 0) anyInput = true;
+
+                    let targetSlot = null;
+                    if (gpIdx < localPlayerOrder.length) {
+                        targetSlot = localPlayerOrder[gpIdx];
+                    } else if (gpIdx === localPlayerOrder.length && gpMask > 0) {
+                        // Dynamic hot-join for next local player via Gamepad
+                        if (isOnlineMode) {
+                            if (!isWaitingForHostSync) {
+                                for (let p = 0; p < 4; p++) {
+                                    if (!app.net_is_player_joined(p)) {
+                                        targetSlot = p;
+                                        localPlayerOrder.push(p);
+                                        app.net_set_is_local_player(p, true);
+                                        app.net_set_player_joined(p, true);
+                                        broadcastPacket(new Uint8Array([0x05, p, 1]));
+                                        updateSlotCards();
+                                        break;
+                                    }
+                                }
+                            }
+                        } else {
+                            for (let p = 0; p < 4; p++) {
+                                if (!app.is_player_active(p)) {
+                                    targetSlot = p;
+                                    localPlayerOrder.push(p);
+                                    app.spawn_player(p);
+                                    updateSlotCards();
+                                    break;
+                                }
+                            }
+                        }
+                    }
+
+                    if (targetSlot !== null && targetSlot < 4) {
+                        gamepadInputMasks[targetSlot] = gpMask;
+                        activeMappedSlots.add(targetSlot);
+                    }
+                }
+
+                // Clean up disconnected / unmapped gamepad masks
+                for (let p = 0; p < 4; p++) {
+                    if (!activeMappedSlots.has(p) && gamepadInputMasks[p] !== 0) {
+                        gamepadInputMasks[p] = 0;
+                    }
+                }
+
+                // Apply combined input masks to WASM engine
+                for (let p = 0; p < 4; p++) {
+                    const kbMask = keyboardInputMasks[p] || 0;
+                    const gpMask = gamepadInputMasks[p] || 0;
+                    const touchMask = (localPlayerOrder[0] === p) ? touchInputMask : 0;
+                    const combinedMask = kbMask | gpMask | touchMask;
+
+                    if (isOnlineMode) {
+                        if (!isWaitingForHostSync && app.net_is_local_player(p)) {
+                            app.net_set_player_local_input_mask(p, combinedMask);
+                        }
+                    } else {
+                        if (app.is_player_active(p)) {
+                            app.set_player_input_mask(p, combinedMask);
+                        }
+                    }
+                }
+
+                if (gamepads.length !== lastGamepadConnectedCount) {
+                    updateGamepadLegend();
+                }
+
+                return anyInput;
+            }
+
             // Reset inputs on blur / visibility change
             function resetAllInputs() {
                 pressedKeys.clear();
                 activeTouches.clear();
+                keyboardInputMasks = [0, 0, 0, 0];
+                gamepadInputMasks = [0, 0, 0, 0];
+                touchInputMask = 0;
                 touchButtons.forEach((btn) => btn.classList.remove("active"));
                 if (isOnlineMode) {
                     for (let i = 0; i < 4; i++) {
@@ -1883,6 +2365,7 @@
 
                             const assignedSlot = msg.assignedSlot || 1;
                             localPlayerIdx = assignedSlot;
+                            localPlayerOrder = [assignedSlot];
                             app.net_init_mask(1 << assignedSlot);
                             isWaitingForHostSync = true;
                             const classNames = ["Ruby", "Sapphire", "Topaz", "Emerald"];
@@ -2122,6 +2605,8 @@
                 btnShareLink.style.display = "none";
                 btnShowQr.style.display = "none";
                 connectingOverlay.style.display = "none";
+                localPlayerIdx = 0;
+                localPlayerOrder = [0];
                 document.getElementById("net-stat-role").textContent = "LOCAL";
                 document.getElementById("net-stat-status").textContent = "Ready";
                 document.getElementById("net-stat-status").style.color = "#4caf50";
@@ -2173,6 +2658,7 @@
                 tabLocal.classList.remove("active");
                 onlinePanel.style.display = "flex";
                 localPlayerIdx = 0;
+                localPlayerOrder = [0];
                 app.net_init_mask(0b0001);
                 document.getElementById("net-stat-role").textContent = "P1 RUBY [ME]";
                 document.getElementById("net-stat-status").textContent = "Ready";
@@ -2191,6 +2677,7 @@
                 tabLocal.classList.remove("active");
                 onlinePanel.style.display = "flex";
                 localPlayerIdx = 0; // Host is P1 Ruby
+                localPlayerOrder = [0];
                 app.net_init_mask(0b0001);
                 document.getElementById("net-stat-role").textContent = "P1 RUBY (HOST)";
                 document.getElementById("net-stat-status").textContent = "Waiting for peers...";
@@ -2228,6 +2715,7 @@
                 tabLocal.classList.remove("active");
                 onlinePanel.style.display = "flex";
                 localPlayerIdx = 1; // Provisional joiner slot until assigned
+                localPlayerOrder = [1];
                 app.net_init_mask(0); // Empty mask until host offer & sync
                 document.getElementById("net-stat-role").textContent = "CONNECTING...";
                 document.getElementById("net-stat-status").textContent = "Connecting to room " + code + "...";
@@ -2295,6 +2783,7 @@
                     const data = JSON.parse(sdpText.value.trim());
                     if (data.type === "offer") {
                         localPlayerIdx = data.assignedSlot || 1;
+                        localPlayerOrder = [localPlayerIdx];
                         app.net_init_mask(1 << localPlayerIdx);
                         await createJoinerPeerConnection("MANUAL-HOST", data.sdp, localPlayerIdx);
                         sdpText.value = JSON.stringify({ type: "answer", sdp: PEER_CONNECTIONS.get("MANUAL-HOST").pc.localDescription });
@@ -2338,13 +2827,213 @@
                 }
             }
 
-            window.addEventListener("hashchange", handleUrlHash);
-            handleUrlHash();
+            // -----------------------------------------------------------------
+            // Dynamic Controls Legend & Slot Cards Updating
+            // -----------------------------------------------------------------
+            const heroMetadata = [
+                { title: "P1: Ruby (Red)", color: "var(--p1-color)", hero: "Ruby" },
+                { title: "P2: Sapphire (Blue)", color: "var(--p2-color)", hero: "Sapphire" },
+                { title: "P3: Topaz (Yellow)", color: "var(--p3-color)", hero: "Topaz" },
+                { title: "P4: Emerald (Green)", color: "var(--p4-color)", hero: "Emerald" },
+            ];
+
+            function updateControlsLegend() {
+                const grid = document.querySelector(".controls-grid");
+                if (!grid) return;
+
+                const gamepads = (typeof navigator !== "undefined" && typeof navigator.getGamepads === "function") ? navigator.getGamepads() : [];
+                const connectedGamepads = [];
+                if (gamepads) {
+                    for (let g = 0; g < gamepads.length; g++) {
+                        const gp = gamepads[g];
+                        if (gp && gp.connected) connectedGamepads.push(gp);
+                    }
+                }
+
+                // Update Status Bar
+                const statusBar = document.getElementById("gamepad-status-bar");
+                const statusText = document.getElementById("gamepad-status-text");
+                if (statusBar && statusText) {
+                    if (connectedGamepads.length === 0) {
+                        statusBar.classList.remove("active");
+                        statusText.textContent = "No gamepads detected — connect a USB or Bluetooth controller";
+                    } else if (connectedGamepads.length === 1) {
+                        statusBar.classList.add("active");
+                        const gp = connectedGamepads[0];
+                        const slotIdx = (0 < localPlayerOrder.length) ? localPlayerOrder[0] : 0;
+                        const playerLabel = playerLabels[slotIdx < 4 ? slotIdx : 0];
+                        statusText.textContent = `🎮 1 Gamepad Connected: Gamepad ${gp.index + 1} (${playerLabel}) — Ready`;
+                    } else {
+                        statusBar.classList.add("active");
+                        const names = connectedGamepads.map((gp, g) => {
+                            const slotIdx = (g < localPlayerOrder.length) ? localPlayerOrder[g] : gp.index;
+                            return `Gamepad ${gp.index + 1} (${playerLabels[slotIdx < 4 ? slotIdx : 0]})`;
+                        }).join(", ");
+                        statusText.textContent = `🎮 ${connectedGamepads.length} Gamepads Connected: ${names} — Ready`;
+                    }
+                }
+
+                let html = "";
+                for (let i = 0; i < 4; i++) {
+                    const hero = heroMetadata[i];
+                    const isActive = isOnlineMode ? app.net_is_player_joined(i) : app.is_player_active(i);
+                    const isLocal = isOnlineMode ? app.net_is_local_player(i) : (i === 0 || app.is_player_active(i));
+                    const localIdx = localPlayerOrder.indexOf(i);
+
+                    let hasGp = false;
+                    let gpNum = i + 1;
+                    for (let g = 0; g < connectedGamepads.length; g++) {
+                        const gp = connectedGamepads[g];
+                        const mappedSlot = (g < localPlayerOrder.length) ? localPlayerOrder[g] : null;
+                        if (mappedSlot === i) {
+                            hasGp = true;
+                            gpNum = gp.index + 1;
+                            break;
+                        }
+                    }
+
+                    let badgeClass = "";
+                    let badgeText = "";
+                    let cardClass = "control-card";
+                    let bodyHtml = "";
+
+                    if (isOnlineMode && isWaitingForHostSync) {
+                        badgeClass = "badge-open";
+                        badgeText = "Connecting...";
+                        cardClass += " is-open";
+                        bodyHtml = `<div class="control-remote-desc">Waiting for room snapshot synchronization...</div>`;
+                    } else if (isActive && isLocal && localIdx !== -1) {
+                        const scheme = CONTROL_SCHEMES[localIdx] || CONTROL_SCHEMES[0];
+                        if (localIdx === 0) {
+                            badgeClass = "badge-primary-local";
+                            badgeText = "Primary Local (This Device)";
+                            cardClass += " is-primary";
+                        } else {
+                            badgeClass = "badge-extra-local";
+                            badgeText = `Local Player ${localIdx + 1} (${scheme.name})`;
+                        }
+
+                        bodyHtml = `
+                            <div class="control-item">
+                                <div class="keys">${scheme.labels.move.map(k => `<kbd>${k}</kbd>`).join("")}</div>
+                                <span class="control-label">Move ${localIdx === 0 ? "/ Touch D-Pad" : ""}</span>
+                            </div>
+                            <div class="control-item">
+                                <div class="keys">${scheme.labels.shoot.map(k => `<kbd>${k}</kbd>`).join("")}</div>
+                                <span class="control-label">Fire Arrow ${localIdx === 0 ? "/ FIRE Button" : ""}</span>
+                            </div>
+                            <div class="control-item">
+                                <div class="keys">${scheme.labels.bomb.map(k => `<kbd>${k}</kbd>`).join("")}</div>
+                                <span class="control-label">Smart Bomb ${localIdx === 0 ? "/ BOMB Button" : ""}</span>
+                            </div>
+                            <div class="gamepad-info">
+                                <div class="gamepad-info-title">🎮 Controller Mapping:</div>
+                                <div class="control-item">
+                                    <div class="keys"><kbd>D-Pad</kbd><kbd>L-Stick</kbd></div>
+                                    <span class="control-label">Move (8-way)</span>
+                                </div>
+                                <div class="control-item">
+                                    <div class="keys"><kbd>A</kbd><kbd>RT</kbd></div>
+                                    <span class="control-label">Fire Arrow</span>
+                                </div>
+                                <div class="control-item">
+                                    <div class="keys"><kbd>B</kbd><kbd>X</kbd></div>
+                                    <span class="control-label">Smart Bomb</span>
+                                </div>
+                            </div>
+                        `;
+                    } else if (isOnlineMode && isActive && !isLocal) {
+                        badgeClass = "badge-remote";
+                        badgeText = "Remote Player";
+                        cardClass += " is-remote";
+                        bodyHtml = `
+                            <div class="control-remote-desc">
+                                Controlled remotely by peer over WebRTC rollback netcode.
+                            </div>
+                        `;
+                    } else {
+                        badgeClass = "badge-open";
+                        cardClass += " is-open";
+
+                        const nextSchemeIdx = localPlayerOrder.length;
+                        let isNextOpenSlot = false;
+                        for (let s = 0; s < 4; s++) {
+                            const sActive = isOnlineMode ? app.net_is_player_joined(s) : app.is_player_active(s);
+                            if (!sActive) {
+                                if (s === i) isNextOpenSlot = true;
+                                break;
+                            }
+                        }
+
+                        if (isNextOpenSlot && nextSchemeIdx < CONTROL_SCHEMES.length) {
+                            const scheme = CONTROL_SCHEMES[nextSchemeIdx];
+                            badgeText = `Press ${scheme.name} / 🎮 to Join`;
+                            bodyHtml = `
+                                <div class="control-item">
+                                    <div class="keys">${scheme.labels.move.map(k => `<kbd>${k}</kbd>`).join("")}</div>
+                                    <span class="control-label">Move / Join</span>
+                                </div>
+                                <div class="control-item">
+                                    <div class="keys">${scheme.labels.shoot.map(k => `<kbd>${k}</kbd>`).join("")}</div>
+                                    <span class="control-label">Fire Arrow</span>
+                                </div>
+                                <div class="control-item">
+                                    <div class="keys">${scheme.labels.bomb.map(k => `<kbd>${k}</kbd>`).join("")}</div>
+                                    <span class="control-label">Smart Bomb</span>
+                                </div>
+                                <div class="gamepad-info">
+                                    <div class="gamepad-info-title">🎮 Controller Mapping:</div>
+                                    <div class="control-item">
+                                        <div class="keys"><kbd>D-Pad</kbd><kbd>L-Stick</kbd></div>
+                                        <span class="control-label">Move / Join</span>
+                                    </div>
+                                    <div class="control-item">
+                                        <div class="keys"><kbd>A</kbd><kbd>RT</kbd></div>
+                                        <span class="control-label">Fire</span>
+                                    </div>
+                                    <div class="control-item">
+                                        <div class="keys"><kbd>B</kbd><kbd>X</kbd></div>
+                                        <span class="control-label">Bomb</span>
+                                    </div>
+                                </div>
+                            `;
+                        } else {
+                            badgeText = isOnlineMode ? "Open Slot" : "Inactive Slot";
+                            bodyHtml = `
+                                <div class="control-remote-desc">
+                                    ${isOnlineMode ? "Open slot for incoming peer or local hot-join." : "Available for local player hot-join."}
+                                </div>
+                                <div class="gamepad-info">
+                                    <div class="gamepad-info-title">🎮 Controller Mapping:</div>
+                                    <div class="control-item">
+                                        <div class="keys"><kbd>D-Pad</kbd><kbd>L-Stick</kbd></div>
+                                        <span class="control-label">Move</span>
+                                    </div>
+                                </div>
+                            `;
+                        }
+                    }
+
+                    const gpBadgeHtml = hasGp
+                        ? `<span id="gamepad-badge-p${i + 1}" class="gamepad-badge">🎮 Gamepad ${gpNum} Active</span>`
+                        : `<span id="gamepad-badge-p${i + 1}" class="gamepad-badge" style="display: none;">🎮 Gamepad ${i + 1} Active</span>`;
+
+                    html += `
+                        <div class="${cardClass}" id="control-card-p${i + 1}">
+                            <div class="control-card-header">
+                                <h3 style="color: ${hero.color};">${hero.title}</h3>
+                                ${gpBadgeHtml}
+                                <span class="control-status-badge ${badgeClass}">${badgeText}</span>
+                            </div>
+                            ${bodyHtml}
+                        </div>
+                    `;
+                }
+
+                grid.innerHTML = html;
+            }
 
             function updateSlotCards() {
-                const classNames = ["Ruby", "Sapphire", "Topaz", "Emerald"];
-                const joinHints = ["Arrows/Space/B", "Press WASD", "Press IJKL", "Press Num8"];
-
                 for (let i = 0; i < 4; i++) {
                     const card = document.getElementById("slot-p" + (i + 1));
                     const badge = document.getElementById("slot-badge-p" + (i + 1));
@@ -2368,9 +3057,27 @@
                         }
                     } else {
                         card.classList.remove("active");
-                        badge.textContent = isOnlineMode ? "OPEN SLOT" : joinHints[i];
+                        if (isOnlineMode) {
+                            badge.textContent = "OPEN SLOT";
+                        } else {
+                            const nextSchemeIdx = localPlayerOrder.length;
+                            let isNextOpen = false;
+                            for (let s = 0; s < 4; s++) {
+                                if (!app.is_player_active(s)) {
+                                    if (s === i) isNextOpen = true;
+                                    break;
+                                }
+                            }
+                            if (isNextOpen && nextSchemeIdx < CONTROL_SCHEMES.length) {
+                                badge.textContent = `Press ${CONTROL_SCHEMES[nextSchemeIdx].name}`;
+                            } else {
+                                const scheme = CONTROL_SCHEMES[i] || CONTROL_SCHEMES[0];
+                                badge.textContent = `Press ${scheme.name}`;
+                            }
+                        }
                     }
                 }
+                updateControlsLegend();
             }
 
             // -----------------------------------------------------------------
@@ -2422,7 +3129,11 @@
                                     <td id="p${i+1}-bombs" class="text-right">${bombs}</td>
                                 `;
                             } else {
-                                const hint = (i === 0) ? "Arrows/Space/B" : (i === 1 ? "WASD/F/G" : (i === 2 ? "IJKL/O/P" : "Num8456/0/."));
+                                const nextSchemeIdx = localPlayerOrder.length;
+                                let hint = "WASD/F/G";
+                                if (nextSchemeIdx < CONTROL_SCHEMES.length) {
+                                    hint = CONTROL_SCHEMES[nextSchemeIdx].labels.shortHint;
+                                }
                                 row.innerHTML = `<td colspan="5" class="hud-inactive">${playerLabels[i]}: Press ${hint} to Join</td>`;
                             }
                         }
@@ -2460,6 +3171,8 @@
             // -----------------------------------------------------------------
             function gameLoop() {
                 if (!loopRunning) return;
+
+                const hasGamepadInput = pollGamepads();
 
                 if (isOnlineMode) {
                     if (isWaitingForHostSync) {
@@ -2512,13 +3225,20 @@
                 const statsArray = getStatsArray(wasm.memory, statsPtr, statsLen);
                 updateHUD(statsArray);
 
-                if (!isOnlineMode && pressedKeys.size === 0 && activeTouches.size === 0 && app.can_sleep()) {
+                const hasConnectedGamepads = lastGamepadConnectedCount > 0;
+
+                if (!isOnlineMode && pressedKeys.size === 0 && activeTouches.size === 0 && !hasGamepadInput && !hasConnectedGamepads && app.can_sleep()) {
                     sleeping = true;
                     return;
                 }
 
                 requestAnimationFrame(gameLoop);
             }
+
+            window.addEventListener("hashchange", handleUrlHash);
+            updateSlotCards();
+            updateGamepadLegend();
+            handleUrlHash();
 
             window.dandyApp = app;
             window.dandyBuildInfo = app.get_build_info();

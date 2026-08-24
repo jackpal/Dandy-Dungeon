@@ -94,15 +94,35 @@ Static build artifacts are written to `dist/` and compressed to under **30 KB gz
 
 ## How to Play
 
-### Single-Player & Local Co-op Controls
+### Dynamic Relative Key Controls (Local & Online)
 
-| Action | Player 1 (Keyboard) | Player 2 (Local Hot-Join) | Mobile / Touch |
-|---|---|---|---|
-| **Move / Slide** | `Arrow Keys` (8-way) | `W` / `A` / `S` / `D` | Virtual D-Pad |
-| **Shoot Arrow** | `Spacebar` | `F` | **FIRE** Button |
-| **Smart Bomb** | `B` | `G` | **BOMB** Button |
+On any device (Host or Joiner), controls are dynamically assigned **relative to the local player order on that client**:
 
-*Pressing any Player 2 key locally dynamically spawns Sapphire next to Player 1.*
+| Local Player Role | Movement (8-way) | Fire Arrow | Smart Bomb | Mobile / Touch |
+|---|---|---|---|---|
+| **Primary Local Player** (P1 on Host, or assigned slot on Joiner) | `Arrow Keys` | `Spacebar` | `B` | Virtual D-Pad / FIRE / BOMB Buttons |
+| **2nd Local Player** (Local Hot-Join) | `W` / `A` / `S` / `D` | `F` | `G` | — |
+| **3rd Local Player** (Local Hot-Join) | `I` / `J` / `K` / `L` | `O` | `P` | — |
+| **4th Local Player** (Local Hot-Join) | `Numpad 8` / `4` / `5` / `6` | `Num 0` | `Num .` | — |
+
+*Pressing any unassigned local scheme key (e.g. WASD on a Joiner who controls Sapphire via Arrow keys) dynamically hot-joins the next available room slot on that device.*
+
+---
+
+### HTML5 Gamepad & Controller Support (USB & Bluetooth)
+
+Full **HTML5 Gamepad API** integration allows plug-and-play controller support across desktop and mobile browsers:
+
+| Gamepad Input | In-Game Action | Standard Controller Mapping |
+|---|---|---|
+| **D-Pad (Buttons 12–15)** | Movement (8-way) | Up / Down / Left / Right directional pad |
+| **Left Analog Stick (Axes 0 & 1)** | Movement (8-way) | 360° Analog control with `0.25` deadzone filtering |
+| **Button 0 (A / Cross)** or **Button 7 (Right Trigger / RT / R2)** | Fire Arrow | Bottom face button or right trigger |
+| **Button 1 (B / Circle)** or **Button 2 (X / Square)** | Smart Bomb | Right face button or left face button |
+
+*   **Multi-Gamepad Local Co-op**: Connect up to 4 gamepads to a single computer. Gamepad 0 maps to Local Player 1, Gamepad 1 maps to Local Player 2, etc.
+*   **Adaptive HUD & Legend Badges**: The Controls section updates dynamically upon `gamepadconnected` and `gamepaddisconnected` events (e.g. `🎮 Gamepad 1 Active`).
+*   **Rollback Netcode Synchronization**: Gamepad inputs synthesize directly into local player bitmasks and synchronize peer-to-peer across WebRTC DataChannels with sub-frame determinism.
 
 ---
 

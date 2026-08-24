@@ -72,6 +72,14 @@ new Promise(async (resolve, reject) => {
         const p3Badges = [1, 2, 3, 4].map(i => iframeP3.contentDocument?.getElementById("slot-badge-p" + i)?.textContent);
         const p4Badges = [1, 2, 3, 4].map(i => iframeP4.contentDocument?.getElementById("slot-badge-p" + i)?.textContent);
 
+        const getControlBadges = (doc) => {
+            return Array.from(doc?.querySelectorAll(".controls-grid .control-status-badge") || []).map(el => el.textContent.trim());
+        };
+        const p1ControlBadges = getControlBadges(document);
+        const p2ControlBadges = getControlBadges(iframeP2.contentDocument);
+        const p3ControlBadges = getControlBadges(iframeP3.contentDocument);
+        const p4ControlBadges = getControlBadges(iframeP4.contentDocument);
+
         const p1Status = document.getElementById("net-stat-status")?.textContent;
         const p2Status = iframeP2.contentDocument?.getElementById("net-stat-status")?.textContent;
         const p3Status = iframeP3.contentDocument?.getElementById("net-stat-status")?.textContent;
@@ -99,29 +107,29 @@ new Promise(async (resolve, reject) => {
         console.log("[Test] Initial Positions on Host:", JSON.stringify(initPositions[0]));
         console.log("[Test] Initial Positions on P2:", JSON.stringify(initPositions[1]));
 
-        console.log("[Test] 6. Simulating active 4-player directional movement...");
-        // Step 1: P1 (Host) moves Right
+        console.log("[Test] 6. Simulating active 4-player directional movement with Dynamic Arrow Keys...");
+        // Step 1: P1 (Host) moves Right via Arrow Keys (Primary Local on Host)
         window.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight" }));
         await new Promise(r => setTimeout(r, 450));
         window.dispatchEvent(new KeyboardEvent("keyup", { key: "ArrowRight" }));
         await new Promise(r => setTimeout(r, 150));
 
-        // Step 2: P2 (Joiner P2) moves Down
-        iframeP2.contentWindow.dispatchEvent(new KeyboardEvent("keydown", { key: "s" }));
+        // Step 2: P2 (Joiner P2 Sapphire) moves Down via Arrow Keys (Primary Local on Joiner P2)
+        iframeP2.contentWindow.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown" }));
         await new Promise(r => setTimeout(r, 450));
-        iframeP2.contentWindow.dispatchEvent(new KeyboardEvent("keyup", { key: "s" }));
+        iframeP2.contentWindow.dispatchEvent(new KeyboardEvent("keyup", { key: "ArrowDown" }));
         await new Promise(r => setTimeout(r, 150));
 
-        // Step 3: P3 (Joiner P3) moves Left
-        iframeP3.contentWindow.dispatchEvent(new KeyboardEvent("keydown", { key: "j" }));
+        // Step 3: P3 (Joiner P3 Topaz) moves Left via Arrow Keys (Primary Local on Joiner P3)
+        iframeP3.contentWindow.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowLeft" }));
         await new Promise(r => setTimeout(r, 450));
-        iframeP3.contentWindow.dispatchEvent(new KeyboardEvent("keyup", { key: "j" }));
+        iframeP3.contentWindow.dispatchEvent(new KeyboardEvent("keyup", { key: "ArrowLeft" }));
         await new Promise(r => setTimeout(r, 150));
 
-        // Step 4: P4 (Joiner P4) moves Up
-        iframeP4.contentWindow.dispatchEvent(new KeyboardEvent("keydown", { key: "8" }));
+        // Step 4: P4 (Joiner P4 Emerald) moves Up via Arrow Keys (Primary Local on Joiner P4)
+        iframeP4.contentWindow.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowUp" }));
         await new Promise(r => setTimeout(r, 450));
-        iframeP4.contentWindow.dispatchEvent(new KeyboardEvent("keyup", { key: "8" }));
+        iframeP4.contentWindow.dispatchEvent(new KeyboardEvent("keyup", { key: "ArrowUp" }));
         await new Promise(r => setTimeout(r, 200));
 
         const finalPositions = getPositions();
@@ -129,6 +137,37 @@ new Promise(async (resolve, reject) => {
         console.log("[Test] Final Positions on P2:", JSON.stringify(finalPositions[1]));
         console.log("[Test] Final Positions on P3:", JSON.stringify(finalPositions[2]));
         console.log("[Test] Final Positions on P4:", JSON.stringify(finalPositions[3]));
+
+        console.log("[Test] 7. Simulating HTML5 Gamepad API connection, status legend, sparse arrays, and analog movement...");
+        // Mock Gamepad on Host (P1 Ruby) placed at OS index 1 (sparse array: [null, Gamepad 1])
+        const mockGamepadP1 = {
+            id: "Xbox Wireless Controller (STANDARD GAMEPAD Vendor: 045e Product: 02fd)",
+            index: 1,
+            connected: true,
+            mapping: "standard",
+            axes: [-0.75, 0.0], // Analog stick tilted Left into open corridor
+            buttons: Array.from({ length: 17 }, (_, i) => ({ pressed: false, value: 0 }))
+        };
+
+        window.navigator.getGamepads = () => [null, mockGamepadP1, null, null];
+        window.dispatchEvent(new Event("gamepadconnected"));
+        await new Promise(r => setTimeout(r, 200));
+
+        const p1GpStatus = document.getElementById("gamepad-status-text")?.textContent;
+        const p1GpBadge = document.getElementById("gamepad-badge-p1")?.textContent;
+        const p1GpBadgeVisible = document.getElementById("gamepad-badge-p1")?.style.display !== "none";
+        const p2GpBadgeVisibleOnHost = document.getElementById("gamepad-badge-p2")?.style.display !== "none";
+
+        // Step active simulation with Gamepad input
+        await new Promise(r => setTimeout(r, 450));
+        const posAfterGamepad = getPositions();
+
+        // Disconnect Gamepad
+        mockGamepadP1.connected = false;
+        window.dispatchEvent(new Event("gamepaddisconnected"));
+        await new Promise(r => setTimeout(r, 150));
+        const p1GpStatusAfterDisconnect = document.getElementById("gamepad-status-text")?.textContent;
+        const p1GpBadgeVisibleAfterDisconnect = document.getElementById("gamepad-badge-p1")?.style.display !== "none";
 
         const p1App = window.dandyApp;
         const p2App = iframeP2.contentWindow.dandyApp;
@@ -141,9 +180,17 @@ new Promise(async (resolve, reject) => {
             p2Badges,
             p3Badges,
             p4Badges,
+            controlBadges: [p1ControlBadges, p2ControlBadges, p3ControlBadges, p4ControlBadges],
             statuses: [p1Status, p2Status, p3Status, p4Status],
             initPositions,
             finalPositions,
+            p1GpStatus,
+            p1GpBadge,
+            p1GpBadgeVisible,
+            p2GpBadgeVisibleOnHost,
+            posAfterGamepad,
+            p1GpStatusAfterDisconnect,
+            p1GpBadgeVisibleAfterDisconnect,
             frames: [
                 p1App.net_get_current_frame(),
                 p2App.net_get_current_frame(),
@@ -183,6 +230,7 @@ function runTest() {
             if (err) {
                 console.error("gbrowser execution error:", err);
                 console.error("stderr:", stderr);
+                console.error("stdout:", stdout);
                 return reject(err);
             }
 
@@ -226,6 +274,13 @@ try {
     assert.deepStrictEqual(res.p3Badges, ["REMOTE", "REMOTE", "LOCAL [ME]", "REMOTE"], "P3 badges matrix mismatch");
     assert.deepStrictEqual(res.p4Badges, ["REMOTE", "REMOTE", "REMOTE", "LOCAL [ME]"], "P4 badges matrix mismatch");
     console.log("✓ Dynamic Slot Cards and Badges verified across all 4 player instances (Full 4x4 Matrix).");
+
+    // 2b. Dynamic Controls Legend Badges (Full 4x4 matrix assertion)
+    assert.deepStrictEqual(res.controlBadges[0], ["Primary Local (This Device)", "Remote Player", "Remote Player", "Remote Player"], "P1 control badges mismatch");
+    assert.deepStrictEqual(res.controlBadges[1], ["Remote Player", "Primary Local (This Device)", "Remote Player", "Remote Player"], "P2 control badges mismatch");
+    assert.deepStrictEqual(res.controlBadges[2], ["Remote Player", "Remote Player", "Primary Local (This Device)", "Remote Player"], "P3 control badges mismatch");
+    assert.deepStrictEqual(res.controlBadges[3], ["Remote Player", "Remote Player", "Remote Player", "Primary Local (This Device)"], "P4 control badges mismatch");
+    console.log("✓ Dynamic Controls & How-to-Play Legend Badges verified across all 4 peer instances.");
 
     // 3. Frame Advance
     assert(res.frames.every(f => f >= 60), "All peers must advance >= 60 frames under active simulation");
@@ -271,7 +326,23 @@ try {
     assert.strictEqual(hostFinal[3].y, p4Final[3].y, "P4 position on Host must match P4");
     console.log("✓ P4 remote movement on Joiner replicated to Host and all peer instances.");
 
-    // 5. Zero-Copy Framebuffer Integrity
+    // 5. HTML5 Gamepad API Verification
+    console.log("\n=== Verifying HTML5 Gamepad API Support & Dynamics ===");
+    console.log(`Gamepad Status Text: "${res.p1GpStatus}"`);
+    console.log(`Gamepad P1 Badge: "${res.p1GpBadge}", Visible: ${res.p1GpBadgeVisible}`);
+    console.log(`Gamepad P2 Badge on Host Visible: ${res.p2GpBadgeVisibleOnHost}`);
+    console.log(`P1 Pos Before GP: (${hostFinal[0].x}, ${hostFinal[0].y}) -> Pos After GP: (${res.posAfterGamepad[0][0].x}, ${res.posAfterGamepad[0][0].y})`);
+    assert(res.p1GpStatus.includes("1 Gamepad Connected"), "Gamepad status must report 1 Gamepad Connected");
+    assert(res.p1GpStatus.includes("P1 Ruby"), "Gamepad status must indicate mapped to P1 Ruby");
+    assert(res.p1GpBadgeVisible, "Gamepad badge must be visible on P1 card");
+    assert.strictEqual(res.p1GpBadge, "🎮 Gamepad 2 Active", "Gamepad badge text must be '🎮 Gamepad 2 Active' (for controller at OS index 1)");
+    assert.strictEqual(res.p2GpBadgeVisibleOnHost, false, "Gamepad badge must NOT bleed onto P2 card when mapped to P1");
+    assert(res.posAfterGamepad[0][0].x < hostFinal[0].x, `P1 must continue moving Left under Gamepad analog stick input (was ${hostFinal[0].x}, now ${res.posAfterGamepad[0][0].x})`);
+    assert(res.p1GpStatusAfterDisconnect.includes("No gamepads detected"), "Status must report no gamepads detected after disconnect");
+    assert.strictEqual(res.p1GpBadgeVisibleAfterDisconnect, false, "Gamepad badge must be hidden after disconnect");
+    console.log("✓ HTML5 Gamepad API polling, sparse array mapping, dynamic legend badges, and analog stick movement verified.");
+
+    // 6. Zero-Copy Framebuffer Integrity
     assert.deepStrictEqual(res.fbSizes, [204800, 204800, 204800, 204800], "320x160x4 Framebuffer integrity");
     assert.deepStrictEqual(res.statsLens, [28, 28, 28, 28], "4x7 stats array integrity");
     console.log("✓ Zero-Copy Framebuffer and Stats memory boundaries intact on all instances.");

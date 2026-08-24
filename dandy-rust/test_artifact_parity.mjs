@@ -300,7 +300,36 @@ assert.strictEqual(joinerSyncApp.is_player_active(1), true, "Joiner P2 should be
 console.log("✓ Net Init Mask & Snapshot Sync Player Lifecycle Parity verified.");
 console.log("✓ Hybrid Multi-Local Netcode verified (2 local host + 2 local joiner).");
 
-// 7. Boundary extraction zero-copy view validity
+// 7. HTML5 Gamepad Action Bitmask Mapping & Determinism
+console.log("\nTesting Gamepad Action Bitmask Mapping & Determinism (200 frames)...");
+const gpSimA = new DandyApp();
+const gpSimB = new DandyApp();
+
+for (let f = 0; f < 200; f++) {
+    // Simulate Gamepad D-Pad & Analog stick inputs (Up, Down, Left, Right)
+    const dpadMask = (f % 4 === 0) ? (1 << PlayerAction.Right) :
+                     (f % 4 === 1) ? (1 << PlayerAction.Down) :
+                     (f % 4 === 2) ? (1 << PlayerAction.Left) : (1 << PlayerAction.Up);
+    
+    // Simulate Fire Arrow (Button 0/7 -> Action Shoot)
+    const fireMask = (f % 7 === 0) ? (1 << PlayerAction.Shoot) : 0;
+    // Simulate Smart Bomb (Button 1/2 -> Action Bomb)
+    const bombMask = (f === 50 || f === 100) ? (1 << PlayerAction.Bomb) : 0;
+
+    const totalMask = dpadMask | fireMask | bombMask;
+    gpSimA.set_player_input_mask(0, totalMask);
+    gpSimB.set_player_input_mask(0, totalMask);
+
+    gpSimA.tick();
+    gpSimB.tick();
+
+    assert.strictEqual(gpSimA.get_player_x(0), gpSimB.get_player_x(0), `Gamepad X parity failure at frame ${f}`);
+    assert.strictEqual(gpSimA.get_player_y(0), gpSimB.get_player_y(0), `Gamepad Y parity failure at frame ${f}`);
+    assert.strictEqual(gpSimA.get_level(), gpSimB.get_level(), `Gamepad Level parity failure at frame ${f}`);
+}
+console.log("✓ Gamepad Action Bitmask Mapping & Determinism verified.");
+
+// 8. Boundary extraction zero-copy view validity
 const fbPtr = app.get_framebuffer_ptr();
 const fbSize = app.get_framebuffer_size();
 const fbBytes = new Uint8ClampedArray(wasmInstance.memory.buffer, fbPtr, fbSize);
