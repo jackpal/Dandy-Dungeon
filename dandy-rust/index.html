@@ -2963,6 +2963,78 @@
 
             const pendingIceCandidates = new Map(); // peerId -> Array<candidate>
 
+            function serializeIceCandidate(candidate) {
+                if (!candidate) return null;
+                if (typeof candidate.toJSON === "function") {
+                    try {
+                        const json = candidate.toJSON();
+                        if (json && typeof json === "object" && typeof json.candidate === "string") {
+                            return {
+                                candidate: json.candidate,
+                                sdpMid: json.sdpMid !== undefined ? json.sdpMid : null,
+                                sdpMLineIndex: json.sdpMLineIndex !== undefined ? json.sdpMLineIndex : null,
+                                usernameFragment: json.usernameFragment !== undefined ? json.usernameFragment : null
+                            };
+                        }
+                    } catch (_) {}
+                }
+                return {
+                    candidate: candidate.candidate || "",
+                    sdpMid: candidate.sdpMid !== undefined ? candidate.sdpMid : null,
+                    sdpMLineIndex: candidate.sdpMLineIndex !== undefined ? candidate.sdpMLineIndex : null,
+                    usernameFragment: candidate.usernameFragment !== undefined ? candidate.usernameFragment : null
+                };
+            }
+
+            function serializeSdp(sdp) {
+                if (!sdp) return null;
+                if (typeof sdp.toJSON === "function") {
+                    try {
+                        const json = sdp.toJSON();
+                        if (json && typeof json === "object" && json.type && json.sdp) {
+                            return { type: json.type, sdp: json.sdp };
+                        }
+                    } catch (_) {}
+                }
+                return {
+                    type: sdp.type || "offer",
+                    sdp: sdp.sdp || ""
+                };
+            }
+
+            async function safelyAddIceCandidate(pc, candidateData) {
+                if (!pc || !candidateData) return;
+                try {
+                    if (!candidateData.candidate || typeof candidateData.candidate !== "string") {
+                        return;
+                    }
+                    const candidateInit = {
+                        candidate: candidateData.candidate
+                    };
+                    if (candidateData.sdpMid !== null && candidateData.sdpMid !== undefined) {
+                        candidateInit.sdpMid = candidateData.sdpMid;
+                    }
+                    if (candidateData.sdpMLineIndex !== null && candidateData.sdpMLineIndex !== undefined) {
+                        candidateInit.sdpMLineIndex = Number(candidateData.sdpMLineIndex);
+                    }
+                    if (candidateData.usernameFragment) {
+                        candidateInit.usernameFragment = candidateData.usernameFragment;
+                    }
+
+                    if (typeof RTCIceCandidate !== "undefined") {
+                        try {
+                            await pc.addIceCandidate(new RTCIceCandidate(candidateInit));
+                        } catch (e1) {
+                            await pc.addIceCandidate(candidateInit);
+                        }
+                    } else {
+                        await pc.addIceCandidate(candidateInit);
+                    }
+                } catch (err) {
+                    console.warn("[ICE] addIceCandidate error:", err);
+                }
+            }
+
             function queueIceCandidate(peerId, candidate) {
                 if (!pendingIceCandidates.has(peerId)) {
                     pendingIceCandidates.set(peerId, []);
@@ -2975,11 +3047,7 @@
                 if (!queue || queue.length === 0) return;
                 pendingIceCandidates.delete(peerId);
                 for (const candidate of queue) {
-                    try {
-                        await pc.addIceCandidate(new RTCIceCandidate(candidate));
-                    } catch (err) {
-                        console.warn(`[ICE] Failed to add queued ICE candidate for peer ${peerId}:`, err);
-                    }
+                    await safelyAddIceCandidate(pc, candidate);
                 }
             }
 
@@ -3063,7 +3131,9 @@
             }
 
             function setupDataChannel(peerId, dc, assignedSlot) {
-                dc.binaryType = "arraybuffer";
+                try {
+                    dc.binaryType = "arraybuffer";
+                } catch (_) {}
                 const onOpenHandler = () => {
                     console.log(`[P2P] DataChannel opened with peer ${peerId} (Slot P${assignedSlot + 1})`);
                     // Send PKT_HANDSHAKE immediately on open (5 bytes: 0x00, 'D', 'D', VERSION_HI, VERSION_LO)
@@ -3133,9 +3203,18 @@
                     wakeLoop();
                 };
 
-                dc.onmessage = (event) => {
-                    if (event.data instanceof ArrayBuffer) {
-                        const bytes = new Uint8Array(event.data);
+                dc.onmessage = async (event) => {
+                    let data = event.data;
+                    if (typeof Blob !== "undefined" && data instanceof Blob) {
+                        try {
+                            data = await data.arrayBuffer();
+                        } catch (e) {
+                            console.warn("[P2P] Failed to read DataChannel Blob:", e);
+                            return;
+                        }
+                    }
+                    if (data instanceof ArrayBuffer) {
+                        const bytes = new Uint8Array(data);
                         if (bytes.length > 0) {
                             const pktType = bytes[0];
                             if (pktType === 0x00) { // PKT_HANDSHAKE
@@ -3529,10 +3608,19 @@
                     }
                 };
 
-                ws.onmessage = (event) => {
+                ws.onmessage = async (event) => {
                     if (sessionEpoch !== mqttSessionEpoch) return;
                     try {
-                        const buf = new Uint8Array(event.data);
+                        let data = event.data;
+                        if (typeof Blob !== "undefined" && data instanceof Blob) {
+                            try {
+                                data = await data.arrayBuffer();
+                            } catch (e) {
+                                console.warn("[Signaling] Failed to read WebSocket Blob:", e);
+                                return;
+                            }
+                        }
+                        const buf = (data instanceof ArrayBuffer) ? new Uint8Array(data) : new Uint8Array(data.buffer || data);
                         const packets = parseMqttPackets(buf);
                         for (const pkt of packets) {
                             if (pkt.type === "CONNACK") {
@@ -3623,6 +3711,13 @@
                 }, 100);
             }
 
+            function queueOutbox(msg) {
+                if (msg.type === "join_request") {
+                    signalingOutbox = signalingOutbox.filter(m => m.type !== "join_request");
+                }
+                signalingOutbox.push(msg);
+            }
+
             function flushSignalingOutbox(topic) {
                 if (!signalingMqttWs || signalingMqttWs.readyState !== WebSocket.OPEN || !mqttSubscribed) return;
                 while (signalingOutbox.length > 0) {
@@ -3639,6 +3734,10 @@
             function closeSignalingTransport() {
                 mqttSessionEpoch++;
                 mqttSubscribed = false;
+                if (joinRetryTimer) {
+                    clearInterval(joinRetryTimer);
+                    joinRetryTimer = null;
+                }
                 if (mqttPingInterval) {
                     clearInterval(mqttPingInterval);
                     mqttPingInterval = null;
@@ -3663,12 +3762,23 @@
             }
 
             function sendSignaling(msg) {
+                if (!msg || !currentRoomId) return;
                 msg.roomId = currentRoomId;
                 msg.senderId = msg.senderId || (localPlayerIdx === 0 ? "HOST" : myPeerId);
                 msg.msgId = msg.msgId || (msg.senderId + "_" + Date.now() + "_" + Math.random().toString(36).substr(2, 6));
 
                 seenSignalingMsgIds.add(msg.msgId);
-                const jsonStr = JSON.stringify(msg);
+
+                // Deep sanitize to plain JSON POJO so DataCloneError can never occur on BroadcastChannel or localStorage
+                let jsonStr;
+                let cleanMsg;
+                try {
+                    jsonStr = JSON.stringify(msg);
+                    cleanMsg = JSON.parse(jsonStr);
+                } catch (e) {
+                    console.warn("[Signaling] Failed to serialize signaling message:", e);
+                    return;
+                }
 
                 const disableLocalSig = Boolean(window.__DISABLE_LOCAL_SIGNALING__ || (window.location && window.location.search && window.location.search.includes("disable_local_sig")));
 
@@ -3676,7 +3786,7 @@
                     // Tier 1: Instant local BroadcastChannel (cross-tab / cross-window on same browser)
                     if (broadcastChannel) {
                         try {
-                            broadcastChannel.postMessage(msg);
+                            broadcastChannel.postMessage(cleanMsg);
                         } catch (e) {
                             console.warn("[Signaling] BroadcastChannel error", e);
                         }
@@ -3684,7 +3794,7 @@
 
                     // Tier 2: LocalStorage storage events (fallback cross-window on same origin)
                     try {
-                        localStorage.setItem("dandy_sig_" + currentRoomId, JSON.stringify({ t: Date.now(), msg }));
+                        localStorage.setItem("dandy_sig_" + currentRoomId, JSON.stringify({ t: Date.now(), msg: cleanMsg }));
                     } catch (_) {}
                 }
 
@@ -3696,10 +3806,10 @@
                         signalingMqttWs.send(packet);
                     } catch (e) {
                         console.warn("[Signaling] Failed to send MQTT packet:", e);
-                        signalingOutbox.push(msg);
+                        queueOutbox(cleanMsg);
                     }
                 } else {
-                    signalingOutbox.push(msg);
+                    queueOutbox(cleanMsg);
                 }
             }
 
@@ -3746,8 +3856,11 @@
                                         targetId: msg.senderId,
                                         assignedSlot: existingPeer.playerIdx,
                                         type: "offer",
-                                        sdp: existingPeer.pc.localDescription
+                                        sdp: serializeSdp(existingPeer.pc.localDescription)
                                     });
+                                    return;
+                                } else {
+                                    // Connection is currently initializing; ignore duplicate join request
                                     return;
                                 }
                             }
@@ -3771,17 +3884,16 @@
                         } else if (msg.type === "answer" && msg.targetId === "HOST") {
                             const peer = PEER_CONNECTIONS.get(msg.senderId);
                             if (peer && peer.pc) {
-                                await peer.pc.setRemoteDescription(new RTCSessionDescription(msg.sdp));
+                                const remoteDesc = (typeof RTCSessionDescription !== "undefined")
+                                    ? new RTCSessionDescription(msg.sdp)
+                                    : msg.sdp;
+                                await peer.pc.setRemoteDescription(remoteDesc);
                                 await flushQueuedIceCandidates(msg.senderId, peer.pc);
                             }
                         } else if (msg.type === "ice" && (msg.targetId === "HOST" || !msg.targetId) && msg.candidate) {
                             const peer = PEER_CONNECTIONS.get(msg.senderId);
                             if (peer && peer.pc && peer.pc.remoteDescription) {
-                                try {
-                                    await peer.pc.addIceCandidate(new RTCIceCandidate(msg.candidate));
-                                } catch (err) {
-                                    console.warn("[ICE] Host addIceCandidate error:", err);
-                                }
+                                await safelyAddIceCandidate(peer.pc, msg.candidate);
                             } else {
                                 queueIceCandidate(msg.senderId, msg.candidate);
                             }
@@ -3789,6 +3901,10 @@
                     } else {
                         // ----------------- JOINER ROLE -----------------
                         if (msg.type === "join_rejected" && (msg.targetId === myPeerId || msg.recipientId === myPeerId || !msg.targetId)) {
+                            if (joinRetryTimer) {
+                                clearInterval(joinRetryTimer);
+                                joinRetryTimer = null;
+                            }
                             console.warn(`[Joiner] Join request rejected by host: ${msg.reason || msg.message || "Room is full"}`);
                             if (msg.reason === "version_mismatch" || (msg.message && msg.message.toLowerCase().includes("version mismatch"))) {
                                 handleVersionMismatch({
@@ -3805,6 +3921,10 @@
                             return; // Suppress further offer/ice processing after rejection
                         }
                         if (msg.type === "offer" && (msg.targetId === myPeerId || !msg.targetId)) {
+                            if (joinRetryTimer) {
+                                clearInterval(joinRetryTimer);
+                                joinRetryTimer = null;
+                            }
                             const hostId = msg.senderId || "HOST";
                             const existingPeer = PEER_CONNECTIONS.get(hostId);
                             if (existingPeer) {
@@ -3817,7 +3937,7 @@
                                         senderId: myPeerId,
                                         targetId: hostId,
                                         type: "answer",
-                                        sdp: existingPeer.pc.localDescription
+                                        sdp: serializeSdp(existingPeer.pc.localDescription)
                                     });
                                     return;
                                 }
@@ -3837,11 +3957,7 @@
                             const hostId = msg.senderId || "HOST";
                             const peer = PEER_CONNECTIONS.get(hostId);
                             if (peer && peer.pc && peer.pc.remoteDescription) {
-                                try {
-                                    await peer.pc.addIceCandidate(new RTCIceCandidate(msg.candidate));
-                                } catch (err) {
-                                    console.warn("[ICE] Joiner addIceCandidate error:", err);
-                                }
+                                await safelyAddIceCandidate(peer.pc, msg.candidate);
                             } else {
                                 queueIceCandidate(hostId, msg.candidate);
                             }
@@ -3859,16 +3975,20 @@
                         ordered: false,
                         maxRetransmits: 0
                     });
+                    try { dc.binaryType = "arraybuffer"; } catch (_) {}
                     setupDataChannel(peerId, dc, assignedSlot);
 
                     pc.onicecandidate = (e) => {
-                        if (e.candidate) {
-                            sendSignaling({
-                                senderId: "HOST",
-                                targetId: peerId,
-                                type: "ice",
-                                candidate: e.candidate
-                            });
+                        if (e && e.candidate && e.candidate.candidate) {
+                            const serialized = serializeIceCandidate(e.candidate);
+                            if (serialized) {
+                                sendSignaling({
+                                    senderId: "HOST",
+                                    targetId: peerId,
+                                    type: "ice",
+                                    candidate: serialized
+                                });
+                            }
                         }
                     };
 
@@ -3899,7 +4019,7 @@
                         targetId: peerId,
                         assignedSlot,
                         type: "offer",
-                        sdp: offer
+                        sdp: serializeSdp(offer)
                     });
 
                     return pc;
@@ -3919,6 +4039,7 @@
                     const pc = new RTCPeerConnection(STUN_SERVERS);
                     pc.ondatachannel = (e) => {
                         const dc = e.channel;
+                        try { dc.binaryType = "arraybuffer"; } catch (_) {}
                         setupDataChannel(targetId, dc, 0); // Host is slot 0
                         const entry = PEER_CONNECTIONS.get(targetId);
                         if (entry) {
@@ -3929,13 +4050,16 @@
                     };
 
                     pc.onicecandidate = (e) => {
-                        if (e.candidate) {
-                            sendSignaling({
-                                senderId: myPeerId,
-                                targetId,
-                                type: "ice",
-                                candidate: e.candidate
-                            });
+                        if (e && e.candidate && e.candidate.candidate) {
+                            const serialized = serializeIceCandidate(e.candidate);
+                            if (serialized) {
+                                sendSignaling({
+                                    senderId: myPeerId,
+                                    targetId,
+                                    type: "ice",
+                                    candidate: serialized
+                                });
+                            }
                         }
                     };
 
@@ -3951,7 +4075,10 @@
 
                     PEER_CONNECTIONS.set(targetId, { pc, dc: null, playerIdx: 0, ping: 0 });
 
-                    await pc.setRemoteDescription(new RTCSessionDescription(offerSdp));
+                    const remoteDesc = (typeof RTCSessionDescription !== "undefined")
+                        ? new RTCSessionDescription(offerSdp)
+                        : offerSdp;
+                    await pc.setRemoteDescription(remoteDesc);
                     await flushQueuedIceCandidates(targetId, pc);
 
                     const answer = await pc.createAnswer();
@@ -3961,7 +4088,7 @@
                         senderId: myPeerId,
                         targetId,
                         type: "answer",
-                        sdp: answer
+                        sdp: serializeSdp(answer)
                     });
 
                     return pc;
@@ -4497,16 +4624,17 @@
                 wakeLoop();
                 if (localPlayerIdx === 0) {
                     const pc = new RTCPeerConnection(STUN_SERVERS);
-                    const dc = pc.createDataChannel("dandy_input");
+                    const dc = pc.createDataChannel("dandy_input", { ordered: false, maxRetransmits: 0 });
+                    try { dc.binaryType = "arraybuffer"; } catch (_) {}
                     setupDataChannel("MANUAL-PEER", dc, 1);
                     PEER_CONNECTIONS.set("MANUAL-PEER", { pc, dc, playerIdx: 1, ping: 0 });
                     const offer = await pc.createOffer();
                     await pc.setLocalDescription(offer);
-                    sdpText.value = JSON.stringify({ type: "offer", assignedSlot: 1, sdp: offer });
+                    sdpText.value = JSON.stringify({ type: "offer", assignedSlot: 1, sdp: serializeSdp(offer) });
                 } else {
                     const peer = PEER_CONNECTIONS.get("MANUAL-HOST");
                     if (peer && peer.pc && peer.pc.localDescription) {
-                        sdpText.value = JSON.stringify({ type: "answer", sdp: peer.pc.localDescription });
+                        sdpText.value = JSON.stringify({ type: "answer", sdp: serializeSdp(peer.pc.localDescription) });
                     }
                 }
                 updateSlotCards();
@@ -4522,11 +4650,17 @@
                         localPlayerOrder = [localPlayerIdx];
                         app.net_init_mask(1 << localPlayerIdx);
                         await createJoinerPeerConnection("MANUAL-HOST", data.sdp, localPlayerIdx);
-                        sdpText.value = JSON.stringify({ type: "answer", sdp: PEER_CONNECTIONS.get("MANUAL-HOST").pc.localDescription });
+                        const hostPeer = PEER_CONNECTIONS.get("MANUAL-HOST");
+                        if (hostPeer && hostPeer.pc && hostPeer.pc.localDescription) {
+                            sdpText.value = JSON.stringify({ type: "answer", sdp: serializeSdp(hostPeer.pc.localDescription) });
+                        }
                     } else if (data.type === "answer") {
                         const peer = PEER_CONNECTIONS.get("MANUAL-PEER");
                         if (peer && peer.pc) {
-                            await peer.pc.setRemoteDescription(new RTCSessionDescription(data.sdp));
+                            const remoteDesc = (typeof RTCSessionDescription !== "undefined")
+                                ? new RTCSessionDescription(data.sdp)
+                                : data.sdp;
+                            await peer.pc.setRemoteDescription(remoteDesc);
                             await flushQueuedIceCandidates("MANUAL-PEER", peer.pc);
                         }
                     }

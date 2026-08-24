@@ -571,14 +571,14 @@ new Promise(async (resolve, reject) => {
         const mqttJoinerRole = mqttJoinerDoc?.getElementById("net-stat-role")?.textContent;
 
         // Verify entity movement replication across the pure MQTT connection
-        const hostInitX = iframeMqttHost.contentWindow.dandyApp.get_player_x(0);
+        const mqttHostInitX = iframeMqttHost.contentWindow.dandyApp.get_player_x(0);
         iframeMqttHost.contentWindow.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight" }));
         await new Promise(r => setTimeout(r, 450));
         iframeMqttHost.contentWindow.dispatchEvent(new KeyboardEvent("keyup", { key: "ArrowRight" }));
         await new Promise(r => setTimeout(r, 200));
 
-        const hostFinalX = iframeMqttHost.contentWindow.dandyApp.get_player_x(0);
-        const joinerSeenX = iframeMqttJoiner.contentWindow.dandyApp.get_player_x(0);
+        const mqttHostFinalX = iframeMqttHost.contentWindow.dandyApp.get_player_x(0);
+        const mqttJoinerSeenX = iframeMqttJoiner.contentWindow.dandyApp.get_player_x(0);
 
         const mqttCommonFrame = Math.min(
             iframeMqttHost.contentWindow.dandyApp.net_get_confirmed_frame(),
@@ -705,7 +705,7 @@ new Promise(async (resolve, reject) => {
 
         resolve(JSON.stringify(results));
     } catch (err) {
-        reject(err.stack || err.toString());
+        resolve(JSON.stringify({ error: err.stack || err.toString() }));
     }
 });
 `;
@@ -740,6 +740,10 @@ function runTest() {
 
 try {
     const res = await runTest();
+    if (res.error) {
+        console.error("Test code failed inside gbrowser:\n", res.error);
+        process.exit(1);
+    }
     console.log("\n=== Multiplayer Test Results ===");
     console.log(`Room Code: ${res.roomCode}`);
     console.log(`Statuses: ${res.statuses.join(" | ")}`);
