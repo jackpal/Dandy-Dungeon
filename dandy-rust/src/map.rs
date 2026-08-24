@@ -45,10 +45,14 @@ impl Map {
             return;
         }
 
-        let mut stack = Vec::new();
-        stack.push((start_x, start_y));
+        let mut stack = [(0i32, 0i32); 64];
+        let mut top = 0;
+        stack[top] = (start_x, start_y);
+        top += 1;
 
-        while let Some((cx, cy)) = stack.pop() {
+        while top > 0 {
+            top -= 1;
+            let (cx, cy) = stack[top];
             if self.get(cx, cy) == target {
                 self.set(cx, cy, replacement);
                 
@@ -57,8 +61,9 @@ impl Map {
                         if dx != 0 || dy != 0 {
                             let nx = cx + dx;
                             let ny = cy + dy;
-                            if self.get(nx, ny) == target {
-                                stack.push((nx, ny));
+                            if self.get(nx, ny) == target && top < stack.len() {
+                                stack[top] = (nx, ny);
+                                top += 1;
                             }
                         }
                     }

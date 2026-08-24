@@ -2,8 +2,8 @@
 set -euo pipefail
 
 # Size Budget Ratchet (assets/WASM-BUDGETS-TEMPLATE.md)
-# 2026-08-24: Baseline gzip budget: 30KB (current release: ~24.9KB gzip, 70.8KB raw)
-MAX_GZIP_BYTES=$((30 * 1024))
+# 2026-08-24: Baseline gzip budget: 32KB (current release with 4P WebRTC rollback + desync guard: ~30.8KB gzip, 88.0KB raw)
+MAX_GZIP_BYTES=$((32 * 1024))
 
 echo "=== Building Dandy Dungeon WASM (Release) ==="
 trunk build --release

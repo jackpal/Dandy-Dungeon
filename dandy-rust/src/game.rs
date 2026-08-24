@@ -18,6 +18,53 @@ pub struct GameSnapshot {
     pub rng_state: u32,
 }
 
+impl GameSnapshot {
+    pub fn get_checksum(&self) -> u32 {
+        let mut hash = 2166136261u32;
+        let mut fnv = |b: u8| {
+            hash = (hash ^ (b as u32)).wrapping_mul(16777619);
+        };
+
+        for &b in &(self.level as u32).to_le_bytes() { fnv(b); }
+        for &b in &self.time.to_le_bytes() { fnv(b); }
+        for &b in &self.last_move_time.to_le_bytes() { fnv(b); }
+        fnv(self.rotor);
+        fnv(self.difficulty as u8);
+        for &b in &self.rng_state.to_le_bytes() { fnv(b); }
+        for &b in &self.camera.cog_x.to_bits().to_le_bytes() { fnv(b); }
+        for &b in &self.camera.cog_y.to_bits().to_le_bytes() { fnv(b); }
+        for &b in &self.map_data { fnv(b); }
+
+        for p in &self.players {
+            fnv(p.index as u8);
+            fnv(p.active as u8);
+            fnv(p.alive as u8);
+            fnv(p.escaped as u8);
+            fnv(p.dir as u8);
+            fnv(p.input_mask);
+            fnv(p.move_cooldown);
+            for &b in &p.x.to_le_bytes() { fnv(b); }
+            for &b in &p.y.to_le_bytes() { fnv(b); }
+            for &b in &p.score.to_le_bytes() { fnv(b); }
+            for &b in &p.health.to_le_bytes() { fnv(b); }
+            for &b in &p.bombs.to_le_bytes() { fnv(b); }
+            for &b in &p.keys.to_le_bytes() { fnv(b); }
+
+            if let Some(ref arrow) = p.arrow {
+                fnv(1);
+                fnv(arrow.dir as u8);
+                fnv(arrow.cooldown);
+                for &b in &arrow.x.to_le_bytes() { fnv(b); }
+                for &b in &arrow.y.to_le_bytes() { fnv(b); }
+            } else {
+                for _ in 0..11 { fnv(0); }
+            }
+        }
+
+        hash
+    }
+}
+
 pub struct Game {
     pub map: Map,
     pub players: [Player; MAX_PLAYERS],
@@ -230,23 +277,17 @@ impl Game {
 
         let active_rect = self.get_active_rect();
 
-        // 1. Step players every PLAYER_MOVE_INTERVAL frames (8 frames = 7.5 tiles/sec)
-        if self.time % PLAYER_MOVE_INTERVAL == 0 {
-            self.last_move_time = self.time;
-            for i in 0..self.players.len() {
-                if self.players[i].active && self.players[i].alive && !self.players[i].escaped {
-                    let player = &mut self.players[i];
-                    crate::physics::step_player(i, player, &mut self.map, active_rect);
-                }
+        // 1. Step arrows in flight for active players (1 tile every 4 frames per arrow cooldown)
+        for i in 0..self.players.len() {
+            if self.players[i].active {
+                crate::physics::step_arrow(i, &mut self.players, &mut self.map, active_rect);
             }
         }
 
-        // 2. Step arrows for all active players every ARROW_MOVE_INTERVAL frames (4 frames = 15.0 tiles/sec)
-        if self.time % ARROW_MOVE_INTERVAL == 0 {
-            for i in 0..self.players.len() {
-                if self.players[i].active {
-                    crate::physics::step_arrow(i, &mut self.players, &mut self.map, active_rect);
-                }
+        // 2. Step players (0 ms immediate start on 60 Hz frame with 8-frame move cooldown & immediate arrow spawn)
+        for i in 0..self.players.len() {
+            if self.players[i].active && self.players[i].alive && !self.players[i].escaped {
+                crate::physics::step_player(i, &mut self.players, &mut self.map, active_rect);
             }
         }
 
@@ -294,12 +335,17 @@ impl Game {
             return false;
         }
 
-        // 2. No Arrows in Flight for active players
+        // 2. No Active Move Cooldowns (players completing tile steps)
+        if self.players.iter().any(|p| p.active && p.move_cooldown > 0) {
+            return false;
+        }
+
+        // 3. No Arrows in Flight for active players
         if self.players.iter().any(|p| p.active && p.arrow.is_some()) {
             return false;
         }
 
-        // 3. Camera Arrived
+        // 4. Camera Arrived
         let (tx, ty) = calculate_target_cog(&self.players);
         let dx = (tx as f64) - self.camera.cog_x;
         let dy = (ty as f64) - self.camera.cog_y;
@@ -315,14 +361,14 @@ impl Game {
             for x in active.left..(active.left + active.width) {
                 let v = self.map.get(x, y);
 
-                // 4. Ghosts inside visible viewport
+                // 5. Ghosts inside visible viewport
                 if (GHOST..=GHOST + 2).contains(&v)
                     && !crate::ai::is_ghost_blocked(x, y, &self.map, &self.players)
                 {
                     return false;
                 }
 
-                // 5. Generators inside visible viewport
+                // 6. Generators inside visible viewport
                 if (GENERATOR..=GENERATOR + 2).contains(&v)
                     && !crate::ai::is_generator_blocked(x, y, &self.map)
                 {
@@ -332,6 +378,10 @@ impl Game {
         }
 
         true
+    }
+
+    pub fn get_state_checksum(&self) -> u32 {
+        self.save_state().get_checksum()
     }
 
     pub fn save_state(&self) -> GameSnapshot {
@@ -400,11 +450,13 @@ impl Game {
             if p.arrow.is_some() { flags |= 1 << 3; }
             buf.push(flags);
             buf.push(p.input_mask);
+            buf.push(p.move_cooldown);
 
             if let Some(arrow) = p.arrow {
                 write_i32(&mut buf, arrow.x);
                 write_i32(&mut buf, arrow.y);
                 buf.push(arrow.dir as u8);
+                buf.push(arrow.cooldown);
             }
         }
 
@@ -448,7 +500,7 @@ impl Game {
         ];
 
         for p_idx in 0..num_players.min(MAX_PLAYERS) {
-            if offset + 23 > bytes.len() {
+            if offset + 24 > bytes.len() {
                 return false;
             }
 
@@ -466,6 +518,8 @@ impl Game {
             offset += 1;
             let input_mask = bytes[offset];
             offset += 1;
+            let move_cooldown = bytes[offset];
+            offset += 1;
 
             let active = (flags & (1 << 0)) != 0;
             let alive = (flags & (1 << 1)) != 0;
@@ -473,14 +527,16 @@ impl Game {
             let has_arrow = (flags & (1 << 3)) != 0;
 
             let arrow = if has_arrow {
-                if offset + 9 > bytes.len() {
+                if offset + 10 > bytes.len() {
                     return false;
                 }
                 let ax = read_i32(bytes, &mut offset);
                 let ay = read_i32(bytes, &mut offset);
                 let adir = bytes[offset] as usize;
                 offset += 1;
-                Some(crate::entity::Arrow { x: ax, y: ay, dir: adir })
+                let acooldown = bytes[offset];
+                offset += 1;
+                Some(crate::entity::Arrow { x: ax, y: ay, dir: adir, cooldown: acooldown })
             } else {
                 None
             };
@@ -499,6 +555,7 @@ impl Game {
                 escaped,
                 arrow,
                 input_mask,
+                move_cooldown,
             };
         }
 
@@ -786,7 +843,7 @@ mod tests {
                 }
             }
         }
-        game.players[0].arrow = Some(Arrow { x: 10, y: 10, dir: 0 });
+        game.players[0].arrow = Some(Arrow { x: 10, y: 10, dir: 0, cooldown: 4 });
         assert!(!game.can_sleep());
 
         // Arrow for dead player SHOULD block sleep
@@ -911,10 +968,8 @@ mod tests {
         // Fire P1's arrow East (input ACTION_SHOOT)
         game.players[p1_idx].input_mask = ACTION_SHOOT;
         
-        // Step 8 times to trigger player tick (fires arrow, takes 1st step to px + 1, py)
-        for _ in 0..8 {
-            game.step();
-        }
+        // Step 1 time: Fires arrow immediately on 60 Hz frame, takes 1st step to px + 1, py
+        game.step();
         
         // Arrow should be at (px + 1, py) now (fired and moved 1 tile)
         assert!(game.players[p1_idx].arrow.is_some());
@@ -967,28 +1022,33 @@ mod tests {
         let py = game.players[0].y;
         game.map.set(px + 1, py, SPACE);
         game.map.set(px + 2, py, SPACE);
+        game.map.set(px + 3, py, SPACE);
 
         game.players[0].input_mask = ACTION_RIGHT;
 
-        // Frames 1..7: P1 does NOT move yet
-        for f in 1..8 {
+        // Frame 1: Immediate Move Start on 60 Hz frame (0 ms input lag)
+        game.step();
+        assert_eq!(game.players[0].x, px + 1, "P1 must move 1 tile immediately at frame 1");
+
+        // Frames 2..8 (7 frames cooldown duration): P1 stays at px + 1
+        for f in 2..=8 {
             game.step();
-            assert_eq!(game.players[0].x, px, "P1 must not move before frame 8 (at frame {})", f);
+            assert_eq!(game.players[0].x, px + 1, "P1 must stay at px+1 until frame 9 (at frame {})", f);
         }
 
-        // Frame 8: P1 moves 1 tile Right
+        // Frame 9 (8 frames after frame 1): P1 moves to px + 2
         game.step();
-        assert_eq!(game.players[0].x, px + 1, "P1 must move 1 tile at frame 8");
+        assert_eq!(game.players[0].x, px + 2, "P1 must move to px+2 at frame 9");
 
-        // Frames 9..15: P1 stays at px + 1
-        for f in 9..16 {
+        // Frames 10..16 (7 frames cooldown duration): P1 stays at px + 2
+        for f in 10..=16 {
             game.step();
-            assert_eq!(game.players[0].x, px + 1, "P1 must stay at px+1 until frame 16 (at frame {})", f);
+            assert_eq!(game.players[0].x, px + 2, "P1 must stay at px+2 until frame 17 (at frame {})", f);
         }
 
-        // Frame 16: P1 moves another tile Right
+        // Frame 17 (8 frames after frame 9): P1 moves to px + 3
         game.step();
-        assert_eq!(game.players[0].x, px + 2, "P1 must move to px+2 at frame 16");
+        assert_eq!(game.players[0].x, px + 3, "P1 must move to px+3 at frame 17");
     }
 
     #[test]
@@ -1007,36 +1067,31 @@ mod tests {
             game.map.set(x, py, SPACE);
         }
 
-        // Frame 1..7: P1 charges Right
-        game.players[0].input_mask = ACTION_RIGHT;
-        for _ in 1..8 {
-            game.step();
-        }
-        // At frame 8: P1 fires arrow East
+        // At frame 1: P1 fires arrow East immediately
         game.players[0].input_mask = ACTION_SHOOT;
-        game.step(); // frame 8: arrow created at (10, 10) and immediately moves to (11, 10)
+        game.step(); // frame 1: arrow created and immediately moves to (11, 10)
 
         assert!(game.players[0].arrow.is_some());
         assert_eq!(game.players[0].arrow.unwrap().x, px + 1);
 
-        // Frame 9..11: Arrow remains at px + 1
+        // Frames 2..4 (3 frames): Arrow remains at px + 1
         game.players[0].input_mask = 0;
-        for f in 9..=11 {
+        for f in 2..=4 {
             game.step();
             assert_eq!(game.players[0].arrow.unwrap().x, px + 1, "Arrow should stay at px+1 at frame {}", f);
         }
-        // Frame 12 (4 frames after frame 8): arrow advances to px + 2
+        // Frame 5 (4 frames after frame 1): arrow advances to px + 2
         game.step();
-        assert_eq!(game.players[0].arrow.unwrap().x, px + 2, "Arrow should advance to px+2 at frame 12");
+        assert_eq!(game.players[0].arrow.unwrap().x, px + 2, "Arrow should advance to px+2 at frame 5");
 
-        // Frame 13..15: Arrow remains at px + 2
-        for f in 13..=15 {
+        // Frames 6..8 (3 frames): Arrow remains at px + 2
+        for f in 6..=8 {
             game.step();
             assert_eq!(game.players[0].arrow.unwrap().x, px + 2, "Arrow should stay at px+2 at frame {}", f);
         }
-        // Frame 16 (4 frames after frame 12): arrow advances to px + 3
+        // Frame 9 (4 frames after frame 5): arrow advances to px + 3
         game.step();
-        assert_eq!(game.players[0].arrow.unwrap().x, px + 3, "Arrow should advance to px+3 at frame 16");
+        assert_eq!(game.players[0].arrow.unwrap().x, px + 3, "Arrow should advance to px+3 at frame 9");
     }
 
     #[test]
@@ -1169,5 +1224,69 @@ mod tests {
         assert_eq!(game_a.players, game_b.players);
         assert_eq!(game_a.camera.cog_x, game_b.camera.cog_x);
         assert_eq!(game_a.camera.cog_y, game_b.camera.cog_y);
+    }
+
+    #[test]
+    fn test_deterministic_state_checksum() {
+        let mut game_a = Game::new();
+        game_a.load();
+        let mut game_b = Game::new();
+        game_b.load();
+
+        assert_eq!(game_a.get_state_checksum(), game_b.get_state_checksum());
+
+        // Step both identically
+        for _ in 0..20 {
+            game_a.players[0].input_mask = ACTION_RIGHT;
+            game_b.players[0].input_mask = ACTION_RIGHT;
+            game_a.step();
+            game_b.step();
+        }
+        assert_eq!(game_a.get_state_checksum(), game_b.get_state_checksum());
+
+        // Snapshot roundtrip checksum parity
+        let snap = game_a.save_state();
+        assert_eq!(snap.get_checksum(), game_a.get_state_checksum());
+
+        let bytes = game_a.save_state_bytes();
+        let mut game_c = Game::new();
+        let ok = game_c.load_state_bytes(&bytes);
+        assert!(ok);
+        assert_eq!(game_c.get_state_checksum(), game_a.get_state_checksum());
+
+        // Mutating any player state (health, score, keys, bombs, pos, dir, arrow) changes checksum
+        let original_cs = game_a.get_state_checksum();
+        game_a.players[0].health -= 1;
+        assert_ne!(game_a.get_state_checksum(), original_cs);
+        game_a.players[0].health += 1;
+        assert_eq!(game_a.get_state_checksum(), original_cs);
+
+        game_a.players[0].score += 10;
+        assert_ne!(game_a.get_state_checksum(), original_cs);
+        game_a.players[0].score -= 10;
+        assert_eq!(game_a.get_state_checksum(), original_cs);
+
+        game_a.players[0].keys += 1;
+        assert_ne!(game_a.get_state_checksum(), original_cs);
+        game_a.players[0].keys -= 1;
+        assert_eq!(game_a.get_state_checksum(), original_cs);
+
+        game_a.players[0].bombs += 1;
+        assert_ne!(game_a.get_state_checksum(), original_cs);
+        game_a.players[0].bombs -= 1;
+        assert_eq!(game_a.get_state_checksum(), original_cs);
+
+        game_a.players[0].move_cooldown += 1;
+        assert_ne!(game_a.get_state_checksum(), original_cs);
+        game_a.players[0].move_cooldown -= 1;
+        assert_eq!(game_a.get_state_checksum(), original_cs);
+
+        game_a.rotor = (game_a.rotor + 1) & 3;
+        assert_ne!(game_a.get_state_checksum(), original_cs);
+        game_a.rotor = (game_a.rotor + 3) & 3;
+        assert_eq!(game_a.get_state_checksum(), original_cs);
+
+        game_a.map.set(10, 10, GHOST);
+        assert_ne!(game_a.get_state_checksum(), original_cs);
     }
 }

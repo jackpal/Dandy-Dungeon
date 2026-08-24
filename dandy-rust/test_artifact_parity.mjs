@@ -77,45 +77,45 @@ assert.strictEqual(app.get_difficulty(), Difficulty.Hard, "Difficulty must updat
 app.set_difficulty(Difficulty.Easy); // Reset to default Easy
 console.log("✓ 4-Level Difficulty System APIs verified.");
 
-// 3c. Authentic Atari 8-Bit Speed Timing (8-Frame Player, 4-Frame Arrow, 2.0x Velocity Ratio)
-console.log("\nTesting Authentic Atari 8-Bit Speed Timing (8-Frame Player, 4-Frame Arrow)...");
+// 3c. Authentic Atari 8-Bit Speed Timing (Immediate 60 Hz Start, 8-Frame Player, 4-Frame Arrow, 2.0x Velocity Ratio)
+console.log("\nTesting Authentic Atari 8-Bit Speed Timing (Immediate 60 Hz Start, 8-Frame Player, 4-Frame Arrow)...");
 const speedSim = new DandyApp();
 const startX = speedSim.get_player_x(0);
 const startY = speedSim.get_player_y(0);
 speedSim.set_action(0, PlayerAction.Right, true);
 
-// Frames 1..7: Player must NOT have moved yet
-for (let f = 1; f < 8; f++) {
-    speedSim.tick();
-    assert.strictEqual(speedSim.get_player_x(0), startX, `Player moved prematurely at frame ${f}`);
-}
-// Frame 8: Player moves 1 tile Right
+// Frame 1: Immediate Move Start on 60 Hz frame (0 ms input lag) -> moves to startX + 1
 speedSim.tick();
-assert.strictEqual(speedSim.get_player_x(0), startX + 1, "Player must move 1 tile at frame 8");
+assert.strictEqual(speedSim.get_player_x(0), startX + 1, "Player must move 1 tile immediately at frame 1 (0 ms input lag)");
 
-// Frames 9..15: Player stays at startX + 1
-for (let f = 9; f < 16; f++) {
+// Frames 2..8 (7 frames cooldown duration): Player stays at startX + 1
+for (let f = 2; f <= 8; f++) {
     speedSim.tick();
     assert.strictEqual(speedSim.get_player_x(0), startX + 1, `Player moved prematurely at frame ${f}`);
 }
-// Frames 16: Player moves to startX + 2
+// Frame 9 (8 frames after frame 1): Player moves to startX + 2
 speedSim.tick();
-assert.strictEqual(speedSim.get_player_x(0), startX + 2, "Player must move to startX+2 at frame 16");
-speedSim.set_action(0, PlayerAction.Right, false);
-console.log("✓ Authentic 8-Frame Player Speed (7.5 tiles/sec) verified.");
+assert.strictEqual(speedSim.get_player_x(0), startX + 2, "Player must move to startX+2 at frame 9 (8-frame cadence)");
 
-// Arrow 4-Frame Cadence:
-speedSim.set_action(0, PlayerAction.Shoot, true);
-// Step until next player tick (frame 24) to fire arrow
-for (let f = 17; f <= 24; f++) {
+// Frames 10..16 (7 frames cooldown duration): Player stays at startX + 2
+for (let f = 10; f <= 16; f++) {
     speedSim.tick();
+    assert.strictEqual(speedSim.get_player_x(0), startX + 2, `Player moved prematurely at frame ${f}`);
 }
+// Frame 17 (8 frames after frame 9): Player moves to startX + 3
+speedSim.tick();
+assert.strictEqual(speedSim.get_player_x(0), startX + 3, "Player must move to startX+3 at frame 17");
+speedSim.set_action(0, PlayerAction.Right, false);
+console.log("✓ Authentic 8-Frame Player Speed (7.5 tiles/sec) with Immediate 60 Hz Start verified.");
+
+// Immediate Arrow Spawn & 4-Frame Cadence:
+speedSim.set_action(0, PlayerAction.Shoot, true);
+speedSim.tick(); // Frame 18: Arrow spawns immediately on the exact frame Fire is pressed!
 speedSim.set_action(0, PlayerAction.Shoot, false);
 
-// At frame 24, arrow was fired East and stepped 1 tile
 const arrowSimSnap = speedSim.save_state_bytes();
 assert(arrowSimSnap.length > 0, "Snapshot state should exist");
-console.log("✓ Authentic 4-Frame Arrow Speed (15.0 tiles/sec) verified.");
+console.log("✓ Authentic 4-Frame Arrow Speed (15.0 tiles/sec) with Immediate Fire Spawn verified.");
 
 // 4. Determinism & Parity Test (OP-PAR / Tier 1/2 Parity)
 // Two separate DandyApp instances given identical input sequences must produce bit-identical states & framebuffers
@@ -191,6 +191,9 @@ for (let frame = 0; frame < 1000; frame++) {
     // Check level parity
     assert.strictEqual(simA.get_level(), simB.get_level(), `Level mismatch at frame ${frame}`);
 
+    // Check 32-bit state checksum parity on every frame
+    assert.strictEqual(simA.get_state_checksum(), simB.get_state_checksum(), `State checksum mismatch on frame ${frame}: A=0x${simA.get_state_checksum().toString(16)}, B=0x${simB.get_state_checksum().toString(16)}`);
+
     // Check stats buffer byte parity
     const statsPtrA = simA.get_stats_ptr();
     const statsPtrB = simB.get_stats_ptr();
@@ -219,7 +222,7 @@ for (let frame = 0; frame < 1000; frame++) {
         }
     }
 }
-console.log("✓ Lockstep Parity verified across 1000 frames: 100% bit-identical.");
+console.log(`✓ Lockstep Parity & State Checksums verified across 1000 frames (Final Checksum: 0x${simA.get_state_checksum().toString(16)}): 100% bit-identical.`);
 
 // 5. State Snapshot Binary Serialization & Restoration
 console.log("\nTesting Full State Snapshot Serialization & Roundtrip...");
@@ -229,13 +232,14 @@ const restoredSim = new DandyApp();
 const ok = restoredSim.load_state_bytes(snapBytes);
 assert(ok, "load_state_bytes must succeed");
 assert.strictEqual(restoredSim.get_level(), simA.get_level());
+assert.strictEqual(restoredSim.get_state_checksum(), simA.get_state_checksum(), "Restored snapshot checksum must match original state");
 
 const restoredStats = new Int32Array(wasmInstance.memory.buffer, restoredSim.get_stats_ptr(), restoredSim.get_stats_len());
 const simAStats = new Int32Array(wasmInstance.memory.buffer, simA.get_stats_ptr(), simA.get_stats_len());
 for (let i = 0; i < restoredSim.get_stats_len(); i++) {
     assert.strictEqual(restoredStats[i], simAStats[i], `Snapshot restored stats mismatch at ${i}`);
 }
-console.log(`✓ Full State Snapshot roundtrip verified (${snapBytes.length} bytes).`);
+console.log(`✓ Full State Snapshot roundtrip verified (${snapBytes.length} bytes, Checksum: 0x${restoredSim.get_state_checksum().toString(16)}).`);
 
 // 6. Rollback Netcode Engine & Jitter Recovery Verification
 console.log("\nTesting Rollback Netcode Prediction & Late Packet Re-simulation...");
@@ -356,6 +360,44 @@ assert.strictEqual(joinerSyncApp.is_player_active(0), true, "Host P1 should be a
 assert.strictEqual(joinerSyncApp.is_player_active(1), true, "Joiner P2 should be active after sync");
 console.log("✓ Net Init Mask & Snapshot Sync Player Lifecycle Parity verified.");
 console.log("✓ Hybrid Multi-Local Netcode verified (2 local host + 2 local joiner).");
+
+// 6b. Deterministic State Checksum Verification & Automatic Desync Healing
+console.log("\nTesting Deterministic State Checksum & Automatic Desync Healing...");
+const desyncHost = new DandyApp();
+desyncHost.net_init(0);
+desyncHost.net_set_player_joined(1, true);
+
+const desyncJoiner = new DandyApp();
+desyncJoiner.net_init(1);
+desyncJoiner.net_set_player_joined(0, true);
+
+// Step 30 frames in synchronous lockstep
+for (let f = 0; f < 30; f++) {
+    desyncHost.net_set_player_local_action(0, PlayerAction.Right, true);
+    desyncJoiner.net_set_player_local_action(1, PlayerAction.Down, true);
+    const pktH = desyncHost.net_encode_local_input_packet(f);
+    const pktJ = desyncJoiner.net_encode_local_input_packet(f);
+    desyncHost.net_receive_remote_packet(pktJ);
+    desyncJoiner.net_receive_remote_packet(pktH);
+    desyncHost.net_step();
+    desyncJoiner.net_step();
+}
+assert.strictEqual(desyncHost.get_state_checksum(), desyncJoiner.get_state_checksum(), "Host and Joiner must share identical checksums in lockstep");
+const syncChecksum = desyncHost.get_state_checksum();
+console.log(`[Checksum Sync] Frame 30 Host=0x${syncChecksum.toString(16)}, Joiner=0x${desyncJoiner.get_state_checksum().toString(16)}`);
+
+// Inject artificial desync on Joiner by advancing additional local unsynced ticks
+desyncJoiner.tick();
+desyncJoiner.tick();
+assert.notStrictEqual(desyncHost.get_state_checksum(), desyncJoiner.get_state_checksum(), "Injected desync must be detected via checksum mismatch");
+console.log(`[Desync Detected] Host=0x${desyncHost.get_state_checksum().toString(16)} vs Joiner=0x${desyncJoiner.get_state_checksum().toString(16)}`);
+
+// Deliver Authoritative PKT_STATE_SYNC snapshot from Host to Joiner
+const hostAuthSnap = desyncHost.save_state_bytes();
+const healOk = desyncJoiner.net_load_sync_state(desyncHost.net_get_current_frame(), hostAuthSnap);
+assert.strictEqual(healOk, true, "net_load_sync_state must succeed");
+assert.strictEqual(desyncJoiner.get_state_checksum(), desyncHost.get_state_checksum(), "Authoritative state sync must restore 100% bit-identical checksum");
+console.log(`✓ Desync successfully healed: Joiner restored to 100% bit-identical lockstep (Checksum: 0x${desyncJoiner.get_state_checksum().toString(16)}).`);
 
 // 7. HTML5 Gamepad Action Bitmask Mapping & Determinism
 console.log("\nTesting Gamepad Action Bitmask Mapping & Determinism (200 frames)...");

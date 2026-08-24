@@ -223,6 +223,122 @@ new Promise(async (resolve, reject) => {
         const p3App = iframeP3.contentWindow.dandyApp;
         const p4App = iframeP4.contentWindow.dandyApp;
 
+        console.log("[Test] 8. Testing Bidirectional Difficulty Synchronization (Host <-> Joiners)...");
+        // Test A: Joiner P2 changes difficulty dropdown to Deadly (3)
+        const p2DifficultySelect = iframeP2.contentDocument?.getElementById("select-difficulty");
+        if (p2DifficultySelect) {
+            p2DifficultySelect.value = "3";
+            p2DifficultySelect.dispatchEvent(new Event("change"));
+        }
+        await waitFor(() => {
+            const hostDiffVal = window.dandyApp?.get_difficulty();
+            const hostSelectVal = document.getElementById("select-difficulty")?.value;
+            const p3DiffVal = iframeP3.contentWindow?.dandyApp?.get_difficulty();
+            const p3SelectVal = iframeP3.contentDocument?.getElementById("select-difficulty")?.value;
+            const p4DiffVal = iframeP4.contentWindow?.dandyApp?.get_difficulty();
+            const p4SelectVal = iframeP4.contentDocument?.getElementById("select-difficulty")?.value;
+            return hostDiffVal === 3 && hostSelectVal === "3" &&
+                   p3DiffVal === 3 && p3SelectVal === "3" &&
+                   p4DiffVal === 3 && p4SelectVal === "3";
+        }, 5000, "Joiner P2 difficulty change propagating to Host, P3, and P4");
+
+        const diffAfterJoinerChange = {
+            hostVal: document.getElementById("select-difficulty")?.value,
+            hostApp: window.dandyApp?.get_difficulty(),
+            p2Val: iframeP2.contentDocument?.getElementById("select-difficulty")?.value,
+            p2App: iframeP2.contentWindow?.dandyApp?.get_difficulty(),
+            p3Val: iframeP3.contentDocument?.getElementById("select-difficulty")?.value,
+            p3App: iframeP3.contentWindow?.dandyApp?.get_difficulty(),
+            p4Val: iframeP4.contentDocument?.getElementById("select-difficulty")?.value,
+            p4App: iframeP4.contentWindow?.dandyApp?.get_difficulty()
+        };
+
+        // Test B: Host changes difficulty to Trivial (0)
+        const hostDifficultySelect = document.getElementById("select-difficulty");
+        if (hostDifficultySelect) {
+            hostDifficultySelect.value = "0";
+            hostDifficultySelect.dispatchEvent(new Event("change"));
+        }
+        await waitFor(() => {
+            const p2DiffVal = iframeP2.contentWindow?.dandyApp?.get_difficulty();
+            const p2SelectVal = iframeP2.contentDocument?.getElementById("select-difficulty")?.value;
+            const p3DiffVal = iframeP3.contentWindow?.dandyApp?.get_difficulty();
+            const p3SelectVal = iframeP3.contentDocument?.getElementById("select-difficulty")?.value;
+            const p4DiffVal = iframeP4.contentWindow?.dandyApp?.get_difficulty();
+            const p4SelectVal = iframeP4.contentDocument?.getElementById("select-difficulty")?.value;
+            return p2DiffVal === 0 && p2SelectVal === "0" &&
+                   p3DiffVal === 0 && p3SelectVal === "0" &&
+                   p4DiffVal === 0 && p4SelectVal === "0";
+        }, 5000, "Host difficulty change propagating to all joiners");
+
+        const diffAfterHostChange = {
+            hostVal: document.getElementById("select-difficulty")?.value,
+            hostApp: window.dandyApp?.get_difficulty(),
+            p2Val: iframeP2.contentDocument?.getElementById("select-difficulty")?.value,
+            p2App: iframeP2.contentWindow?.dandyApp?.get_difficulty(),
+            p3Val: iframeP3.contentDocument?.getElementById("select-difficulty")?.value,
+            p3App: iframeP3.contentWindow?.dandyApp?.get_difficulty(),
+            p4Val: iframeP4.contentDocument?.getElementById("select-difficulty")?.value,
+            p4App: iframeP4.contentWindow?.dandyApp?.get_difficulty()
+        };
+
+        // Reset difficulty back to Easy (1)
+        if (hostDifficultySelect) {
+            hostDifficultySelect.value = "1";
+            hostDifficultySelect.dispatchEvent(new Event("change"));
+        }
+        await waitFor(() => {
+            return window.dandyApp?.get_difficulty() === 1 &&
+                   iframeP2.contentWindow?.dandyApp?.get_difficulty() === 1 &&
+                   iframeP3.contentWindow?.dandyApp?.get_difficulty() === 1 &&
+                   iframeP4.contentWindow?.dandyApp?.get_difficulty() === 1;
+        }, 5000, "Reset difficulty back to Easy");
+
+        console.log("[Test] 8. Inspecting 32-bit state checksums across all 4 peers in mesh...");
+        const commonFrame = Math.min(
+            window.dandyApp.net_get_confirmed_frame(),
+            iframeP2.contentWindow.dandyApp.net_get_confirmed_frame(),
+            iframeP3.contentWindow.dandyApp.net_get_confirmed_frame(),
+            iframeP4.contentWindow.dandyApp.net_get_confirmed_frame()
+        );
+        const initialChecksums = [
+            window.dandyApp.net_get_checksum_at_frame(commonFrame),
+            iframeP2.contentWindow.dandyApp.net_get_checksum_at_frame(commonFrame),
+            iframeP3.contentWindow.dandyApp.net_get_checksum_at_frame(commonFrame),
+            iframeP4.contentWindow.dandyApp.net_get_checksum_at_frame(commonFrame)
+        ];
+
+        console.log("[Test] 9. Simulating live desync injection and automatic healing via PKT_RESYNC_REQ and PKT_STATE_SYNC...");
+        const p3JoinerApp = iframeP3.contentWindow?.dandyApp;
+        const p3ChecksumBeforeDesync = p3JoinerApp?.net_get_checksum_at_frame(commonFrame);
+        // Artificially desync P3 Joiner by ticking local app directly
+        if (p3JoinerApp) {
+            p3JoinerApp.set_action(2, 0, true);
+            p3JoinerApp.tick();
+            p3JoinerApp.tick();
+            p3JoinerApp.set_action(2, 0, false);
+        }
+        const p3ChecksumAfterDesync = p3JoinerApp?.get_state_checksum();
+        const hostChecksumDuringDesync = window.dandyApp?.get_state_checksum();
+
+        // Wait for automatic resync healing (Host delivers authoritative state sync every 2s / 120 frames or via PKT_RESYNC_REQ)
+        await waitFor(() => {
+            const hF = window.dandyApp.net_get_confirmed_frame();
+            const p3F = iframeP3.contentWindow.dandyApp.net_get_confirmed_frame();
+            const targetF = Math.min(hF, p3F);
+            if (targetF <= commonFrame) return false;
+            const hCs = window.dandyApp.net_get_checksum_at_frame(targetF);
+            const p3Cs = iframeP3.contentWindow.dandyApp.net_get_checksum_at_frame(targetF);
+            return hCs !== 0 && hCs === p3Cs;
+        }, 5000, "Automatic desync healing on Joiner P3");
+
+        const latestConfirmedF = Math.min(
+            window.dandyApp.net_get_confirmed_frame(),
+            iframeP3.contentWindow.dandyApp.net_get_confirmed_frame()
+        );
+        const p3ChecksumAfterHeal = iframeP3.contentWindow.dandyApp.net_get_checksum_at_frame(latestConfirmedF);
+        const hostChecksumAfterHeal = window.dandyApp.net_get_checksum_at_frame(latestConfirmedF);
+
         const results = {
             initialWelcomeVisible,
             has3WelcomeOptions,
@@ -247,6 +363,14 @@ new Promise(async (resolve, reject) => {
             posAfterGamepad,
             p1GpStatusAfterDisconnect,
             p1GpBadgeVisibleAfterDisconnect,
+            diffAfterJoinerChange,
+            diffAfterHostChange,
+            initialChecksums,
+            p3ChecksumBeforeDesync,
+            p3ChecksumAfterDesync,
+            hostChecksumDuringDesync,
+            p3ChecksumAfterHeal,
+            hostChecksumAfterHeal,
             frames: [
                 p1App.net_get_current_frame(),
                 p2App.net_get_current_frame(),
@@ -282,12 +406,12 @@ new Promise(async (resolve, reject) => {
 
 function runTest() {
     return new Promise((resolve, reject) => {
-        execFile(GBROWSER_BIN, ['eval', 'http://127.0.0.1:8080/', testCode], { timeout: 30000 }, (err, stdout, stderr) => {
+        execFile(GBROWSER_BIN, ['eval', 'http://127.0.0.1:8080/', testCode], { timeout: 60000 }, (err, stdout, stderr) => {
             if (err) {
-                console.error("gbrowser execution error:", err);
-                console.error("stderr:", stderr);
-                console.error("stdout:", stdout);
-                return reject(err);
+                console.error("gbrowser execution failed!");
+                if (stderr) console.error("stderr:", stderr);
+                if (stdout) console.error("stdout:", stdout);
+                return reject(new Error(err.message || String(err)));
             }
 
             const lines = stdout.trim().split('\n');
@@ -408,7 +532,41 @@ try {
     assert.strictEqual(res.p1GpBadgeVisibleAfterDisconnect, false, "Gamepad badge must be hidden after disconnect");
     console.log("✓ HTML5 Gamepad API polling, sparse array mapping, dynamic legend badges, and analog stick movement verified.");
 
-    // 6. Zero-Copy Framebuffer Integrity
+    // 6. Bidirectional Difficulty Synchronization (Host <-> Joiners)
+    console.log("\n=== Verifying Bidirectional Difficulty Synchronization ===");
+    console.log(`Joiner P2 Change: Host UI=${res.diffAfterJoinerChange.hostVal} (app=${res.diffAfterJoinerChange.hostApp}), P2=${res.diffAfterJoinerChange.p2Val}, P3=${res.diffAfterJoinerChange.p3Val}, P4=${res.diffAfterJoinerChange.p4Val}`);
+    assert.strictEqual(res.diffAfterJoinerChange.hostVal, "3", "Host select-difficulty value must update to '3' when Joiner changes to Deadly");
+    assert.strictEqual(res.diffAfterJoinerChange.hostApp, 3, "Host app difficulty must update to 3 (Deadly) when Joiner changes");
+    assert.strictEqual(res.diffAfterJoinerChange.p3Val, "3", "P3 select-difficulty must update to '3' via Host relay");
+    assert.strictEqual(res.diffAfterJoinerChange.p3App, 3, "P3 app difficulty must update to 3 via Host relay");
+    assert.strictEqual(res.diffAfterJoinerChange.p4Val, "3", "P4 select-difficulty must update to '3' via Host relay");
+    assert.strictEqual(res.diffAfterJoinerChange.p4App, 3, "P4 app difficulty must update to 3 via Host relay");
+    console.log("✓ Joiner difficulty change correctly updated Host UI and relayed across 4-player mesh.");
+
+    console.log(`Host Change: Host UI=${res.diffAfterHostChange.hostVal} (app=${res.diffAfterHostChange.hostApp}), P2=${res.diffAfterHostChange.p2Val}, P3=${res.diffAfterHostChange.p3Val}, P4=${res.diffAfterHostChange.p4Val}`);
+    assert.strictEqual(res.diffAfterHostChange.p2Val, "0", "P2 select-difficulty must update to '0' when Host changes to Trivial");
+    assert.strictEqual(res.diffAfterHostChange.p2App, 0, "P2 app difficulty must update to 0 (Trivial)");
+    assert.strictEqual(res.diffAfterHostChange.p3Val, "0", "P3 select-difficulty must update to '0' when Host changes to Trivial");
+    assert.strictEqual(res.diffAfterHostChange.p3App, 0, "P3 app difficulty must update to 0 (Trivial)");
+    assert.strictEqual(res.diffAfterHostChange.p4Val, "0", "P4 select-difficulty must update to '0' when Host changes to Trivial");
+    assert.strictEqual(res.diffAfterHostChange.p4App, 0, "P4 app difficulty must update to 0 (Trivial)");
+    console.log("✓ Host difficulty change correctly broadcast to all joiner peers.");
+
+    // 7. Deterministic State Checksums and Automatic Desync Healing Verification
+    console.log("\n=== Verifying Deterministic State Checksums and Automatic Desync Healing ===");
+    console.log(`Initial Mesh Checksums: P1=0x${res.initialChecksums[0].toString(16)}, P2=0x${res.initialChecksums[1].toString(16)}, P3=0x${res.initialChecksums[2].toString(16)}, P4=0x${res.initialChecksums[3].toString(16)}`);
+    assert.strictEqual(res.initialChecksums[0], res.initialChecksums[1], "P1 and P2 initial checksums must match");
+    assert.strictEqual(res.initialChecksums[0], res.initialChecksums[2], "P1 and P3 initial checksums must match");
+    assert.strictEqual(res.initialChecksums[0], res.initialChecksums[3], "P1 and P4 initial checksums must match");
+    console.log("✓ Full 4-player mesh lockstep checksum parity verified (100% bit-identical).");
+
+    console.log(`Injected Desync on P3: Host=0x${res.hostChecksumDuringDesync.toString(16)} vs P3=0x${res.p3ChecksumAfterDesync.toString(16)}`);
+    assert.notStrictEqual(res.hostChecksumDuringDesync, res.p3ChecksumAfterDesync, "Injected desync on P3 must alter checksum");
+    console.log(`Healed Checksum on P3: 0x${res.p3ChecksumAfterHeal.toString(16)} (Host: 0x${res.hostChecksumAfterHeal.toString(16)})`);
+    assert.strictEqual(res.p3ChecksumAfterHeal, res.hostChecksumAfterHeal, "Authoritative state sync must restore P3 Joiner to 100% lockstep parity with Host");
+    console.log("✓ Automatic desync detection and seamless state healing over WebRTC mesh verified.");
+
+    // 8. Zero-Copy Framebuffer Integrity
     assert.deepStrictEqual(res.fbSizes, [204800, 204800, 204800, 204800], "320x160x4 Framebuffer integrity");
     assert.deepStrictEqual(res.statsLens, [28, 28, 28, 28], "4x7 stats array integrity");
     console.log("✓ Zero-Copy Framebuffer and Stats memory boundaries intact on all instances.");

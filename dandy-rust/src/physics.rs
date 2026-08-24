@@ -87,18 +87,17 @@ pub fn try_move_player(
 
 pub fn step_player(
     index: usize,
-    player: &mut Player,
+    players: &mut [Player],
     map: &mut Map,
     active_rect: ActiveRect,
 ) {
-    let input = player.input_mask;
-    let start_x = player.x;
-    let start_y = player.y;
+    if index >= players.len() { return; }
+    let input = players[index].input_mask;
 
     // 1. Check Smart Bomb
-    if (input & ACTION_BOMB) != 0 && player.bombs > 0 {
-        player.bombs -= 1;
-        do_smart_bomb(player, map, active_rect);
+    if (input & ACTION_BOMB) != 0 && players[index].bombs > 0 {
+        players[index].bombs -= 1;
+        do_smart_bomb(&mut players[index], map, active_rect);
     }
 
     // Get direction from input mask
@@ -122,32 +121,43 @@ pub fn step_player(
     };
 
     if let Some(d) = dir_opt {
-        player.dir = d;
+        players[index].dir = d;
     }
 
     // 2. Check Shoot vs Move
     if (input & ACTION_SHOOT) != 0 {
-        if player.arrow.is_none() {
-            let shoot_dir = dir_opt.unwrap_or(player.dir);
-            player.arrow = Some(Arrow {
-                x: start_x,
-                y: start_y,
+        if players[index].arrow.is_none() {
+            let shoot_dir = dir_opt.unwrap_or(players[index].dir);
+            players[index].dir = shoot_dir;
+            players[index].arrow = Some(Arrow {
+                x: players[index].x,
+                y: players[index].y,
                 dir: shoot_dir,
+                cooldown: ARROW_MOVE_INTERVAL as u8,
             });
+            step_arrow_advance(index, players, map, active_rect);
         }
-    } else if let Some(d) = dir_opt {
-        // Try moving with wall-sliding
-        let moved = try_move_player(index, player, map, d);
-        if !moved {
-            let moved_left = try_move_player(index, player, map, (d + 1) & 7);
-            if !moved_left {
-                try_move_player(index, player, map, (d + 7) & 7);
+    } else {
+        if players[index].move_cooldown > 0 {
+            players[index].move_cooldown -= 1;
+        }
+        if players[index].move_cooldown == 0 {
+            if let Some(d) = dir_opt {
+                // Try moving with wall-sliding
+                let moved = try_move_player(index, &mut players[index], map, d);
+                if !moved {
+                    let moved_left = try_move_player(index, &mut players[index], map, (d + 1) & 7);
+                    if !moved_left {
+                        try_move_player(index, &mut players[index], map, (d + 7) & 7);
+                    }
+                }
+                players[index].move_cooldown = PLAYER_MOVE_INTERVAL as u8;
             }
         }
     }
 }
 
-pub fn step_arrow(
+pub fn step_arrow_advance(
     index: usize,
     players: &mut [Player],
     map: &mut Map,
@@ -178,6 +188,7 @@ pub fn step_arrow(
                     x: nx,
                     y: ny,
                     dir: a.dir,
+                    cooldown: ARROW_MOVE_INTERVAL as u8,
                 });
                 new_v = arrow_val;
                 kill_arrow = false;
@@ -198,6 +209,7 @@ pub fn step_arrow(
                         p.x = nx;
                         p.y = ny;
                         p.health = 50; // Resurrect with 50 health
+                        p.move_cooldown = 0;
                         new_v = PLAYER + (p_idx as u8);
                         break;
                     }
@@ -216,6 +228,24 @@ pub fn step_arrow(
         map.set(nx, ny, new_v);
         if kill_arrow {
             players[index].arrow = None;
+        }
+    }
+}
+
+pub fn step_arrow(
+    index: usize,
+    players: &mut [Player],
+    map: &mut Map,
+    active_rect: ActiveRect,
+) {
+    if index >= players.len() { return; }
+    if let Some(mut arrow) = players[index].arrow {
+        if arrow.cooldown > 0 {
+            arrow.cooldown -= 1;
+            players[index].arrow = Some(arrow);
+        }
+        if arrow.cooldown == 0 {
+            step_arrow_advance(index, players, map, active_rect);
         }
     }
 }

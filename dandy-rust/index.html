@@ -1845,6 +1845,9 @@
             let localPlayerOrder = [0]; // Local player slots controlled by this client in order of join
             let isWaitingForHostSync = false;
             let currentRoomId = null;
+            let pendingHostChecksums = new Map();
+            let lastSentLevel = 0;
+            let desyncCount = 0;
             let sleeping = false;
             let loopRunning = true;
             const pressedKeys = new Set();
@@ -1853,6 +1856,7 @@
             const canvas = document.getElementById("gameCanvas");
             const ctx = canvas.getContext("2d", { alpha: false });
             const connectingOverlay = document.getElementById("connecting-overlay");
+            const difficultySelect = document.getElementById("select-difficulty");
 
             // Zero-Copy Transport Ladder (G3) View Cache
             let cachedFbPtr = 0;
@@ -2542,6 +2546,7 @@
                                     const stateBytes = bytes.subarray(1);
                                     app.load_state_bytes(stateBytes);
                                 }
+                                pendingHostChecksums.clear();
                                 if (difficultySelect) {
                                     difficultySelect.value = app.get_difficulty().toString();
                                 }
@@ -2593,6 +2598,50 @@
                                     broadcastPacket(bytes, peerId);
                                 }
                                 wakeLoop();
+                            } else if (pktType === 0x08) { // PKT_CHECKSUM
+                                if (bytes.length >= 9) {
+                                    const dv = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+                                    const hostFrame = dv.getUint32(1, false);
+                                    const hostChecksum = dv.getUint32(5, false);
+
+                                    if (localPlayerIdx !== 0) { // Joiner client
+                                        const curFrame = app.net_get_current_frame();
+                                        if (curFrame >= hostFrame) {
+                                            const clientChecksum = app.net_get_checksum_at_frame(hostFrame);
+                                            if (clientChecksum !== 0 && clientChecksum !== hostChecksum) {
+                                                console.warn(`[Netcode] Checksum mismatch at frame ${hostFrame}! Host=0x${hostChecksum.toString(16)}, Client=0x${clientChecksum.toString(16)}. Requesting authoritative resync...`);
+                                                desyncCount++;
+                                                const reqBuf = new Uint8Array(6);
+                                                reqBuf[0] = 0x09; // PKT_RESYNC_REQ
+                                                reqBuf[1] = localPlayerIdx;
+                                                const reqDv = new DataView(reqBuf.buffer);
+                                                reqDv.setUint32(2, hostFrame, false);
+                                                broadcastPacket(reqBuf);
+                                            }
+                                        } else {
+                                            pendingHostChecksums.set(hostFrame, hostChecksum);
+                                            if (pendingHostChecksums.size > 64) {
+                                                const oldest = pendingHostChecksums.keys().next().value;
+                                                pendingHostChecksums.delete(oldest);
+                                            }
+                                        }
+                                    }
+                                }
+                            } else if (pktType === 0x09) { // PKT_RESYNC_REQ
+                                if (localPlayerIdx === 0 && bytes.length >= 6) { // Host
+                                    const dv = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+                                    const reqSlot = bytes[1];
+                                    const reqFrame = dv.getUint32(2, false);
+                                    console.log(`[Netcode] Desync heal requested by slot P${reqSlot + 1} for frame ${reqFrame}. Delivering authoritative PKT_STATE_SYNC...`);
+                                    const curFrame = app.net_get_current_frame();
+                                    const stateBytes = app.save_state_bytes();
+                                    const syncPkt = new Uint8Array(1 + 4 + stateBytes.length);
+                                    syncPkt[0] = 0x04; // PKT_STATE_SYNC
+                                    const syncDv = new DataView(syncPkt.buffer);
+                                    syncDv.setUint32(1, curFrame, false);
+                                    syncPkt.set(stateBytes, 5);
+                                    broadcastPacket(syncPkt);
+                                }
                             }
                         }
                     }
@@ -3716,7 +3765,6 @@
             // -----------------------------------------------------------------
             // Main Simulation Game Loop (Fixed 60 Hz Timestep Accumulator)
             // -----------------------------------------------------------------
-            const difficultySelect = document.getElementById("select-difficulty");
             if (difficultySelect) {
                 difficultySelect.value = app.get_difficulty().toString();
                 difficultySelect.addEventListener("change", (e) => {
@@ -3772,6 +3820,60 @@
                         const inputPackets = app.net_encode_all_local_input_packets(currentFrame);
                         if (inputPackets.length > 0) {
                             broadcastPacket(inputPackets);
+                        }
+
+                        if (localPlayerIdx === 0) {
+                            // Host Desync Guard Architecture:
+                            // A. Level Transition Authoritative Snapshot Sync
+                            const curLevel = app.get_level();
+                            if (curLevel !== lastSentLevel) {
+                                lastSentLevel = curLevel;
+                                const stateBytes = app.save_state_bytes();
+                                const syncPkt = new Uint8Array(1 + 4 + stateBytes.length);
+                                syncPkt[0] = 0x04; // PKT_STATE_SYNC
+                                const syncDv = new DataView(syncPkt.buffer);
+                                syncDv.setUint32(1, currentFrame, false);
+                                syncPkt.set(stateBytes, 5);
+                                broadcastPacket(syncPkt);
+                            }
+
+                            // B. Periodic Checksum Broadcast every 60 frames (1s)
+                            if (currentFrame > 0 && currentFrame % 60 === 0) {
+                                const csPkt = new Uint8Array(9);
+                                csPkt[0] = 0x08; // PKT_CHECKSUM
+                                const csDv = new DataView(csPkt.buffer);
+                                csDv.setUint32(1, currentFrame, false);
+                                csDv.setUint32(5, app.net_get_checksum_at_frame(currentFrame), false);
+                                broadcastPacket(csPkt);
+                            }
+
+                            // C. Periodic Authoritative State Snapshot every 120 frames (2s)
+                            if (currentFrame > 0 && currentFrame % 120 === 0) {
+                                const stateBytes = app.save_state_bytes();
+                                const syncPkt = new Uint8Array(1 + 4 + stateBytes.length);
+                                syncPkt[0] = 0x04; // PKT_STATE_SYNC
+                                const syncDv = new DataView(syncPkt.buffer);
+                                syncDv.setUint32(1, currentFrame, false);
+                                syncPkt.set(stateBytes, 5);
+                                broadcastPacket(syncPkt);
+                            }
+                        } else {
+                            // Joiner Checksum Verification:
+                            if (pendingHostChecksums.has(currentFrame)) {
+                                const hostChecksum = pendingHostChecksums.get(currentFrame);
+                                pendingHostChecksums.delete(currentFrame);
+                                const clientChecksum = app.get_state_checksum();
+                                if (clientChecksum !== hostChecksum) {
+                                    console.warn(`[Netcode] Checksum mismatch at frame ${currentFrame}! Host=0x${hostChecksum.toString(16)}, Client=0x${clientChecksum.toString(16)}. Requesting authoritative resync...`);
+                                    desyncCount++;
+                                    const reqBuf = new Uint8Array(6);
+                                    reqBuf[0] = 0x09; // PKT_RESYNC_REQ
+                                    reqBuf[1] = localPlayerIdx;
+                                    const reqDv = new DataView(reqBuf.buffer);
+                                    reqDv.setUint32(2, currentFrame, false);
+                                    broadcastPacket(reqBuf);
+                                }
+                            }
                         }
 
                         // 3. Periodic Ping (every 1s)

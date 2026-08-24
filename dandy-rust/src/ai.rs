@@ -140,7 +140,7 @@ pub fn step_generator(
     rng: &mut LcgRng,
 ) {
     // Pick random cardinal direction: 0, 2, 4, 6
-    let dir = ((rng.next() * 4.0).floor() as usize) * 2;
+    let dir = (rng.rand_byte() as usize & 3) * 2;
     let delta = DIR_TO_DELTA[dir];
     let nx = gx + delta.0;
     let ny = gy + delta.1;

@@ -5,6 +5,7 @@ pub struct Arrow {
     pub x: i32,
     pub y: i32,
     pub dir: usize,
+    pub cooldown: u8,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -23,6 +24,7 @@ pub struct Player {
     pub escaped: bool,
     pub arrow: Option<Arrow>,
     pub input_mask: u8,
+    pub move_cooldown: u8,
 }
 
 impl Player {
@@ -41,6 +43,7 @@ impl Player {
             escaped: false,
             arrow: None,
             input_mask: 0,
+            move_cooldown: 0,
         }
     }
 
@@ -56,5 +59,6 @@ impl Player {
         self.escaped = false;
         self.arrow = None;
         self.input_mask = 0;
+        self.move_cooldown = 0;
     }
 }

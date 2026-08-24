@@ -12,6 +12,9 @@ pub const PKT_PONG: u8 = 0x03;
 pub const PKT_STATE_SYNC: u8 = 0x04;
 pub const PKT_JOIN: u8 = 0x05;
 pub const PKT_LEAVE: u8 = 0x06;
+pub const PKT_SET_DIFFICULTY: u8 = 0x07;
+pub const PKT_CHECKSUM: u8 = 0x08;
+pub const PKT_RESYNC_REQ: u8 = 0x09;
 
 #[derive(Clone, Copy, Debug)]
 pub struct InputEntry {
@@ -165,6 +168,15 @@ impl RollbackManager {
         self.snapshot_history.first().map(|(f, _)| *f).unwrap_or(self.current_frame)
     }
 
+    pub fn get_checksum_at_frame(&self, frame: u32) -> Option<u32> {
+        for (f, snap) in self.snapshot_history.iter().rev() {
+            if *f == frame {
+                return Some(snap.get_checksum());
+            }
+        }
+        None
+    }
+
     pub fn set_player_joined(&mut self, player_idx: usize, joined: bool) {
         if player_idx < MAX_PLAYERS {
             self.player_joined[player_idx] = joined;
@@ -208,9 +220,13 @@ impl RollbackManager {
         let entry = &self.input_history[player_idx][slot];
         if entry.frame == frame {
             entry.mask
-        } else {
-            // Predicted fallback
+        } else if self.is_local_player(player_idx) {
+            // Local player unconfirmed frame: fallback to last known local input
             self.last_known_input[player_idx]
+        } else {
+            // Remote player unconfirmed frame: predict Neutral (0 / No Action)
+            // Retro grid-based pacing avoids false tile advances & snap-backs on key release
+            0
         }
     }
 
@@ -229,7 +245,7 @@ impl RollbackManager {
             if entry.frame == frame - 1 {
                 entry.mask
             } else {
-                self.last_known_input[peer_idx]
+                0
             }
         } else {
             mask
@@ -265,12 +281,12 @@ impl RollbackManager {
             }
             self.player_joined[peer_idx] = true;
 
-            let ingest = |f: u32, mask: u8, min_rb: &mut Option<u32>, history: &mut [[InputEntry; INPUT_HISTORY_BUFFER_SIZE]; MAX_PLAYERS], last_known: &[u8; MAX_PLAYERS], cur_f: u32| {
+            let ingest = |f: u32, mask: u8, min_rb: &mut Option<u32>, history: &mut [[InputEntry; INPUT_HISTORY_BUFFER_SIZE]; MAX_PLAYERS], cur_f: u32| {
                 if f >= oldest_snap && f <= max_f {
                     let slot = (f as usize) % INPUT_HISTORY_BUFFER_SIZE;
                     let entry = &history[peer_idx][slot];
                     let diff = (entry.frame == f && entry.mask != mask)
-                        || (entry.frame != f && last_known[peer_idx] != mask);
+                        || (entry.frame != f && mask != 0);
 
                     history[peer_idx][slot] = InputEntry {
                         frame: f,
@@ -288,9 +304,9 @@ impl RollbackManager {
             };
 
             if frame > 0 {
-                ingest(frame - 1, prev_mask, &mut min_rollback_frame, &mut self.input_history, &self.last_known_input, self.current_frame);
+                ingest(frame - 1, prev_mask, &mut min_rollback_frame, &mut self.input_history, self.current_frame);
             }
-            ingest(frame, curr_mask, &mut min_rollback_frame, &mut self.input_history, &self.last_known_input, self.current_frame);
+            ingest(frame, curr_mask, &mut min_rollback_frame, &mut self.input_history, self.current_frame);
             self.last_known_input[peer_idx] = curr_mask;
         }
 
@@ -311,7 +327,13 @@ impl RollbackManager {
                 let mask = if self.input_history[p][slot].frame == frame {
                     self.input_history[p][slot].mask
                 } else {
-                    let pred = self.last_known_input[p];
+                    let pred = if self.is_local_player(p) {
+                        self.last_known_input[p]
+                    } else {
+                        // Remote player prediction: 0 (Neutral / No Action)
+                        // Prevents overshooting into subsequent tiles on key release
+                        0
+                    };
                     self.input_history[p][slot] = InputEntry {
                         frame,
                         mask: pred,
@@ -434,6 +456,49 @@ pub fn decode_input_packet(bytes: &[u8]) -> Option<(u8, u32, u8, u8)> {
     Some((player_idx, frame, current_mask, prev_mask))
 }
 
+/// Encodes a checksum verification packet:
+/// [PKT_CHECKSUM(1), frame(4, BE), checksum(4, BE)] = 9 bytes
+pub fn encode_checksum_packet(frame: u32, checksum: u32) -> [u8; 9] {
+    let f_bytes = frame.to_be_bytes();
+    let c_bytes = checksum.to_be_bytes();
+    [
+        PKT_CHECKSUM,
+        f_bytes[0], f_bytes[1], f_bytes[2], f_bytes[3],
+        c_bytes[0], c_bytes[1], c_bytes[2], c_bytes[3],
+    ]
+}
+
+/// Decodes a checksum verification packet: returns (frame, checksum)
+pub fn decode_checksum_packet(bytes: &[u8]) -> Option<(u32, u32)> {
+    if bytes.len() < 9 || bytes[0] != PKT_CHECKSUM {
+        return None;
+    }
+    let frame = u32::from_be_bytes([bytes[1], bytes[2], bytes[3], bytes[4]]);
+    let checksum = u32::from_be_bytes([bytes[5], bytes[6], bytes[7], bytes[8]]);
+    Some((frame, checksum))
+}
+
+/// Encodes a resync request packet:
+/// [PKT_RESYNC_REQ(1), peer_idx(1), frame(4, BE)] = 6 bytes
+pub fn encode_resync_req_packet(peer_idx: u8, frame: u32) -> [u8; 6] {
+    let f_bytes = frame.to_be_bytes();
+    [
+        PKT_RESYNC_REQ,
+        peer_idx,
+        f_bytes[0], f_bytes[1], f_bytes[2], f_bytes[3],
+    ]
+}
+
+/// Decodes a resync request packet: returns (peer_idx, frame)
+pub fn decode_resync_req_packet(bytes: &[u8]) -> Option<(u8, u32)> {
+    if bytes.len() < 6 || bytes[0] != PKT_RESYNC_REQ {
+        return None;
+    }
+    let peer_idx = bytes[1];
+    let frame = u32::from_be_bytes([bytes[2], bytes[3], bytes[4], bytes[5]]);
+    Some((peer_idx, frame))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -446,6 +511,16 @@ mod tests {
         assert_eq!(decoded.1, 1024);
         assert_eq!(decoded.2, ACTION_UP | ACTION_SHOOT);
         assert_eq!(decoded.3, ACTION_LEFT);
+
+        let cs_pkt = encode_checksum_packet(120, 0x12345678);
+        let (f, cs) = decode_checksum_packet(&cs_pkt).expect("Should decode checksum pkt");
+        assert_eq!(f, 120);
+        assert_eq!(cs, 0x12345678);
+
+        let resync_pkt = encode_resync_req_packet(1, 120);
+        let (p, f_resync) = decode_resync_req_packet(&resync_pkt).expect("Should decode resync pkt");
+        assert_eq!(p, 1);
+        assert_eq!(f_resync, 120);
     }
 
     #[test]
@@ -462,15 +537,15 @@ mod tests {
         assert_eq!(rollback.current_frame, 10);
         assert_eq!(rollback.rollback_count, 0);
 
-        // Ground truth: create second game where P2 had ACTION_UP at frame 3
+        // Ground truth: create second game where P2 had ACTION_UP tap at frame 3 (0 for all other frames)
         let mut game_b = Game::new();
         game_b.load();
         for f in 0..10 {
             game_b.players[0].input_mask = ACTION_RIGHT;
             if f == 3 {
                 game_b.players[1].input_mask = ACTION_UP;
-            } else if f > 3 {
-                game_b.players[1].input_mask = ACTION_UP; // Held
+            } else {
+                game_b.players[1].input_mask = 0;
             }
             game_b.step();
             game_b.update_camera();
@@ -489,6 +564,67 @@ mod tests {
         assert_eq!(game_a.players[0].y, game_b.players[0].y);
         assert_eq!(game_a.players[1].x, game_b.players[1].x);
         assert_eq!(game_a.players[1].y, game_b.players[1].y);
+    }
+
+    #[test]
+    fn test_remote_neutral_prediction_no_overshoot_on_key_release() {
+        let mut host_game = Game::new();
+        host_game.load();
+        host_game.spawn_player(1);
+        let mut host_rollback = RollbackManager::new(0, &host_game);
+        host_rollback.set_player_joined(1, true);
+
+        let initial_p2_y = host_game.players[1].y;
+
+        // P2 presses Down for 8 frames (frames 0..7) to complete exactly 1 tile movement,
+        // then releases key (0) for frames 8..15.
+        // Deliver frames 0..7 to host:
+        for f in 0..8 {
+            host_rollback.set_local_input(f, 0);
+            host_rollback.receive_remote_input(1, f, ACTION_DOWN, &mut host_game);
+            host_rollback.step_frame(&mut host_game);
+        }
+
+        // At frame 8, P2 has moved exactly 1 tile Down (y = initial_p2_y + 1)
+        assert_eq!(host_game.players[1].y, initial_p2_y + 1);
+
+        // Now host steps ahead 5 unconfirmed frames (frames 8..12) while P2 release packets are in flight.
+        // Under Neutral prediction (0), host should NOT predict ACTION_DOWN and NOT advance P2 into tile + 2.
+        for f in 8..13 {
+            host_rollback.set_local_input(f, 0);
+            host_rollback.step_frame(&mut host_game);
+        }
+        assert_eq!(host_rollback.current_frame, 13);
+        // Player 2 must remain firmly on initial_p2_y + 1 without overshooting
+        assert_eq!(host_game.players[1].y, initial_p2_y + 1, "P2 must not overshoot into next tile under neutral prediction");
+
+        // When the release packet for frame 8 (mask = 0) arrives at frame 13:
+        let did_rollback = host_rollback.receive_remote_input(1, 8, 0, &mut host_game);
+        // Since prediction was already 0, NO rollback occurs!
+        assert!(!did_rollback, "Packet matching neutral prediction 0 should not trigger rollback");
+        assert_eq!(host_game.players[1].y, initial_p2_y + 1, "P2 position must remain stable with zero visual jump-back");
+    }
+
+    #[test]
+    fn test_action_shoot_and_bomb_not_repeated_during_prediction() {
+        let mut host_game = Game::new();
+        host_game.load();
+        host_game.spawn_player(1);
+        let mut host_rollback = RollbackManager::new(0, &host_game);
+        host_rollback.set_player_joined(1, true);
+
+        // Deliver frame 0 with ACTION_SHOOT
+        host_rollback.set_local_input(0, 0);
+        host_rollback.receive_remote_input(1, 0, ACTION_SHOOT, &mut host_game);
+        host_rollback.step_frame(&mut host_game);
+
+        // Step 10 frames under prediction (unconfirmed frames 1..10)
+        for f in 1..11 {
+            host_rollback.set_local_input(f, 0);
+            host_rollback.step_frame(&mut host_game);
+            // Verify that for all predicted frames, P2 input_mask was 0 (never repeating SHOOT)
+            assert_eq!(host_rollback.get_input(1, f), 0, "Remote SHOOT must not be repeated during prediction");
+        }
     }
 
     #[test]

@@ -379,6 +379,17 @@ impl DandyApp {
         success
     }
 
+    pub fn get_state_checksum(&self) -> u32 {
+        self.game.get_state_checksum()
+    }
+
+    pub fn net_get_checksum_at_frame(&self, frame: u32) -> u32 {
+        if frame == self.rollback.current_frame {
+            return self.game.get_state_checksum();
+        }
+        self.rollback.get_checksum_at_frame(frame).unwrap_or(0)
+    }
+
     pub fn get_player_x(&self, player_idx: usize) -> i32 {
         if player_idx < self.game.players.len() {
             self.game.players[player_idx].x
