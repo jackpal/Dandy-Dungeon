@@ -2068,9 +2068,14 @@ dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
             let whiteNoiseBuffer = null;
             let silentHtml5Audio = null;
             let isMuted = false;
-            let isResuming = false;
+            let resumePromise = null;
             const pendingSoundIds = new Set();
             const stateListeners = [];
+
+            const isIOS = typeof navigator !== "undefined" && (
+                /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+                (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1)
+            );
 
             const NUM_VOICES = 4;
             let voices = [];
@@ -2087,6 +2092,32 @@ dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
                 for (const fn of stateListeners) {
                     try { fn(info); } catch (_) {}
                 }
+            }
+
+            function resumeContextIfNeeded() {
+                if (!audioCtx || audioCtx.state === "closed") return Promise.resolve();
+                if (audioCtx.state === "running") {
+                    flushPendingSounds();
+                    return Promise.resolve();
+                }
+                if (resumePromise) {
+                    return resumePromise;
+                }
+                try {
+                    resumePromise = audioCtx.resume().then(() => {
+                        resumePromise = null;
+                        notifyStateListeners();
+                        if (audioCtx && audioCtx.state === "running") {
+                            flushPendingSounds();
+                        }
+                    }).catch((_) => {
+                        resumePromise = null;
+                        notifyStateListeners();
+                    });
+                } catch (_) {
+                    resumePromise = null;
+                }
+                return resumePromise || Promise.resolve();
             }
 
             // Complete catalog of all 21 authentic Atari 8-Bit sound effects (0=Silence, 1..20=Sound Effects)
@@ -2231,7 +2262,7 @@ dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
             }
 
             function flushPendingSounds() {
-                if (pendingSoundIds.size === 0 || isMuted || !audioCtx || audioCtx.state === "closed") return;
+                if (pendingSoundIds.size === 0 || isMuted || !audioCtx || audioCtx.state !== "running") return;
                 const sorted = Array.from(pendingSoundIds)
                     .filter(id => id > 0)
                     .sort((a, b) => (SOUND_PRIORITIES[b] || 0) - (SOUND_PRIORITIES[a] || 0));
@@ -2244,20 +2275,10 @@ dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
             function initAudio() {
                 if (audioCtx && audioCtx.state !== "closed") {
                     ensureNoiseBuffers();
-                    if ((audioCtx.state === "suspended" || audioCtx.state === "interrupted") && !isResuming) {
-                        isResuming = true;
-                        audioCtx.resume().then(() => {
-                            isResuming = false;
-                            notifyStateListeners();
-                            if (audioCtx && audioCtx.state === "running") {
-                                flushPendingSounds();
-                            }
-                        }).catch(() => {
-                            isResuming = false;
-                            notifyStateListeners();
-                        });
-                    } else if (audioCtx.state === "running") {
+                    if (audioCtx.state === "running") {
                         flushPendingSounds();
+                    } else {
+                        resumeContextIfNeeded();
                     }
                     notifyStateListeners();
                     return;
@@ -2315,44 +2336,33 @@ dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
 
                     if (audioCtx.state === "running") {
                         flushPendingSounds();
-                    } else if (audioCtx.state === "suspended" || audioCtx.state === "interrupted") {
-                        isResuming = true;
-                        audioCtx.resume().then(() => {
-                            isResuming = false;
-                            notifyStateListeners();
-                            if (audioCtx && audioCtx.state === "running") {
-                                flushPendingSounds();
-                            }
-                        }).catch(() => {
-                            isResuming = false;
-                            notifyStateListeners();
-                        });
+                    } else {
+                        resumeContextIfNeeded();
                     }
                 } catch (_) {}
             }
 
             function unlockAudio() {
-                isResuming = false;
                 initAudio();
                 if (!audioCtx) return;
 
-                // 1. Prime iOS audio session with silent HTML5 audio tag if supported
-                try {
-                    if (!silentHtml5Audio) {
-                        silentHtml5Audio = new Audio();
-                        silentHtml5Audio.src = SILENT_WAV_DATA_URI;
-                        silentHtml5Audio.setAttribute("playsinline", "");
-                        silentHtml5Audio.setAttribute("webkit-playsinline", "");
-                    }
-                    silentHtml5Audio.play().then(() => {
-                        try { silentHtml5Audio.pause(); } catch (_) {}
-                    }).catch(() => {});
-                } catch (_) {}
+                // 1. Prime iOS audio session with silent HTML5 audio tag if on iOS device
+                if (isIOS) {
+                    try {
+                        if (!silentHtml5Audio) {
+                            silentHtml5Audio = new Audio();
+                            silentHtml5Audio.src = SILENT_WAV_DATA_URI;
+                            silentHtml5Audio.setAttribute("playsinline", "");
+                            silentHtml5Audio.setAttribute("webkit-playsinline", "");
+                        }
+                        silentHtml5Audio.play().catch(() => {});
+                    } catch (_) {}
+                }
 
-                // 2. Synchronously trigger 1-frame silent buffer on iOS Safari / WebKit user gesture stack
+                // 2. Synchronously trigger 128-sample silent buffer on WebKit user gesture stack matching quantum
                 try {
                     const sr = audioCtx.sampleRate || 44100;
-                    const dummyBuffer = audioCtx.createBuffer(1, 1, sr);
+                    const dummyBuffer = audioCtx.createBuffer(1, 128, sr);
                     const dummySource = audioCtx.createBufferSource();
                     dummySource.buffer = dummyBuffer;
                     dummySource.connect(audioCtx.destination);
@@ -2362,22 +2372,12 @@ dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
                     };
                 } catch (_) {}
 
-                // 3. Unconditionally invoke resume() on user gesture stack
-                if (audioCtx.state === "suspended" || audioCtx.state === "interrupted" || audioCtx.state !== "running") {
-                    isResuming = true;
-                    audioCtx.resume().then(() => {
-                        isResuming = false;
-                        notifyStateListeners();
-                        if (audioCtx && audioCtx.state === "running") {
-                            flushPendingSounds();
-                        }
-                    }).catch(() => {
-                        isResuming = false;
-                        notifyStateListeners();
-                    });
-                }
+                // 3. Atomically resume AudioContext if suspended / interrupted
+                resumeContextIfNeeded();
                 notifyStateListeners();
-                flushPendingSounds();
+                if (audioCtx.state === "running") {
+                    flushPendingSounds();
+                }
             }
 
             function stopVoice(voice) {
@@ -2811,7 +2811,7 @@ dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
             }
 
             function playSoundDirect(id) {
-                if (isMuted || !audioCtx || audioCtx.state === "closed") return;
+                if (isMuted || !audioCtx || audioCtx.state !== "running") return;
 
                 const voice = allocateVoice(id);
                 if (!voice) return; // Dropped by priority policy
@@ -2852,7 +2852,7 @@ dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
             function playSound(id) {
                 if (isMuted || id <= 0) return;
                 initAudio();
-                if (!audioCtx || (audioCtx.state !== "running" && audioCtx.state !== "suspended")) {
+                if (!audioCtx || audioCtx.state !== "running") {
                     pendingSoundIds.add(id);
                     return;
                 }
@@ -2890,7 +2890,7 @@ dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
                     return;
                 }
                 unlockAudio();
-                if (!audioCtx) {
+                if (!audioCtx || audioCtx.state !== "running") {
                     pendingSoundIds.add(id);
                     return;
                 }
