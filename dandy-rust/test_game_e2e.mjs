@@ -98,6 +98,8 @@ new Promise(async (resolve, reject) => {
         let soundTestSelectCount = 0;
         let soundTestGridCount = 0;
         let soundTestMetaPopulated = false;
+        let soundTestStatusValid = false;
+        let soundTestStatusText = "";
         let soundTestDirectPlaySuccess = false;
         let soundTestModalClosed = false;
 
@@ -123,6 +125,11 @@ new Promise(async (resolve, reject) => {
                 metaChanEl && metaChanEl.textContent.trim().length > 0 &&
                 metaPrioEl && metaPrioEl.textContent.trim().length > 0
             );
+
+            const statusBtnEl = document.getElementById("sound-test-audio-status");
+            const statusTextEl = document.getElementById("sound-test-status-text");
+            soundTestStatusText = statusTextEl ? statusTextEl.textContent : "";
+            soundTestStatusValid = Boolean(statusBtnEl && statusTextEl && soundTestStatusText.includes("Audio Context"));
 
             // Test trigger direct sound playback API on PokeyAudio (Bomb Explosion ID 3, Hit Player ID 1)
             if (window.PokeyAudio) {
@@ -263,6 +270,8 @@ new Promise(async (resolve, reject) => {
             soundTestSelectCount,
             soundTestGridCount,
             soundTestMetaPopulated,
+            soundTestStatusValid,
+            soundTestStatusText,
             soundTestDirectPlaySuccess,
             soundTestModalClosed,
             nonZeroInitialRgb,
@@ -329,6 +338,7 @@ try {
     console.log(`Sound Test Select Count: ${res.soundTestSelectCount} / 21`);
     console.log(`Sound Test Grid Tiles Count: ${res.soundTestGridCount} / 21`);
     console.log(`Sound Test Metadata Populated: ${res.soundTestMetaPopulated}`);
+    console.log(`Sound Test Status Indicator Valid: ${res.soundTestStatusValid} (${res.soundTestStatusText})`);
     console.log(`Direct POKEY Playback Execution: ${res.soundTestDirectPlaySuccess}`);
     console.log(`Sound Test Modal Closed: ${res.soundTestModalClosed}`);
 
@@ -336,6 +346,7 @@ try {
     assert.strictEqual(res.soundTestSelectCount, 21, `Sound Test dropdown must contain all 21 sound entries (found ${res.soundTestSelectCount})`);
     assert.strictEqual(res.soundTestGridCount, 21, `Sound Test quick-audition grid must contain 21 sound tiles (found ${res.soundTestGridCount})`);
     assert(res.soundTestMetaPopulated, "Sound Test metadata panel must display ID, Label, Channel, and Priority");
+    assert(res.soundTestStatusValid, "Sound Test audio status indicator must display active Audio Context state");
     assert(res.soundTestDirectPlaySuccess, "PokeyAudio direct sound playback API must execute cleanly");
     assert(res.soundTestModalClosed, "Sound Test modal must close cleanly on dismiss");
     console.log("✓ Sound Test UI, 21-sound catalog, metadata panel, and POKEY audio synthesis verified.");
