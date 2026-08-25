@@ -3839,7 +3839,13 @@
                                         app.net_hot_join(peerSlot);
                                     }
                                 }
-                                app.net_receive_remote_packet(bytes);
+                                const didRollback = app.net_receive_remote_packet(bytes);
+                                if (didRollback) {
+                                    const soundMask = app.take_sound_mask();
+                                    if (soundMask !== 0) {
+                                        PokeyAudio.playMask(soundMask);
+                                    }
+                                }
                                 wakeLoop();
                                 // If Host (localPlayerIdx == 0), relay to all other connected peers!
                                 if (localPlayerIdx === 0) {
@@ -6081,12 +6087,6 @@
                         // 1. Advance rollback netcode step
                         const currentFrame = app.net_step();
 
-                        // Dispatch audio sound effects triggered during this step
-                        const soundMask = app.get_sound_mask();
-                        if (soundMask !== 0) {
-                            PokeyAudio.playMask(soundMask);
-                        }
-
                         // 2. Broadcast local input packets for all local player slots to peers
                         const inputPackets = app.net_encode_all_local_input_packets(currentFrame);
                         if (inputPackets.length > 0) {
@@ -6162,17 +6162,23 @@
                         document.getElementById("net-stat-frame").textContent = currentFrame.toString();
                         document.getElementById("net-stat-rollbacks").textContent = app.net_get_rollback_count().toString();
                     }
+
+                    // Dispatch audio sound effects triggered during forward net steps
+                    const soundMask = app.take_sound_mask();
+                    if (soundMask !== 0) {
+                        PokeyAudio.playMask(soundMask);
+                    }
                 } else {
                     // Local co-op fixed 60Hz step
                     while (accumulator >= TIMESTEP) {
                         accumulator -= TIMESTEP;
                         app.tick();
+                    }
 
-                        // Dispatch audio sound effects triggered during this tick
-                        const soundMask = app.get_sound_mask();
-                        if (soundMask !== 0) {
-                            PokeyAudio.playMask(soundMask);
-                        }
+                    // Dispatch audio sound effects triggered during local steps
+                    const soundMask = app.take_sound_mask();
+                    if (soundMask !== 0) {
+                        PokeyAudio.playMask(soundMask);
                     }
                 }
 

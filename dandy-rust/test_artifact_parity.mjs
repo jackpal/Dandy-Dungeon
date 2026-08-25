@@ -417,6 +417,46 @@ assert(moveShootEvents.includes(2), "Sound events after moving must contain SOUN
 assert.strictEqual((moveShootSim.get_sound_mask() & (1 << 2)) !== 0, true, "Sound mask bit 2 must be set after moving");
 assert.strictEqual(moveShootSim.get_audio_channel_sound(0), 2, "Channel 0 must play SOUND_SHOOT after moving");
 
+// Atomic take_sound_mask verification
+const atomicSim = new DandyApp();
+atomicSim.set_action(0, PlayerAction.Shoot, true);
+atomicSim.tick();
+const takenMask = atomicSim.take_sound_mask();
+assert.strictEqual((takenMask & (1 << 2)) !== 0, true, "take_sound_mask must return SOUND_SHOOT bit");
+
+// 10. Rollback Audio Queueing & Remote Input Parity
+console.log("\nTesting Rollback Sound Queueing & Remote Shoot Packet Audio Parity...");
+const hostApp = new DandyApp();
+hostApp.spawn_player(1); // Host slot 0, remote slot 1
+
+// Step host 5 frames forward
+for (let f = 0; f < 5; f++) {
+    hostApp.set_player_input_mask(0, 8); // Move right
+    hostApp.net_step();
+}
+// Drain any forward sounds
+hostApp.take_sound_mask();
+
+// Remote Player 2 shoots at frame 0 (5 frames of latency)
+const remoteShootPkt = new Uint8Array(8);
+remoteShootPkt[0] = 0x01; // PKT_INPUT
+remoteShootPkt[1] = 1;    // peer slot 1
+const dv = new DataView(remoteShootPkt.buffer);
+dv.setUint32(2, 0, false); // frame 0
+remoteShootPkt[6] = 16;   // ACTION_SHOOT
+remoteShootPkt[7] = 0;    // prev_mask
+
+const didShootRollback = hostApp.net_receive_remote_packet(remoteShootPkt);
+assert.strictEqual(didShootRollback, true, "Delayed remote shoot packet must trigger rollback");
+const rbSoundMask = hostApp.take_sound_mask();
+assert.strictEqual((rbSoundMask & (1 << 2)) !== 0, true, "SOUND_SHOOT (bit 2) must be drained via take_sound_mask after rollback resimulation");
+
+// Verify that a second call to take_sound_mask is drained (0)
+const drainedMask = hostApp.take_sound_mask();
+assert.strictEqual(drainedMask & (1 << 2), 0, "take_sound_mask must be atomic and clear pending sound mask");
+
+console.log("✓ Rollback sound queueing & remote shoot packet audio parity verified.");
+
 console.log("✓ POKEY Priority Audio Scheduler & Multi-Channel APIs verified.");
 
 console.log("\n=== ALL BUILT-ARTIFACT PARITY & MULTIPLAYER TESTS PASSED ===");

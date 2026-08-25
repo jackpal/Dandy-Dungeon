@@ -506,9 +506,21 @@ impl DandyApp {
     }
 
     pub fn get_sound_mask(&self) -> u32 {
-        let mut mask = 0u32;
+        let mut mask = self.rollback.pending_sound_mask;
         for &s in &self.game.sounds {
-            if s < 32 {
+            if s > 0 && s < 32 {
+                mask |= 1 << s;
+            }
+        }
+        mask
+    }
+
+    pub fn take_sound_mask(&mut self) -> u32 {
+        let mut mask = self.rollback.pending_sound_mask;
+        self.rollback.pending_sound_mask = 0;
+        // Also include any sounds from standalone / single-player game.sounds if rollback not stepping
+        for &s in &self.game.sounds {
+            if s > 0 && s < 32 {
                 mask |= 1 << s;
             }
         }

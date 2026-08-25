@@ -46,6 +46,12 @@ pub struct RollbackManager {
 
     // Active joined status per player slot
     pub player_joined: [bool; MAX_PLAYERS],
+
+    // History of emitted sound bitmasks per frame for rollback sound deduplication
+    pub sound_history: [u32; INPUT_HISTORY_BUFFER_SIZE],
+
+    // Queue of pending sounds (accumulated bitmask) to be consumed by audio playback
+    pub pending_sound_mask: u32,
 }
 
 impl RollbackManager {
@@ -78,6 +84,8 @@ impl RollbackManager {
             input_history,
             last_known_input: [0; MAX_PLAYERS],
             player_joined,
+            sound_history: [0; INPUT_HISTORY_BUFFER_SIZE],
+            pending_sound_mask: 0,
         };
 
         // Record initial state at frame 0
@@ -140,6 +148,8 @@ impl RollbackManager {
             self.last_known_input[p] = 0;
             self.player_joined[p] = (local_player_mask & (1 << p)) != 0;
         }
+        self.sound_history = [0; INPUT_HISTORY_BUFFER_SIZE];
+        self.pending_sound_mask = 0;
     }
 
     pub fn sync_state(&mut self, frame: u32, game: &Game) {
@@ -157,6 +167,8 @@ impl RollbackManager {
             self.last_known_input[p] = 0;
             self.player_joined[p] = game.players[p].active || self.is_local_player(p) || self.player_joined[p];
         }
+        self.sound_history = [0; INPUT_HISTORY_BUFFER_SIZE];
+        self.pending_sound_mask = 0;
     }
 
     pub fn oldest_snapshot_frame(&self) -> u32 {
@@ -318,6 +330,9 @@ impl RollbackManager {
     fn apply_inputs_and_step(&mut self, game: &mut Game, frame: u32) {
         for p in 0..MAX_PLAYERS {
             if self.player_joined[p] {
+                if !game.players[p].active {
+                    game.spawn_player(p);
+                }
                 let slot = (frame as usize) % INPUT_HISTORY_BUFFER_SIZE;
                 let mask = if self.input_history[p][slot].frame == frame {
                     self.input_history[p][slot].mask
@@ -369,6 +384,19 @@ impl RollbackManager {
         for f in snap_frame..end_frame {
             self.apply_inputs_and_step(game, f);
             self.resimulated_frames_total += 1;
+
+            let mut sound_mask = 0u32;
+            for &s in &game.sounds {
+                if s > 0 && s < 32 {
+                    sound_mask |= 1 << s;
+                }
+            }
+            let slot = (f as usize) % INPUT_HISTORY_BUFFER_SIZE;
+            let old_mask = self.sound_history[slot];
+            let diff_mask = sound_mask & (!old_mask);
+            self.pending_sound_mask |= diff_mask;
+            self.sound_history[slot] = sound_mask;
+
             self.snapshot_history.push((f + 1, game.save_state()));
         }
 
@@ -379,6 +407,16 @@ impl RollbackManager {
     pub fn step_frame(&mut self, game: &mut Game) -> u32 {
         let frame = self.current_frame;
         self.apply_inputs_and_step(game, frame);
+
+        let mut sound_mask = 0u32;
+        for &s in &game.sounds {
+            if s > 0 && s < 32 {
+                sound_mask |= 1 << s;
+            }
+        }
+        self.sound_history[(frame as usize) % INPUT_HISTORY_BUFFER_SIZE] = sound_mask;
+        self.pending_sound_mask |= sound_mask;
+
         self.current_frame += 1;
 
         self.snapshot_history.push((self.current_frame, game.save_state()));
@@ -794,5 +832,45 @@ mod tests {
         assert!(host_game.players[1].active, "P2 must be active after remote join/rollback");
         assert!(host_game.players[2].active, "P3 must remain active on Host");
         assert_eq!(host_rollback.current_frame, 5);
+    }
+
+    #[test]
+    fn test_delayed_remote_shoot_sound_emitted_in_rollback_without_duplication() {
+        let mut host_game = Game::new();
+        host_game.load();
+        host_game.spawn_player(1); // Spawn P2 (slot 1)
+
+        let mut host_rollback = RollbackManager::new(0, &host_game);
+        host_rollback.set_player_joined(1, true);
+
+        // Step 5 frames on Host (frames 0..5)
+        for f in 0..5 {
+            host_rollback.set_local_input(f, ACTION_RIGHT);
+            host_rollback.step_frame(&mut host_game);
+        }
+        assert_eq!(host_rollback.current_frame, 5);
+
+        // Drain any pending sounds from forward steps
+        host_rollback.pending_sound_mask = 0;
+
+        // Remote P2's ACTION_SHOOT arrives for frame 0 with 5 frames of latency
+        let did_rb = host_rollback.receive_remote_input(1, 0, ACTION_SHOOT, &mut host_game);
+        assert!(did_rb, "Delayed shoot packet must trigger rollback");
+
+        // Verify that SOUND_SHOOT is present in pending_sound_mask
+        let shoot_bit = 1 << SOUND_SHOOT;
+        assert_ne!(
+            host_rollback.pending_sound_mask & shoot_bit,
+            0,
+            "SOUND_SHOOT bit must be queued in pending_sound_mask during rollback resimulation"
+        );
+
+        // Step another frame forward (frame 5) and ensure sound mask is tracked in history
+        let frame_after = host_rollback.step_frame(&mut host_game);
+        assert_eq!(frame_after, 6);
+
+        // An identical redundant packet for frame 0 arriving later must NOT re-trigger rollback or duplicate sound
+        let did_rb_again = host_rollback.receive_remote_input(1, 0, ACTION_SHOOT, &mut host_game);
+        assert!(!did_rb_again, "Redundant confirmed shoot packet must not trigger rollback again");
     }
 }
