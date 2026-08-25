@@ -594,7 +594,7 @@
             align-items: center;
             max-width: 660px;
             width: 100%;
-            touch-action: none;
+            touch-action: pan-y;
         }
 
         @keyframes spin {
@@ -710,7 +710,7 @@
             aspect-ratio: 2 / 1;
             border-radius: 2px;
             display: block;
-            touch-action: none;
+            touch-action: pan-y;
         }
 
         #qr-canvas {
@@ -2066,6 +2066,7 @@ dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
             let poly54Buffer = null;
             let poly5Buffer = null;
             let whiteNoiseBuffer = null;
+            let silentHtml5Audio = null;
             let isMuted = false;
             let isResuming = false;
             const pendingSoundIds = new Set();
@@ -2073,6 +2074,9 @@ dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
 
             const NUM_VOICES = 4;
             let voices = [];
+
+            // 1-sample 44.1kHz 16-bit PCM silent WAV data URI for iOS media session priming
+            const SILENT_WAV_DATA_URI = "data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA";
 
             function notifyStateListeners() {
                 const info = {
@@ -2227,7 +2231,7 @@ dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
             }
 
             function flushPendingSounds() {
-                if (pendingSoundIds.size === 0 || isMuted || !audioCtx || audioCtx.state !== "running") return;
+                if (pendingSoundIds.size === 0 || isMuted || !audioCtx || audioCtx.state === "closed") return;
                 const sorted = Array.from(pendingSoundIds)
                     .filter(id => id > 0)
                     .sort((a, b) => (SOUND_PRIORITIES[b] || 0) - (SOUND_PRIORITIES[a] || 0));
@@ -2262,6 +2266,10 @@ dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
                     const AudioContextClass = window.AudioContext || window.webkitAudioContext;
                     if (!AudioContextClass) return;
                     audioCtx = new AudioContextClass();
+                    poly17Buffer = null;
+                    poly54Buffer = null;
+                    poly5Buffer = null;
+                    whiteNoiseBuffer = null;
 
                     audioCtx.onstatechange = () => {
                         notifyStateListeners();
@@ -2324,12 +2332,27 @@ dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
             }
 
             function unlockAudio() {
+                isResuming = false;
                 initAudio();
                 if (!audioCtx) return;
 
-                // Synchronously trigger 1-frame silent buffer on iOS Safari / WebKit user gesture stack
+                // 1. Prime iOS audio session with silent HTML5 audio tag if supported
                 try {
-                    const dummyBuffer = audioCtx.createBuffer(1, 1, 22050);
+                    if (!silentHtml5Audio) {
+                        silentHtml5Audio = new Audio();
+                        silentHtml5Audio.src = SILENT_WAV_DATA_URI;
+                        silentHtml5Audio.setAttribute("playsinline", "");
+                        silentHtml5Audio.setAttribute("webkit-playsinline", "");
+                    }
+                    silentHtml5Audio.play().then(() => {
+                        try { silentHtml5Audio.pause(); } catch (_) {}
+                    }).catch(() => {});
+                } catch (_) {}
+
+                // 2. Synchronously trigger 1-frame silent buffer on iOS Safari / WebKit user gesture stack
+                try {
+                    const sr = audioCtx.sampleRate || 44100;
+                    const dummyBuffer = audioCtx.createBuffer(1, 1, sr);
                     const dummySource = audioCtx.createBufferSource();
                     dummySource.buffer = dummyBuffer;
                     dummySource.connect(audioCtx.destination);
@@ -2339,7 +2362,8 @@ dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
                     };
                 } catch (_) {}
 
-                if ((audioCtx.state === "suspended" || audioCtx.state === "interrupted") && !isResuming) {
+                // 3. Unconditionally invoke resume() on user gesture stack
+                if (audioCtx.state === "suspended" || audioCtx.state === "interrupted" || audioCtx.state !== "running") {
                     isResuming = true;
                     audioCtx.resume().then(() => {
                         isResuming = false;
@@ -2353,6 +2377,7 @@ dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
                     });
                 }
                 notifyStateListeners();
+                flushPendingSounds();
             }
 
             function stopVoice(voice) {
@@ -2786,7 +2811,7 @@ dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
             }
 
             function playSoundDirect(id) {
-                if (isMuted || !audioCtx || audioCtx.state !== "running") return;
+                if (isMuted || !audioCtx || audioCtx.state === "closed") return;
 
                 const voice = allocateVoice(id);
                 if (!voice) return; // Dropped by priority policy
@@ -2827,7 +2852,7 @@ dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
             function playSound(id) {
                 if (isMuted || id <= 0) return;
                 initAudio();
-                if (!audioCtx || audioCtx.state !== "running") {
+                if (!audioCtx || (audioCtx.state !== "running" && audioCtx.state !== "suspended")) {
                     pendingSoundIds.add(id);
                     return;
                 }
@@ -2865,24 +2890,11 @@ dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
                     return;
                 }
                 unlockAudio();
-                if (audioCtx && audioCtx.state === "running") {
-                    playSoundDirect(id);
-                } else {
+                if (!audioCtx) {
                     pendingSoundIds.add(id);
-                    if (audioCtx && (audioCtx.state === "suspended" || audioCtx.state === "interrupted") && !isResuming) {
-                        isResuming = true;
-                        audioCtx.resume().then(() => {
-                            isResuming = false;
-                            notifyStateListeners();
-                            if (audioCtx && audioCtx.state === "running") {
-                                flushPendingSounds();
-                            }
-                        }).catch(() => {
-                            isResuming = false;
-                            notifyStateListeners();
-                        });
-                    }
+                    return;
                 }
+                playSoundDirect(id);
             }
 
             function stopAll() {
@@ -2987,6 +2999,8 @@ dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
 
             const canvas = document.getElementById("gameCanvas");
             const ctx = canvas.getContext("2d", { alpha: false });
+            canvas.addEventListener("pointerdown", () => PokeyAudio.unlock(), { passive: true });
+            canvas.addEventListener("pointerup", () => PokeyAudio.unlock(), { passive: true });
             const connectingOverlay = document.getElementById("connecting-overlay");
             const roomFullOverlay = document.getElementById("room-full-overlay");
             const roomFullTitle = document.getElementById("room-full-title");
@@ -3242,6 +3256,7 @@ dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
 
                 const press = (e) => {
                     e.preventDefault();
+                    PokeyAudio.unlock();
                     try { btn.setPointerCapture(e.pointerId); } catch (_) {}
                     btn.classList.add("active");
                     touchInputMask |= (1 << action);
@@ -3252,6 +3267,7 @@ dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
 
                 const release = (e) => {
                     e.preventDefault();
+                    PokeyAudio.unlock();
                     try { btn.releasePointerCapture(e.pointerId); } catch (_) {}
                     btn.classList.remove("active");
                     activeTouches.delete(e.pointerId);
