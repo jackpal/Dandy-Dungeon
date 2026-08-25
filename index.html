@@ -1142,7 +1142,13 @@ dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
                     </div>
                     <button id="btn-close-sound-test" class="btn-close" aria-label="Close sound test">✕</button>
                 </div>
-                <p class="modal-subtitle" style="margin-bottom: 0.75rem; font-size: 0.8rem;">Audition authentic 6502 sound effects synthesized via 4-channel POKEY chip emulation.</p>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; flex-wrap: wrap; gap: 6px;">
+                    <p class="modal-subtitle" style="margin: 0; font-size: 0.8rem;">Audition authentic 6502 sound effects synthesized via 4-channel POKEY chip emulation.</p>
+                    <button id="sound-test-audio-status" class="btn btn-sm" title="Click to Unlock / Resume Web Audio" style="padding: 3px 8px; font-size: 0.72rem; font-family: monospace; border-radius: 4px; display: inline-flex; align-items: center; gap: 5px; cursor: pointer; transition: all 0.2s ease; background: #2d240d; border: 1px solid #f57f17; color: #ffe082;">
+                        <span id="sound-test-status-dot" style="width: 7px; height: 7px; border-radius: 50%; background: #ffca28; display: inline-block;"></span>
+                        <span id="sound-test-status-text">Audio Context: Tap to Unlock</span>
+                    </button>
+                </div>
 
                 <!-- Stepper & Main Interactive Control Row -->
                 <div style="background: #141414; border: 1px solid #333; border-radius: 8px; padding: 10px 12px; margin-bottom: 10px; display: flex; flex-direction: column; gap: 8px;">
@@ -2061,10 +2067,23 @@ dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
             let poly5Buffer = null;
             let whiteNoiseBuffer = null;
             let isMuted = false;
+            let isResuming = false;
             const pendingSoundIds = new Set();
+            const stateListeners = [];
 
             const NUM_VOICES = 4;
             let voices = [];
+
+            function notifyStateListeners() {
+                const info = {
+                    state: audioCtx ? audioCtx.state : "uninitialized",
+                    sampleRate: audioCtx ? (audioCtx.sampleRate || 44100) : 0,
+                    isMuted: isMuted
+                };
+                for (const fn of stateListeners) {
+                    try { fn(info); } catch (_) {}
+                }
+            }
 
             // Complete catalog of all 21 authentic Atari 8-Bit sound effects (0=Silence, 1..20=Sound Effects)
             const SOUND_DEFINITIONS = [
@@ -2218,30 +2237,38 @@ dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
                 }
             }
 
-            let isResuming = false;
-
             function initAudio() {
-                if (audioCtx) {
+                if (audioCtx && audioCtx.state !== "closed") {
                     ensureNoiseBuffers();
-                    if (audioCtx.state === "suspended" && !isResuming) {
+                    if ((audioCtx.state === "suspended" || audioCtx.state === "interrupted") && !isResuming) {
                         isResuming = true;
                         audioCtx.resume().then(() => {
                             isResuming = false;
+                            notifyStateListeners();
                             if (audioCtx && audioCtx.state === "running") {
                                 flushPendingSounds();
                             }
                         }).catch(() => {
                             isResuming = false;
+                            notifyStateListeners();
                         });
                     } else if (audioCtx.state === "running") {
                         flushPendingSounds();
                     }
+                    notifyStateListeners();
                     return;
                 }
                 try {
                     const AudioContextClass = window.AudioContext || window.webkitAudioContext;
                     if (!AudioContextClass) return;
                     audioCtx = new AudioContextClass();
+
+                    audioCtx.onstatechange = () => {
+                        notifyStateListeners();
+                        if (audioCtx && audioCtx.state === "running") {
+                            flushPendingSounds();
+                        }
+                    };
 
                     // Dynamics compressor to eliminate clipping & harsh distortion when multiple voices play
                     compressor = audioCtx.createDynamicsCompressor();
@@ -2276,17 +2303,21 @@ dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
                         });
                     }
 
+                    notifyStateListeners();
+
                     if (audioCtx.state === "running") {
                         flushPendingSounds();
-                    } else if (audioCtx.state === "suspended") {
+                    } else if (audioCtx.state === "suspended" || audioCtx.state === "interrupted") {
                         isResuming = true;
                         audioCtx.resume().then(() => {
                             isResuming = false;
+                            notifyStateListeners();
                             if (audioCtx && audioCtx.state === "running") {
                                 flushPendingSounds();
                             }
                         }).catch(() => {
                             isResuming = false;
+                            notifyStateListeners();
                         });
                     }
                 } catch (_) {}
@@ -2294,17 +2325,34 @@ dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
 
             function unlockAudio() {
                 initAudio();
-                if (audioCtx && audioCtx.state === "suspended" && !isResuming) {
+                if (!audioCtx) return;
+
+                // Synchronously trigger 1-frame silent buffer on iOS Safari / WebKit user gesture stack
+                try {
+                    const dummyBuffer = audioCtx.createBuffer(1, 1, 22050);
+                    const dummySource = audioCtx.createBufferSource();
+                    dummySource.buffer = dummyBuffer;
+                    dummySource.connect(audioCtx.destination);
+                    dummySource.start(0);
+                    dummySource.onended = () => {
+                        try { dummySource.disconnect(); } catch (_) {}
+                    };
+                } catch (_) {}
+
+                if ((audioCtx.state === "suspended" || audioCtx.state === "interrupted") && !isResuming) {
                     isResuming = true;
                     audioCtx.resume().then(() => {
                         isResuming = false;
+                        notifyStateListeners();
                         if (audioCtx && audioCtx.state === "running") {
                             flushPendingSounds();
                         }
                     }).catch(() => {
                         isResuming = false;
+                        notifyStateListeners();
                     });
                 }
+                notifyStateListeners();
             }
 
             function stopVoice(voice) {
@@ -2819,14 +2867,21 @@ dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
                 unlockAudio();
                 if (audioCtx && audioCtx.state === "running") {
                     playSoundDirect(id);
-                } else if (audioCtx && audioCtx.state === "suspended") {
-                    audioCtx.resume().then(() => {
-                        if (audioCtx && audioCtx.state === "running") {
-                            playSoundDirect(id);
-                        }
-                    }).catch(() => {});
                 } else {
                     pendingSoundIds.add(id);
+                    if (audioCtx && (audioCtx.state === "suspended" || audioCtx.state === "interrupted") && !isResuming) {
+                        isResuming = true;
+                        audioCtx.resume().then(() => {
+                            isResuming = false;
+                            notifyStateListeners();
+                            if (audioCtx && audioCtx.state === "running") {
+                                flushPendingSounds();
+                            }
+                        }).catch(() => {
+                            isResuming = false;
+                            notifyStateListeners();
+                        });
+                    }
                 }
             }
 
@@ -2839,11 +2894,13 @@ dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
 
             function toggleMute() {
                 isMuted = !isMuted;
+                notifyStateListeners();
                 return isMuted;
             }
 
             function setMuted(val) {
                 isMuted = Boolean(val);
+                notifyStateListeners();
             }
 
             return {
@@ -2858,7 +2915,18 @@ dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
                 toggleMute,
                 setMuted,
                 isMuted: () => isMuted,
+                getState: () => ({
+                    state: audioCtx ? audioCtx.state : "uninitialized",
+                    sampleRate: audioCtx ? (audioCtx.sampleRate || 44100) : 0,
+                    isMuted: isMuted,
+                    voices: voices.map(v => ({ id: v.activeSoundId, priority: v.priority }))
+                }),
                 getVoiceState: () => voices.map(v => ({ id: v.activeSoundId, priority: v.priority })),
+                onStateChange: (fn) => {
+                    if (typeof fn === "function") {
+                        stateListeners.push(fn);
+                    }
+                },
                 SOUND_DEFINITIONS,
                 getDefinitions: () => SOUND_DEFINITIONS
             };
@@ -2866,9 +2934,32 @@ dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
 
         window.PokeyAudio = PokeyAudio;
 
-        // Global user gesture listeners to unlock browser Web Audio
-        ["keydown", "pointerdown", "touchstart", "mousedown", "click"].forEach((evt) => {
+        // Global user gesture listeners to unlock browser Web Audio on iOS Safari / WebKit and desktop
+        const unlockEvents = ["touchend", "pointerup", "mouseup", "click", "keydown", "touchstart", "pointerdown", "mousedown"];
+        unlockEvents.forEach((evt) => {
             window.addEventListener(evt, () => PokeyAudio.unlock(), { passive: true, capture: true });
+        });
+
+        // Resume AudioContext if tab was backgrounded/interrupted on iOS
+        window.addEventListener("pageshow", () => {
+            const state = PokeyAudio.getState ? PokeyAudio.getState().state : "uninitialized";
+            if (state === "suspended" || state === "interrupted") {
+                PokeyAudio.unlock();
+            }
+        });
+        document.addEventListener("visibilitychange", () => {
+            if (!document.hidden) {
+                const state = PokeyAudio.getState ? PokeyAudio.getState().state : "uninitialized";
+                if (state === "suspended" || state === "interrupted") {
+                    PokeyAudio.unlock();
+                }
+            }
+        });
+        window.addEventListener("focus", () => {
+            const state = PokeyAudio.getState ? PokeyAudio.getState().state : "uninitialized";
+            if (state === "suspended" || state === "interrupted") {
+                PokeyAudio.unlock();
+            }
         });
 
         window.addEventListener("TrunkApplicationStarted", (event) => {
@@ -4716,6 +4807,47 @@ dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
             let currentSelectedSoundId = 1;
             let soundTestInitialized = false;
 
+            function updateAudioStatusIndicator() {
+                const statusBtn = document.getElementById("sound-test-audio-status");
+                const statusDot = document.getElementById("sound-test-status-dot");
+                const statusText = document.getElementById("sound-test-status-text");
+                if (!statusBtn || !statusText) return;
+
+                const audioState = PokeyAudio.getState ? PokeyAudio.getState() : { state: "uninitialized", sampleRate: 0, isMuted: false };
+                if (audioState.isMuted) {
+                    if (statusDot) statusDot.style.background = "#9e9e9e";
+                    statusText.textContent = "Audio Context: Muted";
+                    statusBtn.style.background = "#262626";
+                    statusBtn.style.borderColor = "#444";
+                    statusBtn.style.color = "#aaa";
+                } else if (audioState.state === "running") {
+                    if (statusDot) statusDot.style.background = "#4caf50";
+                    const hzStr = audioState.sampleRate ? ` (${audioState.sampleRate} Hz)` : "";
+                    statusText.textContent = `Audio Context: Running${hzStr}`;
+                    statusBtn.style.background = "#142614";
+                    statusBtn.style.borderColor = "#2e7d32";
+                    statusBtn.style.color = "#81c784";
+                } else if (audioState.state === "suspended") {
+                    if (statusDot) statusDot.style.background = "#ffca28";
+                    statusText.textContent = "Audio Context: Suspended (Tap to Unlock)";
+                    statusBtn.style.background = "#2d240d";
+                    statusBtn.style.borderColor = "#f57f17";
+                    statusBtn.style.color = "#ffe082";
+                } else if (audioState.state === "interrupted") {
+                    if (statusDot) statusDot.style.background = "#ff5722";
+                    statusText.textContent = "Audio Context: Interrupted (Tap to Resume)";
+                    statusBtn.style.background = "#2e140d";
+                    statusBtn.style.borderColor = "#d84315";
+                    statusBtn.style.color = "#ff8a65";
+                } else {
+                    if (statusDot) statusDot.style.background = "#ffca28";
+                    statusText.textContent = "Audio Context: Tap to Unlock";
+                    statusBtn.style.background = "#2d240d";
+                    statusBtn.style.borderColor = "#f57f17";
+                    statusBtn.style.color = "#ffe082";
+                }
+            }
+
             function updateSoundMeta(soundId) {
                 const defs = PokeyAudio.SOUND_DEFINITIONS || [];
                 const def = defs.find(s => s.id === soundId) || defs[0];
@@ -4749,9 +4881,11 @@ dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
             }
 
             function triggerSoundPlay(soundId) {
+                PokeyAudio.unlock();
                 currentSelectedSoundId = soundId;
                 updateSoundMeta(soundId);
                 PokeyAudio.playDirectSound(soundId);
+                updateAudioStatusIndicator();
 
                 if (soundTestGrid) {
                     const tile = soundTestGrid.querySelector(`.sound-tile-btn[data-sound-id="${soundId}"]`);
@@ -4767,6 +4901,17 @@ dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
                 soundTestInitialized = true;
                 const defs = PokeyAudio.SOUND_DEFINITIONS || [];
 
+                const statusBtn = document.getElementById("sound-test-audio-status");
+                if (statusBtn) {
+                    statusBtn.addEventListener("click", () => {
+                        PokeyAudio.unlock();
+                        updateAudioStatusIndicator();
+                    });
+                }
+                if (PokeyAudio.onStateChange) {
+                    PokeyAudio.onStateChange(updateAudioStatusIndicator);
+                }
+
                 if (soundTestSelect) {
                     soundTestSelect.innerHTML = "";
                     for (const def of defs) {
@@ -4776,9 +4921,11 @@ dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
                         soundTestSelect.appendChild(opt);
                     }
                     soundTestSelect.addEventListener("change", (e) => {
+                        PokeyAudio.unlock();
                         const newId = parseInt(e.target.value, 10);
                         currentSelectedSoundId = newId;
                         updateSoundMeta(newId);
+                        updateAudioStatusIndicator();
                     });
                 }
 
@@ -4824,6 +4971,7 @@ dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
                         tile.appendChild(nameSpan);
 
                         tile.addEventListener("click", () => {
+                            PokeyAudio.unlock();
                             triggerSoundPlay(def.id);
                         });
 
@@ -4832,11 +4980,13 @@ dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
                 }
 
                 updateSoundMeta(currentSelectedSoundId);
+                updateAudioStatusIndicator();
             }
 
             function showSoundTestModal() {
                 initSoundTestUI();
                 PokeyAudio.unlock();
+                updateAudioStatusIndicator();
                 if (soundTestModal) {
                     soundTestModal.style.display = "flex";
                 }
@@ -4850,12 +5000,14 @@ dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
 
             if (btnWelcomeSoundTest) {
                 btnWelcomeSoundTest.addEventListener("click", () => {
+                    PokeyAudio.unlock();
                     showSoundTestModal();
                 });
             }
 
             if (btnSoundTest) {
                 btnSoundTest.addEventListener("click", () => {
+                    PokeyAudio.unlock();
                     showSoundTestModal();
                 });
             }
@@ -4876,6 +5028,7 @@ dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
 
             if (btnSoundPlay) {
                 btnSoundPlay.addEventListener("click", () => {
+                    PokeyAudio.unlock();
                     triggerSoundPlay(currentSelectedSoundId);
                 });
             }
@@ -4883,11 +5036,13 @@ dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
             if (btnSoundStop) {
                 btnSoundStop.addEventListener("click", () => {
                     PokeyAudio.stopAll();
+                    updateAudioStatusIndicator();
                 });
             }
 
             if (btnSoundPrev) {
                 btnSoundPrev.addEventListener("click", () => {
+                    PokeyAudio.unlock();
                     const defs = PokeyAudio.SOUND_DEFINITIONS || [];
                     const currentIndex = defs.findIndex(s => s.id === currentSelectedSoundId);
                     const prevIndex = (currentIndex - 1 + defs.length) % defs.length;
@@ -4898,6 +5053,7 @@ dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
 
             if (btnSoundNext) {
                 btnSoundNext.addEventListener("click", () => {
+                    PokeyAudio.unlock();
                     const defs = PokeyAudio.SOUND_DEFINITIONS || [];
                     const currentIndex = defs.findIndex(s => s.id === currentSelectedSoundId);
                     const nextIndex = (currentIndex + 1) % defs.length;
