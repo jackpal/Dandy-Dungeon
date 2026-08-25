@@ -1054,8 +1054,8 @@
     </style>
     
 <script type="module">
-import init, * as bindings from './dandy-rust-5195d0202ef2e00f.js';
-const wasm = await init({ module_or_path: './dandy-rust-5195d0202ef2e00f_bg.wasm' });
+import init, * as bindings from './dandy-rust-2023221aa6a2ab63.js';
+const wasm = await init({ module_or_path: './dandy-rust-2023221aa6a2ab63_bg.wasm' });
 
 
 window.wasmBindings = bindings;
@@ -1064,7 +1064,7 @@ window.wasmBindings = bindings;
 dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
 
 </script>
-<link rel="modulepreload" href="./dandy-rust-5195d0202ef2e00f.js" crossorigin="anonymous" integrity="sha384-CdzftEjHA0rI1Y2R2HRXSgZZ+H5CsQAyrGzbo614Ix/P5KZ4JszJEkamYEiwN+5F"><link rel="preload" href="./dandy-rust-5195d0202ef2e00f_bg.wasm" crossorigin="anonymous" integrity="sha384-6UKhl15HqfjF8EbjXlnih08xS8ANZ7nP+fIB7Q2+jDAb0TJ54Dugvc7q7gO0GgTR" as="fetch" type="application/wasm"></head>
+<link rel="modulepreload" href="./dandy-rust-2023221aa6a2ab63.js" crossorigin="anonymous" integrity="sha384-pxPUEJt0pszNTS38cHZVlYAUvX8V/TDEtMwBg4gAJioiln9H4H20vdolZ9QsqUcN"><link rel="preload" href="./dandy-rust-2023221aa6a2ab63_bg.wasm" crossorigin="anonymous" integrity="sha384-8VJ8Ug0ui0rhc/6K7/VLA+jsB1wzg8cDaKX0oY3Y4iSfGsaAK+plQxowkC2e7jzd" as="fetch" type="application/wasm"></head>
 <body>
     <div class="container">
         <header>
@@ -3850,7 +3850,13 @@ dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
                                         app.net_hot_join(peerSlot);
                                     }
                                 }
-                                app.net_receive_remote_packet(bytes);
+                                const didRollback = app.net_receive_remote_packet(bytes);
+                                if (didRollback) {
+                                    const soundMask = app.take_sound_mask();
+                                    if (soundMask !== 0) {
+                                        PokeyAudio.playMask(soundMask);
+                                    }
+                                }
                                 wakeLoop();
                                 // If Host (localPlayerIdx == 0), relay to all other connected peers!
                                 if (localPlayerIdx === 0) {
@@ -6092,12 +6098,6 @@ dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
                         // 1. Advance rollback netcode step
                         const currentFrame = app.net_step();
 
-                        // Dispatch audio sound effects triggered during this step
-                        const soundMask = app.get_sound_mask();
-                        if (soundMask !== 0) {
-                            PokeyAudio.playMask(soundMask);
-                        }
-
                         // 2. Broadcast local input packets for all local player slots to peers
                         const inputPackets = app.net_encode_all_local_input_packets(currentFrame);
                         if (inputPackets.length > 0) {
@@ -6173,17 +6173,23 @@ dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
                         document.getElementById("net-stat-frame").textContent = currentFrame.toString();
                         document.getElementById("net-stat-rollbacks").textContent = app.net_get_rollback_count().toString();
                     }
+
+                    // Dispatch audio sound effects triggered during forward net steps
+                    const soundMask = app.take_sound_mask();
+                    if (soundMask !== 0) {
+                        PokeyAudio.playMask(soundMask);
+                    }
                 } else {
                     // Local co-op fixed 60Hz step
                     while (accumulator >= TIMESTEP) {
                         accumulator -= TIMESTEP;
                         app.tick();
+                    }
 
-                        // Dispatch audio sound effects triggered during this tick
-                        const soundMask = app.get_sound_mask();
-                        if (soundMask !== 0) {
-                            PokeyAudio.playMask(soundMask);
-                        }
+                    // Dispatch audio sound effects triggered during local steps
+                    const soundMask = app.take_sound_mask();
+                    if (soundMask !== 0) {
+                        PokeyAudio.playMask(soundMask);
                     }
                 }
 

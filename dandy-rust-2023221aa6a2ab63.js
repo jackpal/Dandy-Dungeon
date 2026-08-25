@@ -603,6 +603,13 @@ export class DandyApp {
     spawn_player(player_idx) {
         wasm.dandyapp_spawn_player(this.__wbg_ptr, player_idx);
     }
+    /**
+     * @returns {number}
+     */
+    take_sound_mask() {
+        const ret = wasm.dandyapp_take_sound_mask(this.__wbg_ptr);
+        return ret >>> 0;
+    }
     tick() {
         wasm.dandyapp_tick(this.__wbg_ptr);
     }
