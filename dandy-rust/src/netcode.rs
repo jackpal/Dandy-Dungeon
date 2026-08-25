@@ -623,7 +623,9 @@ mod tests {
     fn test_rollback_prediction_and_recovery() {
         let mut game_a = Game::new();
         game_a.load();
+        game_a.spawn_player(1);
         let mut rollback = RollbackManager::new(0, &game_a);
+        rollback.set_player_joined(1, true);
 
         // Step 10 frames with local inputs only (P2 predicted as 0)
         for f in 0..10 {
@@ -636,6 +638,7 @@ mod tests {
         // Ground truth: create second game where P2 had ACTION_UP tap at frame 3 (0 for all other frames)
         let mut game_b = Game::new();
         game_b.load();
+        game_b.spawn_player(1);
         for f in 0..10 {
             game_b.players[0].input_mask = ACTION_RIGHT;
             if f == 3 {
