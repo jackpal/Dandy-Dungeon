@@ -265,6 +265,24 @@ new Promise(async (resolve, reject) => {
         const hudKeys = hudKeysEl ? parseInt(hudKeysEl.textContent, 10) : 0;
         const hudBombs = hudBombsEl ? parseInt(hudBombsEl.textContent, 10) : 0;
 
+        // 5. Test Touch-Action and Gesture Scoping for Mobile Safari
+        console.log("[E2E] 5. Testing Touch-Action and Mobile Safari Gesture Scoping...");
+        const canvasWrapperEl = document.querySelector(".canvas-wrapper");
+        const canvasEl = document.getElementById("gameCanvas");
+        const touchControlsEl = document.getElementById("touch-controls");
+        const dpadBtnEl = document.querySelector(".dpad-btn");
+        const actBtnEl = document.querySelector(".act-btn");
+
+        const canvasWrapperTouchAction = canvasWrapperEl ? window.getComputedStyle(canvasWrapperEl).touchAction : "";
+        const canvasTouchAction = canvasEl ? window.getComputedStyle(canvasEl).touchAction : "";
+        const touchControlsTouchAction = touchControlsEl ? window.getComputedStyle(touchControlsEl).touchAction : "";
+        const dpadBtnTouchAction = dpadBtnEl ? window.getComputedStyle(dpadBtnEl).touchAction : "";
+        const actBtnTouchAction = actBtnEl ? window.getComputedStyle(actBtnEl).touchAction : "";
+
+        const touchScrollAllowedOnCanvas = canvasTouchAction === "pan-y";
+        const touchScrollAllowedOnWrapper = canvasWrapperTouchAction === "pan-y";
+        const touchEatenOnControls = (touchControlsTouchAction === "none") && (dpadBtnTouchAction === "none") && (actBtnTouchAction === "none");
+
         const results = {
             soundTestModalOpened,
             soundTestSelectCount,
@@ -286,7 +304,15 @@ new Promise(async (resolve, reject) => {
             hudHealth,
             hudScore,
             hudKeys,
-            hudBombs
+            hudBombs,
+            canvasTouchAction,
+            canvasWrapperTouchAction,
+            touchControlsTouchAction,
+            dpadBtnTouchAction,
+            actBtnTouchAction,
+            touchScrollAllowedOnCanvas,
+            touchScrollAllowedOnWrapper,
+            touchEatenOnControls
         };
 
         resolve(JSON.stringify(results));
@@ -373,6 +399,17 @@ try {
     assert.strictEqual(res.hudKeys, 0, "HUD Keys must display starting keys of 0");
     assert.strictEqual(res.hudBombs, 0, "HUD Bombs must display starting bombs of 0");
     console.log("✓ HUD table reactivity and stats buffer synchronization verified.");
+
+    console.log("\n=== Mobile Safari Touch-Action & Gesture Scoping Verification ===");
+    console.log(`Canvas Touch-Action: ${res.canvasTouchAction}`);
+    console.log(`Canvas Wrapper Touch-Action: ${res.canvasWrapperTouchAction}`);
+    console.log(`Touch Controls Touch-Action: ${res.touchControlsTouchAction}`);
+    console.log(`D-Pad Button Touch-Action: ${res.dpadBtnTouchAction}`);
+    console.log(`Action Button Touch-Action: ${res.actBtnTouchAction}`);
+    assert(res.touchScrollAllowedOnCanvas, `Canvas touch-action must allow vertical page scrolling (found: ${res.canvasTouchAction})`);
+    assert(res.touchScrollAllowedOnWrapper, `Canvas wrapper touch-action must allow vertical page scrolling (found: ${res.canvasWrapperTouchAction})`);
+    assert(res.touchEatenOnControls, `Touch controls and buttons must have touch-action: none to intercept game control gestures`);
+    console.log("✓ Mobile Safari touch-action scoped to game control buttons while preserving page scrolling on playfield.");
 
     console.log("\n==================================================================");
     console.log("🎉 ALL END-TO-END 'DOES THE GAME WORK' SMOKE TESTS PASSED! 🎉");
