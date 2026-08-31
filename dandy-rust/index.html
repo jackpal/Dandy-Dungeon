@@ -1161,9 +1161,11 @@
                     </div>
                 </div>
 
-                <!-- Welcome Screen Sound Test Trigger -->
+                <!-- Welcome Screen Sound Test Trigger & Reload Action -->
                 <div class="welcome-footer-actions" style="margin-top: 1rem; padding-top: 0.75rem; border-top: 1px dashed #333; display: flex; justify-content: space-between; align-items: center;">
-                    <span style="font-size: 0.75rem; color: #888; font-family: monospace;">POKEY SOUND SYNTHESIZER</span>
+                    <button id="btn-welcome-reload" class="btn btn-sm" title="Force refresh PWA from server" style="display: inline-flex; align-items: center; gap: 4px; padding: 5px 10px; font-size: 0.78rem; background: #262626; border: 1px solid #444; color: var(--text-secondary); cursor: pointer; border-radius: 6px;">
+                        <span>🔄 Reload / Update</span>
+                    </button>
                     <button id="btn-welcome-sound-test" class="btn btn-sm" style="display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; font-size: 0.82rem; background: #262626; border: 1px solid #444; color: var(--accent-color); font-weight: bold; cursor: pointer; border-radius: 6px;">
                         <span>🔊 Sound Test</span>
                     </button>
@@ -1317,6 +1319,7 @@
                         <span>Rollbacks: <b id="net-stat-rollbacks">0</b></span>
                         <span>Status: <b id="net-stat-status" style="color: #4caf50;">Ready</b></span>
                         <button id="btn-manual-sdp-toggle" class="btn btn-xs" style="margin-left: auto;">Manual SDP ⚙</button>
+                        <button id="btn-reload-app" class="btn btn-xs" style="margin-left: 6px;" title="Force refresh PWA from server">🔄 Reload App</button>
                     </div>
 
                     <div id="sdp-modal" style="display: none;">
@@ -6386,8 +6389,46 @@
 
             window.dandyApp = app;
             window.dandyBuildInfo = app.get_build_info();
+            window.dandyBuildVersion = "5361344";
             window.myPeerId = myPeerId;
-            console.log(`[Dandy Dungeon] Loaded: ${window.dandyBuildInfo}`);
+            console.log(`[Dandy Dungeon] Loaded: ${window.dandyBuildInfo} (v${window.dandyBuildVersion})`);
+
+            // Manual Reload Triggers (Welcome Screen & Diagnostics)
+            const handleForceReload = () => {
+                const url = new URL(window.location.href);
+                url.searchParams.set("reload", Date.now().toString());
+                window.location.href = url.toString();
+            };
+            const btnWelcomeReload = document.getElementById("btn-welcome-reload");
+            if (btnWelcomeReload) btnWelcomeReload.addEventListener("click", handleForceReload);
+            const btnDiagReload = document.getElementById("btn-reload-app");
+            if (btnDiagReload) btnDiagReload.addEventListener("click", handleForceReload);
+
+            // Automatic Background PWA Update Checker
+            async function checkForAppUpdates() {
+                try {
+                    const res = await fetch("./?_chk=" + Date.now(), {
+                        cache: "no-store",
+                        headers: { "Cache-Control": "no-cache" }
+                    });
+                    if (!res.ok) return;
+                    const html = await res.text();
+                    const match = html.match(/dandyBuildVersion\s*=\s*"([^"]+)"/);
+                    if (match && match[1] && match[1] !== window.dandyBuildVersion) {
+                        console.log(`[PWA Update] New version detected: ${match[1]} (current: ${window.dandyBuildVersion}). Updating...`);
+                        if (!isOnlineMode) {
+                            handleForceReload();
+                        }
+                    }
+                } catch (_) {}
+            }
+
+            setTimeout(checkForAppUpdates, 2000);
+            document.addEventListener("visibilitychange", () => {
+                if (!document.hidden) {
+                    checkForAppUpdates();
+                }
+            });
 
             requestAnimationFrame(gameLoop);
         });
