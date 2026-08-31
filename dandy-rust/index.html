@@ -76,6 +76,17 @@
             text-transform: uppercase;
         }
 
+        h1 a {
+            color: inherit;
+            text-decoration: none;
+            transition: color 0.15s;
+        }
+
+        h1 a:hover {
+            color: #ffca28;
+            text-decoration: underline;
+        }
+
         /* Modal Base Styles */
         .modal-overlay {
             display: none;
@@ -1042,7 +1053,7 @@
 <body>
     <div class="container">
         <header>
-            <h1>Dandy Dungeon</h1>
+            <h1><a href="https://github.com/jackpal/Dandy-Dungeon" target="_blank" rel="noopener noreferrer">Dandy Dungeon</a></h1>
         </header>
 
         <!-- Welcome / Play Mode Selection Modal -->
