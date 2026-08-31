@@ -39,6 +39,10 @@
             box-sizing: border-box;
         }
 
+        html, body {
+            touch-action: pan-y;
+        }
+
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             background-color: var(--bg-color);
@@ -49,7 +53,6 @@
             align-items: center;
             padding: max(6px, env(safe-area-inset-top)) max(6px, env(safe-area-inset-right)) max(6px, env(safe-area-inset-bottom)) max(6px, env(safe-area-inset-left));
             line-height: 1.3;
-            touch-action: manipulation;
             overscroll-behavior: none;
             -webkit-user-select: none;
             user-select: none;
@@ -3231,6 +3234,48 @@ dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
                     wakeLoop();
                 }
             });
+
+            // -----------------------------------------------------------------
+            // Disable Viewport Pinch-to-Zoom & Double-Tap Zoom on iOS / iPadOS
+            // -----------------------------------------------------------------
+            // 1. Prevent WebKit proprietary gesture events (pinch-to-zoom / rotate)
+            document.addEventListener("gesturestart", (e) => {
+                e.preventDefault();
+            }, { passive: false });
+
+            document.addEventListener("gesturechange", (e) => {
+                e.preventDefault();
+            }, { passive: false });
+
+            document.addEventListener("gestureend", (e) => {
+                e.preventDefault();
+            }, { passive: false });
+
+            // 2. Prevent multi-touch pinch gestures starting outside interactive touch controls
+            document.addEventListener("touchstart", (e) => {
+                if (e.touches.length > 1) {
+                    const isControlTouch = Array.from(e.touches).some(t => {
+                        const el = document.elementFromPoint(t.clientX, t.clientY);
+                        return el && (el.closest("#touch-controls") || el.closest(".modal-card") || el.closest("input, select, textarea, button"));
+                    });
+                    if (!isControlTouch) {
+                        e.preventDefault();
+                    }
+                }
+            }, { passive: false });
+
+            // 3. Prevent double-tap to zoom on iOS Safari outside text inputs
+            let lastTouchEndTime = 0;
+            document.addEventListener("touchend", (e) => {
+                const now = Date.now();
+                if (now - lastTouchEndTime <= 300) {
+                    const tag = e.target && e.target.tagName;
+                    if (tag !== "INPUT" && tag !== "TEXTAREA") {
+                        e.preventDefault();
+                    }
+                }
+                lastTouchEndTime = now;
+            }, { passive: false });
 
             // -----------------------------------------------------------------
             // Touch Controls Setup (Mapped to Primary Local Player)
