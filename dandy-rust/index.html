@@ -805,19 +805,23 @@
 
         .action-btns {
             display: flex;
-            gap: 10px;
-            align-items: center;
+            position: relative;
+            width: 140px;
+            height: 140px;
             touch-action: none;
         }
 
         .act-btn {
-            width: 58px;
-            height: 58px;
+            position: absolute;
+            width: 62px;
+            height: 62px;
+            bottom: 4px;
+            right: 4px;
             border-radius: 50%;
             background: rgba(255, 167, 38, 0.2);
             border: 2px solid var(--accent-color);
             color: var(--accent-color);
-            font-size: 0.85rem;
+            font-size: 0.9rem;
             font-weight: bold;
             display: flex;
             flex-direction: column;
@@ -828,26 +832,34 @@
             touch-action: none;
             cursor: pointer;
             transition: background 0.1s, transform 0.05s;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5), inset 0 1px 2px rgba(255, 255, 255, 0.3);
         }
 
         .act-btn:active, .act-btn.active {
             background: var(--accent-color);
             color: #000;
-            transform: scale(0.95);
+            transform: scale(0.94);
         }
 
         .act-btn-bomb {
-            width: 48px;
-            height: 48px;
-            background: rgba(239, 83, 80, 0.2);
-            border-color: #ef5350;
+            position: absolute;
+            width: 44px;
+            height: 44px;
+            top: 6px;
+            left: 10px;
+            bottom: auto;
+            right: auto;
+            background: rgba(239, 83, 80, 0.18);
+            border: 2px solid #ef5350;
             color: #ef5350;
-            font-size: 0.75rem;
+            font-size: 0.72rem;
+            box-shadow: 0 3px 8px rgba(0, 0, 0, 0.5), inset 0 1px 2px rgba(255, 255, 255, 0.2);
         }
 
         .act-btn-bomb:active, .act-btn-bomb.active {
             background: #ef5350;
             color: #fff;
+            transform: scale(0.94);
         }
 
         #controls {
