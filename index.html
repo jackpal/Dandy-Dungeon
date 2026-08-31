@@ -736,39 +736,72 @@
             display: none !important;
         }
 
-        .dpad {
-            display: grid;
-            grid-template-columns: repeat(3, 50px);
-            grid-template-rows: repeat(3, 50px);
-            gap: 4px;
+        .thumbstick-base {
+            width: 140px;
+            height: 140px;
+            position: relative;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.02) 65%, rgba(0, 0, 0, 0.4) 100%);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.6), 0 2px 10px rgba(0, 0, 0, 0.4);
             touch-action: none;
+            user-select: none;
+            -webkit-user-select: none;
+            cursor: pointer;
+            box-sizing: border-box;
+        }
+
+        .thumbstick-ring {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+            pointer-events: none;
+        }
+
+        .stick-tick {
+            position: absolute;
+            font-size: 0.65rem;
+            color: rgba(255, 255, 255, 0.4);
+            line-height: 1;
+            user-select: none;
+            font-family: inherit;
+        }
+        .stick-tick.tick-u  { top: 5px; left: 50%; transform: translateX(-50%); }
+        .stick-tick.tick-ur { top: 15px; right: 16px; font-size: 0.55rem; }
+        .stick-tick.tick-r  { top: 50%; right: 6px; transform: translateY(-50%); }
+        .stick-tick.tick-dr { bottom: 15px; right: 16px; font-size: 0.55rem; }
+        .stick-tick.tick-d  { bottom: 5px; left: 50%; transform: translateX(-50%); }
+        .stick-tick.tick-dl { bottom: 15px; left: 16px; font-size: 0.55rem; }
+        .stick-tick.tick-l  { top: 50%; left: 6px; transform: translateY(-50%); }
+        .stick-tick.tick-ul { top: 15px; left: 16px; font-size: 0.55rem; }
+
+        .thumbstick-nub {
+            width: 52px;
+            height: 52px;
+            border-radius: 50%;
+            background: radial-gradient(circle at 35% 35%, #4a4a4a, #1f1f1f);
+            border: 2px solid rgba(255, 255, 255, 0.35);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.6), inset 0 1px 2px rgba(255, 255, 255, 0.4);
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            touch-action: none;
+            pointer-events: none;
+            box-sizing: border-box;
+            transition: border-color 0.15s, box-shadow 0.15s;
         }
 
         .dpad-btn {
-            background: rgba(255, 255, 255, 0.12);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            border-radius: 10px;
-            color: #fff;
-            font-size: 1.3rem;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            user-select: none;
-            -webkit-user-select: none;
             touch-action: none;
-            cursor: pointer;
-            transition: background 0.1s;
         }
 
-        .dpad-btn:active, .dpad-btn.active {
-            background: var(--accent-color);
-            color: #000;
+        .thumbstick-base.active .thumbstick-nub {
+            border-color: var(--accent-color);
+            box-shadow: 0 0 12px rgba(255, 179, 0, 0.5), inset 0 1px 3px rgba(255, 255, 255, 0.6);
         }
-
-        .dpad-up { grid-column: 2; grid-row: 1; }
-        .dpad-left { grid-column: 1; grid-row: 2; }
-        .dpad-right { grid-column: 3; grid-row: 2; }
-        .dpad-down { grid-column: 2; grid-row: 3; }
 
         .action-btns {
             display: flex;
@@ -1066,8 +1099,8 @@
     </style>
     
 <script type="module">
-import init, * as bindings from './dandy-rust-2023221aa6a2ab63.js';
-const wasm = await init({ module_or_path: './dandy-rust-2023221aa6a2ab63_bg.wasm' });
+import init, * as bindings from './dandy-rust-58295181230e769d.js';
+const wasm = await init({ module_or_path: './dandy-rust-58295181230e769d_bg.wasm' });
 
 
 window.wasmBindings = bindings;
@@ -1076,7 +1109,7 @@ window.wasmBindings = bindings;
 dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
 
 </script>
-<link rel="modulepreload" href="./dandy-rust-2023221aa6a2ab63.js" crossorigin="anonymous" integrity="sha384-pxPUEJt0pszNTS38cHZVlYAUvX8V/TDEtMwBg4gAJioiln9H4H20vdolZ9QsqUcN"><link rel="preload" href="./dandy-rust-2023221aa6a2ab63_bg.wasm" crossorigin="anonymous" integrity="sha384-8VJ8Ug0ui0rhc/6K7/VLA+jsB1wzg8cDaKX0oY3Y4iSfGsaAK+plQxowkC2e7jzd" as="fetch" type="application/wasm"></head>
+<link rel="modulepreload" href="./dandy-rust-58295181230e769d.js" crossorigin="anonymous" integrity="sha384-pxPUEJt0pszNTS38cHZVlYAUvX8V/TDEtMwBg4gAJioiln9H4H20vdolZ9QsqUcN"><link rel="preload" href="./dandy-rust-58295181230e769d_bg.wasm" crossorigin="anonymous" integrity="sha384-itdOtRSdw2zbaoeEm3hN6fTADYdVjIVpgYZbyBfslxxKzlTPklI1YJu4LrdcVvi4" as="fetch" type="application/wasm"></head>
 <body>
     <div class="container">
         <header>
@@ -1384,11 +1417,18 @@ dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
 
         <!-- On-Screen Touch Controls for Mobile / Tablets -->
         <div id="touch-controls" aria-label="Touch Controls">
-            <div class="dpad">
-                <button class="dpad-btn dpad-up" data-action="Up" aria-label="Up">▲</button>
-                <button class="dpad-btn dpad-left" data-action="Left" aria-label="Left">◀</button>
-                <button class="dpad-btn dpad-right" data-action="Right" aria-label="Right">▶</button>
-                <button class="dpad-btn dpad-down" data-action="Down" aria-label="Down">▼</button>
+            <div id="thumbstick-base" class="thumbstick-base" aria-label="8-Way Virtual Thumbstick">
+                <div class="thumbstick-ring">
+                    <span class="stick-tick tick-u">▲</span>
+                    <span class="stick-tick tick-ur">◥</span>
+                    <span class="stick-tick tick-r">▶</span>
+                    <span class="stick-tick tick-dr">◢</span>
+                    <span class="stick-tick tick-d">▼</span>
+                    <span class="stick-tick tick-dl">◣</span>
+                    <span class="stick-tick tick-l">◀</span>
+                    <span class="stick-tick tick-ul">◤</span>
+                </div>
+                <div id="thumbstick-nub" class="thumbstick-nub dpad-btn" aria-label="Thumbstick Nub"></div>
             </div>
             <div class="action-btns">
                 <button class="act-btn act-btn-bomb" data-action="Bomb" aria-label="Smart Bomb">BOMB</button>
@@ -3189,10 +3229,131 @@ dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
                 "Bomb": PlayerAction.Bomb
             };
 
-            const touchButtons = document.querySelectorAll("#touch-controls button");
-            touchButtons.forEach((btn) => {
+            // -----------------------------------------------------------------
+            // 8-Way Virtual Thumbstick & Action Buttons Setup
+            // -----------------------------------------------------------------
+            let touchDirectionMask = 0;
+            let touchActionMask = 0;
+
+            const thumbstickBase = document.getElementById("thumbstick-base");
+            const thumbstickNub = document.getElementById("thumbstick-nub");
+
+            let thumbstickActive = false;
+            let thumbstickPointerId = null;
+
+            function updateThumbstickFromPointer(e) {
+                if (!thumbstickBase || !thumbstickNub) return;
+                const rect = thumbstickBase.getBoundingClientRect();
+                const centerX = rect.left + rect.width / 2;
+                const centerY = rect.top + rect.height / 2;
+
+                const dx = e.clientX - centerX;
+                const dy = e.clientY - centerY;
+                const dist = Math.hypot(dx, dy);
+
+                // Max radius travel for center of nub
+                const maxRadius = (rect.width - 52) / 2; // ~44px
+                const clampedDist = Math.min(dist, maxRadius);
+                const angleRad = Math.atan2(dy, dx);
+
+                const clampedX = dist > 0 ? Math.cos(angleRad) * clampedDist : 0;
+                const clampedY = dist > 0 ? Math.sin(angleRad) * clampedDist : 0;
+
+                thumbstickNub.style.transform = `translate(calc(-50% + ${clampedX.toFixed(1)}px), calc(-50% + ${clampedY.toFixed(1)}px))`;
+
+                // Deadzone threshold (8px)
+                const deadzone = 8;
+                if (dist < deadzone) {
+                    touchDirectionMask = 0;
+                    touchInputMask = touchDirectionMask | touchActionMask;
+                    wakeLoop();
+                    return;
+                }
+
+                // Convert angle (-180 to +180) to 8 sectors (+/- 22.5 deg around 45 deg multiples)
+                const angleDeg = angleRad * (180 / Math.PI);
+                let newMask = 0;
+
+                if (angleDeg >= -22.5 && angleDeg < 22.5) {
+                    // Right
+                    newMask = (1 << PlayerAction.Right);
+                } else if (angleDeg >= 22.5 && angleDeg < 67.5) {
+                    // Down-Right
+                    newMask = (1 << PlayerAction.Down) | (1 << PlayerAction.Right);
+                } else if (angleDeg >= 67.5 && angleDeg < 112.5) {
+                    // Down
+                    newMask = (1 << PlayerAction.Down);
+                } else if (angleDeg >= 112.5 && angleDeg < 157.5) {
+                    // Down-Left
+                    newMask = (1 << PlayerAction.Down) | (1 << PlayerAction.Left);
+                } else if (angleDeg >= 157.5 || angleDeg < -157.5) {
+                    // Left
+                    newMask = (1 << PlayerAction.Left);
+                } else if (angleDeg >= -157.5 && angleDeg < -112.5) {
+                    // Up-Left
+                    newMask = (1 << PlayerAction.Up) | (1 << PlayerAction.Left);
+                } else if (angleDeg >= -112.5 && angleDeg < -67.5) {
+                    // Up
+                    newMask = (1 << PlayerAction.Up);
+                } else if (angleDeg >= -67.5 && angleDeg < -22.5) {
+                    // Up-Right
+                    newMask = (1 << PlayerAction.Up) | (1 << PlayerAction.Right);
+                }
+
+                touchDirectionMask = newMask;
+                touchInputMask = touchDirectionMask | touchActionMask;
+                const p0 = localPlayerOrder[0] || 0;
+                latchedInputMasks[p0] |= newMask;
+                wakeLoop();
+            }
+
+            function resetThumbstick() {
+                thumbstickActive = false;
+                thumbstickPointerId = null;
+                if (thumbstickBase) thumbstickBase.classList.remove("active");
+                if (thumbstickNub) thumbstickNub.style.transform = "translate(-50%, -50%)";
+                touchDirectionMask = 0;
+                touchInputMask = touchDirectionMask | touchActionMask;
+                wakeLoop();
+            }
+
+            if (thumbstickBase) {
+                thumbstickBase.addEventListener("pointerdown", (e) => {
+                    e.preventDefault();
+                    PokeyAudio.unlock();
+                    thumbstickActive = true;
+                    thumbstickPointerId = e.pointerId;
+                    try { thumbstickBase.setPointerCapture(e.pointerId); } catch (_) {}
+                    thumbstickBase.classList.add("active");
+                    updateThumbstickFromPointer(e);
+                });
+
+                thumbstickBase.addEventListener("pointermove", (e) => {
+                    if (!thumbstickActive || e.pointerId !== thumbstickPointerId) return;
+                    e.preventDefault();
+                    updateThumbstickFromPointer(e);
+                });
+
+                thumbstickBase.addEventListener("pointerup", (e) => {
+                    if (e.pointerId === thumbstickPointerId) {
+                        e.preventDefault();
+                        try { thumbstickBase.releasePointerCapture(e.pointerId); } catch (_) {}
+                        resetThumbstick();
+                    }
+                });
+
+                thumbstickBase.addEventListener("pointercancel", (e) => {
+                    if (e.pointerId === thumbstickPointerId) {
+                        try { thumbstickBase.releasePointerCapture(e.pointerId); } catch (_) {}
+                        resetThumbstick();
+                    }
+                });
+            }
+
+            const actionButtons = document.querySelectorAll("#touch-controls .act-btn");
+            actionButtons.forEach((btn) => {
                 const actionName = btn.dataset.action;
-                const action = touchActionMap[actionName];
+                const action = actionName === "Shoot" ? PlayerAction.Shoot : (actionName === "Bomb" ? PlayerAction.Bomb : undefined);
                 if (action === undefined) return;
 
                 const press = (e) => {
@@ -3200,8 +3361,11 @@ dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
                     PokeyAudio.unlock();
                     try { btn.setPointerCapture(e.pointerId); } catch (_) {}
                     btn.classList.add("active");
-                    touchInputMask |= (1 << action);
-                    latchedInputMasks[localPlayerOrder[0] || 0] |= (1 << action);
+                    const bit = (1 << action);
+                    touchActionMask |= bit;
+                    touchInputMask = touchDirectionMask | touchActionMask;
+                    const p0 = localPlayerOrder[0] || 0;
+                    latchedInputMasks[p0] |= bit;
                     activeTouches.set(e.pointerId, { btn, action });
                     wakeLoop();
                 };
@@ -3212,11 +3376,12 @@ dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
                     try { btn.releasePointerCapture(e.pointerId); } catch (_) {}
                     btn.classList.remove("active");
                     activeTouches.delete(e.pointerId);
-                    let mask = 0;
+                    let actMask = 0;
                     for (const [_, t] of activeTouches) {
-                        if (t && t.action !== undefined) mask |= (1 << t.action);
+                        if (t && t.action !== undefined) actMask |= (1 << t.action);
                     }
-                    touchInputMask = mask;
+                    touchActionMask = actMask;
+                    touchInputMask = touchDirectionMask | touchActionMask;
                     wakeLoop();
                 };
 
@@ -3450,8 +3615,11 @@ dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
                 keyboardInputMasks = [0, 0, 0, 0];
                 latchedInputMasks = [0, 0, 0, 0];
                 gamepadInputMasks = [0, 0, 0, 0];
+                touchDirectionMask = 0;
+                touchActionMask = 0;
                 touchInputMask = 0;
-                touchButtons.forEach((btn) => btn.classList.remove("active"));
+                resetThumbstick();
+                actionButtons.forEach((btn) => btn.classList.remove("active"));
                 if (isOnlineMode) {
                     for (let i = 0; i < 4; i++) {
                         if (app.net_is_local_player(i)) {
