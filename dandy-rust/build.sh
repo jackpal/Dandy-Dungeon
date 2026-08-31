@@ -6,6 +6,10 @@ set -euo pipefail
 MAX_GZIP_BYTES=$((33 * 1024))
 
 echo "=== Building Dandy Dungeon WASM (Release) ==="
+GIT_REV=$(git rev-parse --short HEAD 2>/dev/null || date +%s)
+echo "Stamping build version: ${GIT_REV}..."
+sed -i -E "s/window\.dandyBuildVersion\s*=\s*\"[^\"]+\";/window.dandyBuildVersion = \"${GIT_REV}\";/g" index.html
+
 trunk build --release
 
 echo "Compressing artifacts..."

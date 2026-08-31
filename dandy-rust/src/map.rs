@@ -45,24 +45,26 @@ impl Map {
             return;
         }
 
-        let mut stack = [(0i32, 0i32); 64];
+        let mut stack = [(0i8, 0i8); 128];
         let mut top = 0;
-        stack[top] = (start_x, start_y);
+        stack[top] = (start_x as i8, start_y as i8);
         top += 1;
 
         while top > 0 {
             top -= 1;
             let (cx, cy) = stack[top];
-            if self.get(cx, cy) == target {
-                self.set(cx, cy, replacement);
+            let cx_i = cx as i32;
+            let cy_i = cy as i32;
+            if self.get(cx_i, cy_i) == target {
+                self.set(cx_i, cy_i, replacement);
                 
                 for dy in -1..=1 {
                     for dx in -1..=1 {
                         if dx != 0 || dy != 0 {
-                            let nx = cx + dx;
-                            let ny = cy + dy;
+                            let nx = cx_i + dx;
+                            let ny = cy_i + dy;
                             if self.get(nx, ny) == target && top < stack.len() {
-                                stack[top] = (nx, ny);
+                                stack[top] = (nx as i8, ny as i8);
                                 top += 1;
                             }
                         }

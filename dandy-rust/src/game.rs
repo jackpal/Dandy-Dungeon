@@ -240,6 +240,47 @@ impl Game {
         self.audio_scheduler.schedule_sound(SOUND_WARP_IN);
     }
 
+    pub fn load_next_level(&mut self) {
+        self.map.load(self.level);
+        self.rotor = 0;
+
+        // Find player spawn (stairs UP)
+        let spawn = self.map.find(UP).unwrap_or((2, 2));
+
+        // Move surviving players to spawn while preserving health, keys, bombs, and score.
+        // If a player died on the previous floor, revive them with default health for the new floor.
+        for (i, player) in self.players.iter_mut().enumerate() {
+            if player.active && i < PLAYER_SPAWN_DIRS.len() {
+                let dir = PLAYER_SPAWN_DIRS[i];
+                let (px, py) = Self::find_spawn_tile(&self.map, spawn, dir, i);
+                player.x = px;
+                player.y = py;
+                player.dir = dir;
+                player.escaped = false;
+                player.arrow = None;
+                player.move_cooldown = 0;
+                player.input_mask = 0;
+                if !player.alive {
+                    player.alive = true;
+                    player.health = 100;
+                    player.bombs = 0;
+                    player.keys = 0;
+                }
+                // health, bombs, keys, and score are preserved for surviving players!
+                self.map.set(px, py, PLAYER + i as u8);
+            }
+        }
+
+        // Initialize camera position to spawn
+        let (target_x, target_y) = calculate_target_cog(&self.players);
+        self.camera.cog_x = target_x as f64;
+        self.camera.cog_y = target_y as f64;
+
+        // Authentic 6502 Z.WARP.IN emitted on dungeon swap / level load (GAME.TXT lines 74-81)
+        self.sounds.push(SOUND_WARP_IN);
+        self.audio_scheduler.schedule_sound(SOUND_WARP_IN);
+    }
+
     pub fn update_camera(&mut self) {
         let (tx, ty) = calculate_target_cog(&self.players);
         let num_active = self.players.iter().filter(|p| p.active && p.alive && !p.escaped).count();
@@ -315,11 +356,15 @@ impl Game {
 
         if any_joined && !players_in_dungeon && !arrows_in_flight {
             if any_escaped {
-                // Progress to next level
+                // Progress to next level: surviving players carry over health, keys, bombs, score
                 self.level = (self.level + 1).min(25);
-                self.load();
+                self.load_next_level();
             } else {
-                // Everyone died, restart
+                // Everyone died, restart game from Level 0 (Level A)
+                self.level = 0;
+                for p in &mut self.players {
+                    p.score = 0;
+                }
                 self.load();
             }
         }
@@ -2105,20 +2150,33 @@ mod tests {
         let mut game = Game::new();
         game.load();
 
-        // 1. Single player escapes -> next level emits SOUND_WARP_IN
+        // 1. Single player escapes with keys, bombs, health, score -> next level preserves them
+        game.players[0].health = 250;
+        game.players[0].keys = 3;
+        game.players[0].bombs = 2;
+        game.players[0].score = 1500;
         game.players[0].escaped = true;
         game.players[0].alive = true;
         game.step();
 
         assert_eq!(game.level, 1);
+        assert_eq!(game.players[0].health, 250);
+        assert_eq!(game.players[0].keys, 3);
+        assert_eq!(game.players[0].bombs, 2);
+        assert_eq!(game.players[0].score, 1500);
         assert!(game.sounds.contains(&SOUND_WARP_IN), "Level transition must emit SOUND_WARP_IN");
         assert!(game.audio_scheduler.is_channel_active(3), "SOUND_WARP_IN scheduled on channel 3");
 
-        // 2. Player dies and restarts -> emits SOUND_WARP_IN
+        // 2. Player dies and restarts -> wipes to level 0 with 0 score, 100 health, 0 keys, 0 bombs
         game.players[0].alive = false;
         game.players[0].escaped = false;
         game.step();
 
+        assert_eq!(game.level, 0);
+        assert_eq!(game.players[0].health, 100);
+        assert_eq!(game.players[0].keys, 0);
+        assert_eq!(game.players[0].bombs, 0);
+        assert_eq!(game.players[0].score, 0);
         assert!(game.sounds.contains(&SOUND_WARP_IN), "Wipe restart must emit SOUND_WARP_IN");
     }
 
