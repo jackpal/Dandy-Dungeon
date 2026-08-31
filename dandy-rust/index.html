@@ -2,8 +2,24 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Dandy Dungeon — Serverless 4-Player P2P Rollback Co-op (Rust WASM)</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Dandy Dungeon</title>
+    <!-- Web App & PWA Metadata -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Dandy">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="application-name" content="Dandy Dungeon">
+    <meta name="theme-color" content="#121212">
+    <meta name="apple-touch-fullscreen" content="yes">
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+    <link data-trunk rel="copy-file" href="manifest.json">
+    <link data-trunk rel="copy-file" href="icon-192.png">
+    <link data-trunk rel="copy-file" href="icon-512.png">
+    <link data-trunk rel="copy-file" href="apple-touch-icon.png">
+    <link data-trunk rel="copy-file" href="favicon.ico">
     <style>
         :root {
             --bg-color: #121212;
@@ -31,8 +47,8 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            padding: 1rem 0.5rem;
-            line-height: 1.5;
+            padding: max(6px, env(safe-area-inset-top)) max(6px, env(safe-area-inset-right)) max(6px, env(safe-area-inset-bottom)) max(6px, env(safe-area-inset-left));
+            line-height: 1.3;
             touch-action: manipulation;
             overscroll-behavior: none;
             -webkit-user-select: none;
@@ -40,7 +56,7 @@
         }
 
         .container {
-            max-width: 820px;
+            max-width: 660px;
             width: 100%;
             display: flex;
             flex-direction: column;
@@ -49,40 +65,15 @@
 
         header {
             text-align: center;
-            margin-bottom: 1rem;
+            margin-bottom: 4px;
         }
 
         h1 {
             color: var(--accent-color);
-            margin: 0 0 0.2rem 0;
-            font-size: 2rem;
-            letter-spacing: -0.02em;
-            text-transform: uppercase;
-        }
-
-        .badge-bar {
-            display: flex;
-            gap: 6px;
-            justify-content: center;
-            flex-wrap: wrap;
-            margin-bottom: 0.4rem;
-        }
-
-        .badge {
-            background: #222;
-            border: 1px solid #444;
-            border-radius: 4px;
-            padding: 2px 8px;
-            font-size: 0.75rem;
-            font-weight: bold;
-            letter-spacing: 0.05em;
-            color: var(--accent-color);
-        }
-
-        p.subtitle {
-            color: var(--text-secondary);
-            font-size: 0.9rem;
             margin: 0;
+            font-size: 1.1rem;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
         }
 
         /* Modal Base Styles */
@@ -306,11 +297,11 @@
             background: var(--surface-color);
             border: 1px solid var(--border-color);
             border-radius: 8px;
-            padding: 0.75rem 1rem;
-            margin-bottom: 0.75rem;
+            padding: 4px 8px;
+            margin-bottom: 4px;
             display: flex;
             flex-direction: column;
-            gap: 8px;
+            gap: 4px;
         }
 
         .lobby-header-bar {
@@ -318,8 +309,8 @@
             justify-content: space-between;
             align-items: center;
             flex-wrap: wrap;
-            gap: 8px;
-            padding-bottom: 4px;
+            gap: 6px;
+            padding-bottom: 0;
         }
 
         .lobby-mode-group {
@@ -383,10 +374,7 @@
         }
 
         .difficulty-label {
-            color: var(--text-secondary);
-            font-size: 0.75rem;
-            font-weight: bold;
-            letter-spacing: 0.05em;
+            display: none;
         }
 
         .difficulty-select {
@@ -490,10 +478,7 @@
         }
 
         .diagnostics-details {
-            margin-top: 4px;
-            border-top: 1px solid #282828;
-            padding-top: 4px;
-            width: 100%;
+            display: none !important;
         }
 
         .diagnostics-summary {
@@ -539,10 +524,7 @@
         }
 
         .slots-indicator {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 6px;
-            width: 100%;
+            display: none !important;
         }
 
         .slot-card {
@@ -667,19 +649,19 @@
             color: var(--accent-color);
             font-family: 'Courier New', Courier, monospace;
             font-weight: bold;
-            font-size: 0.85rem;
-            border-bottom: 2px solid #222;
-            margin-bottom: 4px;
+            font-size: 0.8rem;
+            border-bottom: 1px solid #222;
+            margin-bottom: 2px;
             line-height: normal;
         }
 
         #hud th, #hud td {
-            padding: 0.3rem 0.2rem;
+            padding: 2px 4px;
         }
 
         #hud th {
             width: 18%;
-            font-size: 0.7rem;
+            font-size: 0.68rem;
             text-transform: uppercase;
             color: var(--text-secondary);
             font-weight: normal;
@@ -694,11 +676,9 @@
         .hud-row-p3 { color: var(--p3-color); }
         .hud-row-p4 { color: var(--p4-color); }
 
-        .hud-inactive {
-            color: #555;
-            font-style: italic;
-            font-size: 0.75rem;
-            text-align: center;
+        .hud-inactive,
+        tr:has(.hud-inactive) {
+            display: none;
         }
 
         #gameCanvas {
@@ -728,7 +708,7 @@
             display: none;
             width: 100%;
             max-width: 660px;
-            margin-top: 0.75rem;
+            margin-top: 6px;
             padding: 0.25rem;
             justify-content: space-between;
             align-items: center;
@@ -743,18 +723,18 @@
 
         .dpad {
             display: grid;
-            grid-template-columns: repeat(3, 56px);
-            grid-template-rows: repeat(3, 56px);
-            gap: 6px;
+            grid-template-columns: repeat(3, 50px);
+            grid-template-rows: repeat(3, 50px);
+            gap: 4px;
             touch-action: none;
         }
 
         .dpad-btn {
             background: rgba(255, 255, 255, 0.12);
             border: 1px solid rgba(255, 255, 255, 0.2);
-            border-radius: 12px;
+            border-radius: 10px;
             color: #fff;
-            font-size: 1.4rem;
+            font-size: 1.3rem;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -777,19 +757,19 @@
 
         .action-btns {
             display: flex;
-            gap: 12px;
+            gap: 10px;
             align-items: center;
             touch-action: none;
         }
 
         .act-btn {
-            width: 64px;
-            height: 64px;
+            width: 58px;
+            height: 58px;
             border-radius: 50%;
             background: rgba(255, 167, 38, 0.2);
             border: 2px solid var(--accent-color);
             color: var(--accent-color);
-            font-size: 0.9rem;
+            font-size: 0.85rem;
             font-weight: bold;
             display: flex;
             flex-direction: column;
@@ -809,16 +789,21 @@
         }
 
         .act-btn-bomb {
-            width: 54px;
-            height: 54px;
+            width: 48px;
+            height: 48px;
             background: rgba(239, 83, 80, 0.2);
             border-color: #ef5350;
             color: #ef5350;
+            font-size: 0.75rem;
         }
 
         .act-btn-bomb:active, .act-btn-bomb.active {
             background: #ef5350;
             color: #fff;
+        }
+
+        #controls {
+            display: none !important;
         }
 
         section {
@@ -1058,13 +1043,6 @@
     <div class="container">
         <header>
             <h1>Dandy Dungeon</h1>
-            <div class="badge-bar">
-                <span class="badge">4-PLAYER CO-OP</span>
-                <span class="badge">WEBRTC DATACHANNELS</span>
-                <span class="badge">DETERMINISTIC ROLLBACK</span>
-                <span class="badge">RUST WASM</span>
-            </div>
-            <p class="subtitle">Classic dungeon crawl action with zero-latency peer-to-peer multiplayer netcode.</p>
         </header>
 
         <!-- Welcome / Play Mode Selection Modal -->
@@ -1525,19 +1503,6 @@
                 </div>
             </div>
         </section>
-
-        <section id="about">
-            <h2>About Dandy Online</h2>
-            <p>
-                <strong>Dandy Online</strong> brings John Palevich's legendary Atari 800 roguelike dungeon crawl into modern web browsers with 
-                <strong>sub-frame deterministic rollback netcode</strong> over <strong>WebRTC DataChannels</strong>.
-                No backend game servers are required — game states and input streams synchronize peer-to-peer with zero lag, instant prediction, and automatic frame rollback recovery.
-            </p>
-        </section>
-
-        <footer>
-            <p>&copy; 2009-2026 John H. Palevich. Modernized with Rust WebAssembly & WebRTC Rollback Netcode.</p>
-        </footer>
     </div>
 
     <!-- WebRTC DataChannels & Rollback Multiplayer Orchestration -->
