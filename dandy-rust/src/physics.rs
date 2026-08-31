@@ -148,11 +148,7 @@ pub fn step_player(
     // 2. Check Shoot vs Move
     if (input & ACTION_SHOOT) != 0 {
         if players[index].arrow.is_none() {
-            let shoot_dir = if players[index].move_cooldown == 0 {
-                dir_opt.unwrap_or(players[index].dir)
-            } else {
-                players[index].dir
-            };
+            let shoot_dir = dir_opt.unwrap_or(players[index].dir);
             players[index].dir = shoot_dir;
             players[index].arrow = Some(Arrow {
                 x: players[index].x,
