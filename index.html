@@ -726,10 +726,14 @@
             touch-action: none;
         }
 
-        @media (pointer: coarse), (max-width: 800px) {
+        @media (any-pointer: coarse), (pointer: coarse), (max-width: 800px) {
             #touch-controls {
                 display: flex;
             }
+        }
+
+        #touch-controls.touch-hidden {
+            display: none !important;
         }
 
         .dpad {
@@ -824,12 +828,6 @@
             border: 1px solid var(--border-color);
         }
 
-        @media (max-width: 800px), (pointer: coarse) {
-            #controls {
-                display: none !important;
-            }
-        }
-
         #controls h2 {
             border-bottom: none;
             padding-bottom: 0;
@@ -844,6 +842,22 @@
             display: grid;
             grid-template-columns: repeat(4, 1fr);
             gap: 6px;
+        }
+
+        @media (max-width: 600px) {
+            #controls {
+                margin-top: 6px;
+                padding: 6px 8px;
+            }
+
+            .controls-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 5px;
+            }
+
+            .control-card {
+                padding: 5px 6px;
+            }
         }
 
         .control-card {
@@ -1229,6 +1243,7 @@ dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
                         <option value="3">Deadly</option>
                     </select>
                     <button id="btn-toggle-sound" class="btn btn-sm" title="Toggle Sound Effects" style="margin-left: 6px; padding: 4px 8px; font-size: 0.85rem;">🔊</button>
+                    <button id="btn-toggle-touch" class="btn btn-sm" title="Toggle On-Screen Touch Gamepad" style="display: none; margin-left: 4px; padding: 4px 8px; font-size: 0.85rem; align-items: center; gap: 4px;">📱 Touch</button>
                     <button id="btn-sound-test" class="btn btn-sm" title="Open POKEY Sound Test" style="margin-left: 4px; padding: 4px 8px; font-size: 0.85rem; display: inline-flex; align-items: center; gap: 4px;">🎵 Sound Test</button>
                 </div>
             </div>
@@ -6133,6 +6148,65 @@ dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
                     const muted = PokeyAudio.toggleMute();
                     btnToggleSound.textContent = muted ? "🔇" : "🔊";
                     btnToggleSound.title = muted ? "Sound Muted (Click to Unmute)" : "Sound On (Click to Mute)";
+                });
+            }
+
+            const btnToggleTouch = document.getElementById("btn-toggle-touch");
+            const touchControlsEl = document.getElementById("touch-controls");
+
+            function updateTouchToggleUI(visible) {
+                if (!touchControlsEl) return;
+                if (visible) {
+                    touchControlsEl.classList.remove("touch-hidden");
+                    if (btnToggleTouch) {
+                        btnToggleTouch.classList.add("active");
+                        btnToggleTouch.textContent = "📱 Touch: On";
+                        btnToggleTouch.title = "Hide On-Screen Touch Gamepad";
+                    }
+                } else {
+                    touchControlsEl.classList.add("touch-hidden");
+                    if (btnToggleTouch) {
+                        btnToggleTouch.classList.remove("active");
+                        btnToggleTouch.textContent = "📱 Touch: Off";
+                        btnToggleTouch.title = "Show On-Screen Touch Gamepad";
+                    }
+                }
+            }
+
+            function setTouchControlsVisible(visible) {
+                updateTouchToggleUI(visible);
+                try {
+                    localStorage.setItem("dandy_touch_controls_visible", visible ? "1" : "0");
+                } catch (_) {}
+            }
+
+            const isTouchCapable = ('ontouchstart' in window) ||
+                                   (typeof navigator !== "undefined" && navigator.maxTouchPoints > 0) ||
+                                   (window.matchMedia && window.matchMedia('(any-pointer: coarse)').matches) ||
+                                   (window.innerWidth <= 800);
+
+            if (btnToggleTouch) {
+                if (isTouchCapable) {
+                    btnToggleTouch.style.display = "inline-flex";
+                }
+                window.addEventListener("touchstart", () => {
+                    if (btnToggleTouch) btnToggleTouch.style.display = "inline-flex";
+                    if (touchControlsEl && !localStorage.getItem("dandy_touch_controls_visible")) {
+                        setTouchControlsVisible(true);
+                    }
+                }, { passive: true });
+
+                let savedPref = null;
+                try {
+                    savedPref = localStorage.getItem("dandy_touch_controls_visible");
+                } catch (_) {}
+
+                const initialVisible = savedPref !== null ? (savedPref === "1") : isTouchCapable;
+                updateTouchToggleUI(initialVisible);
+
+                btnToggleTouch.addEventListener("click", () => {
+                    const currentlyHidden = touchControlsEl ? touchControlsEl.classList.contains("touch-hidden") : false;
+                    setTouchControlsVisible(currentlyHidden);
                 });
             }
 
