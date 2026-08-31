@@ -2267,5 +2267,59 @@ mod tests {
         assert!(game.audio_scheduler.is_channel_active(0), "Channel 0 must be active for SOUND_SHOOT");
         assert_eq!(game.audio_scheduler.get_channel_sound(0), SOUND_SHOOT);
     }
+
+    #[test]
+    fn test_diagonal_arrow_wall_slide_aim_assist() {
+        let mut game = Game::new();
+        game.load();
+        let px = 10;
+        let py = 10;
+
+        // Clear player initial pos and place at (10, 10)
+        game.map.set(game.players[0].x, game.players[0].y, SPACE);
+        game.players[0].x = px;
+        game.players[0].y = py;
+        game.players[0].dir = 2; // East
+        game.map.set(px, py, PLAYER);
+
+        let (tx, ty) = calculate_target_cog(&game.players);
+        game.camera.cog_x = tx as f64;
+        game.camera.cog_y = ty as f64;
+
+        // Build a 1-tile wide horizontal corridor running East:
+        // (10, 9) is Wall (North)
+        // (11, 9) is Wall (North-East / Diagonal)
+        // (10, 11) is Wall (South)
+        // (11, 11) is Wall (South-East / Diagonal)
+        // (11, 10) is Space (East / Corridor open)
+        game.map.set(px, py - 1, WALL);
+        game.map.set(px + 1, py - 1, WALL);
+        game.map.set(px, py + 1, WALL);
+        game.map.set(px + 1, py + 1, WALL);
+        game.map.set(px + 1, py, SPACE);
+        game.map.set(px + 2, py, SPACE);
+
+        // Player inputs Up + Right + Shoot (diagonal Up-Right into wall)
+        game.players[0].input_mask = ACTION_UP | ACTION_RIGHT | ACTION_SHOOT;
+        game.step();
+
+        // 1. Aim assist should have detected (11, 9) is blocked, (10, 9) is blocked, but (11, 10) East is open!
+        // So the arrow direction is adjusted to 2 (East) and successfully flies down the corridor!
+        assert!(game.players[0].arrow.is_some(), "Arrow must be spawned");
+        let arrow = game.players[0].arrow.unwrap();
+        assert_eq!(arrow.dir, 2, "Arrow direction must be adjusted from diagonal 1 (Up-Right) to cardinal 2 (East)");
+        assert_eq!(game.players[0].dir, 2, "Player facing direction must be updated to adjusted aim");
+        assert!(game.sounds.contains(&SOUND_SHOOT), "SOUND_SHOOT must be emitted");
+
+        // 2. Clear walls to test true diagonal shooting in open space
+        game.players[0].arrow = None; // Reset arrow
+        game.map.set(px + 1, py - 1, SPACE);
+        game.players[0].input_mask = ACTION_UP | ACTION_RIGHT | ACTION_SHOOT;
+        game.step();
+
+        assert!(game.players[0].arrow.is_some(), "Arrow must be spawned");
+        let arrow_diag = game.players[0].arrow.unwrap();
+        assert_eq!(arrow_diag.dir, 1, "Arrow direction must remain diagonal 1 (Up-Right) when diagonal path is open");
+    }
 }
 

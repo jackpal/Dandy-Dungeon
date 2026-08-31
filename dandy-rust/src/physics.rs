@@ -3,6 +3,96 @@ use crate::entity::{Player, Arrow};
 use crate::map::Map;
 use crate::camera::ActiveRect;
 
+fn is_arrow_passable(v: u8) -> bool {
+    matches!(v, SPACE | GHOST..=11 | GENERATOR..=15 | HEART | BOMB)
+}
+
+fn score_arrow_direction(player_x: i32, player_y: i32, dir: usize, map: &Map) -> (bool, i32) {
+    let delta = DIR_TO_DELTA[dir];
+    let first_x = player_x + delta.0;
+    let first_y = player_y + delta.1;
+    let first_v = map.get(first_x, first_y);
+
+    if !is_arrow_passable(first_v) {
+        return (false, 0);
+    }
+
+    // Direct neighbor is passable. Count potential targets down line of sight (up to 12 tiles)
+    let mut target_score = 0;
+    let mut cx = first_x;
+    let mut cy = first_y;
+    for dist in 1..=12 {
+        let v = map.get(cx, cy);
+        match v {
+            GHOST..=11 => {
+                target_score += 20 - dist;
+            }
+            GENERATOR..=15 => {
+                target_score += 30 - dist;
+            }
+            SPACE => {}
+            _ => break,
+        }
+        cx += delta.0;
+        cy += delta.1;
+    }
+
+    (true, target_score)
+}
+
+pub fn adjust_shoot_direction(
+    player_x: i32,
+    player_y: i32,
+    desired_dir: usize,
+    facing_dir: usize,
+    map: &Map,
+) -> usize {
+    let delta = DIR_TO_DELTA[desired_dir];
+    let direct_v = map.get(player_x + delta.0, player_y + delta.1);
+
+    // If direct direction is passable (open space or enemy/spawner/heart/bomb), keep original aim
+    if is_arrow_passable(direct_v) {
+        return desired_dir;
+    }
+
+    // If desired direction was diagonal (1, 3, 5, 7) and is blocked right in front of the player:
+    // Try wall-slide aim assist to the two adjacent cardinal directions
+    if desired_dir % 2 != 0 {
+        let dir_cw = (desired_dir + 1) & 7;   // e.g. Up-Right (1) -> Right (2)
+        let dir_ccw = (desired_dir + 7) & 7;  // e.g. Up-Right (1) -> Up (0)
+
+        let (passable_cw, score_cw) = score_arrow_direction(player_x, player_y, dir_cw, map);
+        let (passable_ccw, score_ccw) = score_arrow_direction(player_x, player_y, dir_ccw, map);
+
+        if passable_cw && !passable_ccw {
+            return dir_cw;
+        }
+        if passable_ccw && !passable_cw {
+            return dir_ccw;
+        }
+        if passable_cw && passable_ccw {
+            // Both directions are open:
+            // 1. Pick direction with enemies/spawners down line of sight
+            if score_cw > score_ccw {
+                return dir_cw;
+            } else if score_ccw > score_cw {
+                return dir_ccw;
+            }
+            // 2. Pick direction matching player's current walking / facing direction
+            if facing_dir == dir_cw {
+                return dir_cw;
+            }
+            if facing_dir == dir_ccw {
+                return dir_ccw;
+            }
+            // Default to clockwise cardinal
+            return dir_cw;
+        }
+    }
+
+    desired_dir
+}
+
 pub fn do_smart_bomb(
     player: &mut Player,
     map: &mut Map,
@@ -148,7 +238,14 @@ pub fn step_player(
     // 2. Check Shoot vs Move
     if (input & ACTION_SHOOT) != 0 {
         if players[index].arrow.is_none() {
-            let shoot_dir = dir_opt.unwrap_or(players[index].dir);
+            let raw_dir = dir_opt.unwrap_or(players[index].dir);
+            let shoot_dir = adjust_shoot_direction(
+                players[index].x,
+                players[index].y,
+                raw_dir,
+                players[index].dir,
+                map,
+            );
             players[index].dir = shoot_dir;
             players[index].arrow = Some(Arrow {
                 x: players[index].x,
