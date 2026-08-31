@@ -6273,12 +6273,10 @@
                     while (accumulator >= TIMESTEP) {
                         accumulator -= TIMESTEP;
                         app.tick();
-                    }
-
-                    // Dispatch audio sound effects triggered during local steps
-                    const soundMask = app.take_sound_mask();
-                    if (soundMask !== 0) {
-                        PokeyAudio.playMask(soundMask);
+                        const soundMask = app.take_sound_mask();
+                        if (soundMask !== 0) {
+                            PokeyAudio.playMask(soundMask);
+                        }
                     }
                 }
 

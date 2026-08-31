@@ -67,6 +67,7 @@ pub struct DandyApp {
     spritesheet: Vec<u8>,
     framebuffer: Framebuffer,
     stats: [i32; 28],
+    local_sound_mask: u32,
 }
 
 impl Default for DandyApp {
@@ -112,6 +113,7 @@ impl DandyApp {
             spritesheet,
             framebuffer,
             stats,
+            local_sound_mask: 0,
         };
         app.update_stats_buffer();
         app.render_framebuffer(); // Initial render
@@ -135,6 +137,11 @@ impl DandyApp {
     pub fn tick(&mut self) {
         // 1. Step the game physics
         self.game.step();
+        for &s in &self.game.sounds {
+            if s > 0 && s < 32 {
+                self.local_sound_mask |= 1 << s;
+            }
+        }
 
         // 2. Update camera offsets
         self.game.update_camera();
@@ -516,8 +523,9 @@ impl DandyApp {
     }
 
     pub fn take_sound_mask(&mut self) -> u32 {
-        let mut mask = self.rollback.pending_sound_mask;
+        let mut mask = self.rollback.pending_sound_mask | self.local_sound_mask;
         self.rollback.pending_sound_mask = 0;
+        self.local_sound_mask = 0;
         // Also include any sounds from standalone / single-player game.sounds if rollback not stepping
         for &s in &self.game.sounds {
             if s > 0 && s < 32 {
