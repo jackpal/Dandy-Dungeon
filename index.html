@@ -1111,8 +1111,8 @@
     </style>
     
 <script type="module">
-import init, * as bindings from './dandy-rust-58295181230e769d.js';
-const wasm = await init({ module_or_path: './dandy-rust-58295181230e769d_bg.wasm' });
+import init, * as bindings from './dandy-rust-1f8a05b5bb7586e6.js';
+const wasm = await init({ module_or_path: './dandy-rust-1f8a05b5bb7586e6_bg.wasm' });
 
 
 window.wasmBindings = bindings;
@@ -1121,7 +1121,7 @@ window.wasmBindings = bindings;
 dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
 
 </script>
-<link rel="modulepreload" href="./dandy-rust-58295181230e769d.js" crossorigin="anonymous" integrity="sha384-pxPUEJt0pszNTS38cHZVlYAUvX8V/TDEtMwBg4gAJioiln9H4H20vdolZ9QsqUcN"><link rel="preload" href="./dandy-rust-58295181230e769d_bg.wasm" crossorigin="anonymous" integrity="sha384-itdOtRSdw2zbaoeEm3hN6fTADYdVjIVpgYZbyBfslxxKzlTPklI1YJu4LrdcVvi4" as="fetch" type="application/wasm"></head>
+<link rel="modulepreload" href="./dandy-rust-1f8a05b5bb7586e6.js" crossorigin="anonymous" integrity="sha384-pxPUEJt0pszNTS38cHZVlYAUvX8V/TDEtMwBg4gAJioiln9H4H20vdolZ9QsqUcN"><link rel="preload" href="./dandy-rust-1f8a05b5bb7586e6_bg.wasm" crossorigin="anonymous" integrity="sha384-+GZQibHf3wktk/yg/qL0qbIu3mnIjjfRkwAc5FO6XYmcyLnWf2sAcGvKjDCmy8x5" as="fetch" type="application/wasm"></head>
 <body>
     <div class="container">
         <header>
@@ -6284,12 +6284,10 @@ dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
                     while (accumulator >= TIMESTEP) {
                         accumulator -= TIMESTEP;
                         app.tick();
-                    }
-
-                    // Dispatch audio sound effects triggered during local steps
-                    const soundMask = app.take_sound_mask();
-                    if (soundMask !== 0) {
-                        PokeyAudio.playMask(soundMask);
+                        const soundMask = app.take_sound_mask();
+                        if (soundMask !== 0) {
+                            PokeyAudio.playMask(soundMask);
+                        }
                     }
                 }
 
