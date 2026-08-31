@@ -29,7 +29,6 @@ language styles.
 Demos
 -----
 
-+ [Play the JavaScript version](https://jackpal.github.io/Dandy-Dungeon/)
-+ [Play the Rust WebAssembly version](dandy-rust/) (Supports 4-player online P2P WebRTC rollback co-op)
++ [Play the WebAssembly version](https://jackpal.github.io/Dandy-Dungeon/)
 
 
